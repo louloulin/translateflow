@@ -1,0 +1,9 @@
+{
+    "interface_language": "zh_CN",
+    "source_language": "Japanese",
+    "target_language": "Chinese",
+    "actual_thread_counts": 3,
+    "user_thread_counts": 3,
+    "enable_cache_backup": true,
+    "enable_auto_restore_ebook": true
+}
