@@ -1,6 +1,7 @@
 import os
 import threading
 import traceback
+import queue
 
 import rapidjson as json
 from rich import print
@@ -21,7 +22,9 @@ class Event():
     TASK_CONTINUE_CHECK_DONE = 241           # 继续翻译状态检查完成
     TASK_MANUAL_EXPORT = 250                 # 翻译结果手动导出
     TASK_MANUAL_SAVE_CACHE = 251             # 手动保存缓存文件
+    TASK_API_STATUS_REPORT = 260             # API 状态报告 (成功/失败)
     CACHE_FILE_AUTO_SAVE = 300                      # 缓存文件自动保存
+    SYSTEM_STATUS_UPDATE = 310               # 系统状态更新 (用于 TUI)
 
 
     APP_UPDATE_CHECK: int = 600                             # 检查更新
@@ -75,6 +78,9 @@ class Base():
 
     # 类线程锁
     CONFIG_FILE_LOCK = threading.Lock()
+    
+    # 全局输入队列 (用于 TUI 交互)
+    global_input_queue = queue.Queue()
 
     # 多语言界面配置信息 (类变量)
     multilingual_interface_dict = {}

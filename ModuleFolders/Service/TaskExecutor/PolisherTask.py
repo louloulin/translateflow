@@ -92,8 +92,6 @@ class PolisherTask(Base):
 
     # 单请求翻译任务
     def unit_translation_task(self) -> dict:
-        # 任务开始的时间
-        task_start_time = time.time()
         
         # Log source text for UI feedback
         source_preview = list(self.source_text_dict.values())
@@ -104,24 +102,26 @@ class PolisherTask(Base):
             self.print(f"[dim][{self.task_id}] Polishing: {preview_text}[/dim]")
             self.print(f"[STATUS] [{self.task_id}] Polishing: {preview_text}")
 
+        wait_start_time = time.time()
         while True:
             # 检测是否收到停止翻译事件
             if Base.work_status == Base.STATUS.STOPING:
                 return {}
 
-            # 检查是否超时，超时则直接跳过当前任务，以避免死循环
-            if time.time() - task_start_time >= self.config.request_timeout:
-                return {}
-
             # 检查 RPM 和 TPM 限制，如果符合条件，则继续
             if self.request_limiter.check_limiter(self.request_tokens_consume):
                 break
+            
+            # Prevent infinite wait
+            if time.time() - wait_start_time > 600:
+                self.error(f"[{self.task_id}] Queue wait timeout. Skipping.")
+                return {}
 
             # 如果以上条件都不符合，则间隔 1 秒再次检查
             time.sleep(1)
 
-        # 获取接口配置信息包
-        platform_config = self.config.get_platform_configuration("polishingReq")
+        # 任务开始的时间 (真正开始处理，通过限流后)
+        task_start_time = time.time()
 
         # --- NEW: Dry Run Logic ---
         if self.config.get("enable_dry_run", True) and not getattr(Base, "_dry_run_done", False):
@@ -130,36 +130,125 @@ class PolisherTask(Base):
             
             with dry_run_lock:
                 if not getattr(Base, "_dry_run_done", False):
-                    self.print(f"\n[bold yellow]{self.tra('msg_dry_run_title')}[/bold yellow]")
-                    self.print(f"[dim]{self.tra('msg_dry_run_hint')}[/dim]")
+                    self.print(f"\n[bold yellow]{Base.i18n.get('msg_dry_run_title')}[/bold yellow]")
+                    self.print(f"[dim]{Base.i18n.get('msg_dry_run_hint')}[/dim]")
                     self.print(f"[blue]SYSTEM:[/blue]\n{self.system_prompt}")
                     if self.messages:
                         self.print(f"\n[green]USER (First Item):[/green]\n{self.messages[0].get('content')}")
                     
-                    from rich.prompt import Confirm
-                    if not Confirm.ask(f"\n{self.tra('msg_dry_run_confirm')}", default=True):
+                    # Handle input using Base.global_input_queue
+                    self.print(f"\n[bold magenta]{Base.i18n.get('msg_dry_run_confirm')} (y/n): [/bold magenta]")
+                    
+                    user_response = None
+                    wait_start = time.time()
+                    
+                    while True:
+                        if Base.work_status == Base.STATUS.STOPING:
+                            user_response = False
+                            break
+                            
+                        # Check timeout (e.g. 120s)
+                        if time.time() - wait_start > 120:
+                            self.print("[dim]Dry run timeout, auto-confirming...[/dim]")
+                            user_response = True
+                            break
+                            
+                        try:
+                            # Read from the shared queue populated by CLI InputListener
+                            import queue
+                            key = Base.global_input_queue.get_nowait()
+                            if key in ['y', 'Y', '\r', '\n']:
+                                user_response = True
+                                break
+                            elif key in ['n', 'N', 'q']:
+                                if key == 'q': self.signal_handler(None, None)
+                                user_response = False
+                                break
+                        except queue.Empty:
+                            time.sleep(0.1)
+                    
+                    if not user_response:
+                        # Stop task if user cancels
                         Base.work_status = Base.STATUS.STOPING
                         return {}
+                    
                     Base._dry_run_done = True
         # --- End Dry Run ---
 
-        # 发起请求
-        requester = LLMRequester()
-        skip, response_think, response_content, prompt_tokens, completion_tokens = requester.sent_request(
-            self.messages,
-            self.system_prompt,
-            platform_config
-        )
+        # ---------------------------------------------------------
+        # API 请求重试循环 (Failover Loop)
+        # ---------------------------------------------------------
+        response_content = None
+        prompt_tokens = 0
+        completion_tokens = 0
+        response_think = None
 
-        # 如果请求结果标记为 skip，即有运行错误发生，则直接返回错误信息，停止后续任务
-        if skip == True:
-            return {
-                "check_result": False,
-                "row_count": 0,
-                "prompt_tokens": self.request_tokens_consume,
-                "completion_tokens": 0,
-                "extra_info": getattr(self, "extra_info", {})
-            }
+        while True:
+            # 0. 检查停止信号
+            if Base.work_status == Base.STATUS.STOPING:
+                return {}
+
+            # 1. 获取最新配置
+            platform_config = self.config.get_platform_configuration("polishingReq")
+            current_api = platform_config.get("target_platform", "Unknown")
+            is_local = current_api.lower() in ["localllm", "sakura"]
+
+            # 2. 发起请求
+            requester = LLMRequester()
+            skip, status_tag, error_msg, p_tokens, c_tokens = requester.sent_request(
+                self.messages,
+                self.system_prompt,
+                platform_config
+            )
+
+            # 3. 处理失败
+            if skip:
+                self.request_tokens_consume = p_tokens if p_tokens else self.request_tokens_consume
+
+                # Failover logic
+                if status_tag == "API_FAIL" and self.config.enable_api_failover and not is_local:
+                    self.emit(Base.EVENT.SYSTEM_STATUS_UPDATE, {"status": "fixing"})
+                    self.emit(Base.EVENT.TASK_API_STATUS_REPORT, {"is_success": False})
+                    self.print(f"[yellow][{self.task_id}] API Error ({current_api}): {error_msg}. Retrying in 2s...[/yellow]")
+                    self.print(f"[STATUS] [{self.task_id}] API Error. Retrying...")
+                    time.sleep(2)
+                    continue 
+                
+                else:
+                    self.emit(Base.EVENT.SYSTEM_STATUS_UPDATE, {"status": "error"})
+                    error = f"API请求错误 ({status_tag})，回复为空或出错，将在下一轮次重试"
+                    self.print(
+                        self.generate_log_table(
+                            *self.generate_log_rows(
+                                error,
+                                task_start_time,
+                                p_tokens if p_tokens else 0,
+                                0,
+                                [],
+                                [],
+                                [f"Error: {error_msg}"]
+                            )
+                        )
+                    )
+                    return {
+                        "check_result": False,
+                        "row_count": 0,
+                        "prompt_tokens": self.request_tokens_consume,
+                        "completion_tokens": 0,
+                    }
+
+            # 4. 处理成功
+            self.emit(Base.EVENT.SYSTEM_STATUS_UPDATE, {"status": "normal"})
+            self.emit(Base.EVENT.TASK_API_STATUS_REPORT, {"is_success": True})
+            response_content = error_msg 
+            response_think = status_tag
+            prompt_tokens = p_tokens
+            completion_tokens = c_tokens
+            break
+
+        # ---------------------------------------------------------
+        # 后续处理
+        # ---------------------------------------------------------
 
         # 返空判断
         if response_content is None or not response_content.strip():
@@ -284,6 +373,7 @@ class PolisherTask(Base):
                 "completion_tokens": completion_tokens,
                 "extra_info": getattr(self, "extra_info", {})
             }
+
 
 
     # 生成日志行

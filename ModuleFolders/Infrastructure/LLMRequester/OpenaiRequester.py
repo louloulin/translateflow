@@ -100,8 +100,21 @@ class OpenaiRequester(Base):
                 response_content = message.content
 
         except Exception as e:
-            self.error(f"请求任务错误 ... {e}", e if self.is_debug() else None)
-            return True, None, None, None, None
+            error_str = str(e).lower()
+            error_type = "GENERIC_FAIL"
+            
+            # 简单的关键词匹配来判断是否为 API/网络 错误
+            api_error_keywords = [
+                "429", "500", "502", "503", "timeout", "connection", 
+                "rate limit", "service unavailable", "bad gateway",
+                "api_key", "insufficient_quota" # 这些通常不需要重试，但也属于 API 错误，交给上层判断
+            ]
+            
+            if any(k in error_str for k in api_error_keywords):
+                error_type = "API_FAIL"
+            
+            self.error(f"请求任务错误 ({error_type}) ... {e}", e if self.is_debug() else None)
+            return True, error_type, str(e), 0, 0
 
         # 获取指令消耗
         try:

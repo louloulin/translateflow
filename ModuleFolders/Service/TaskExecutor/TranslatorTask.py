@@ -1,4 +1,5 @@
 import copy
+import threading
 import re
 import time
 import itertools
@@ -116,8 +117,6 @@ class TranslatorTask(Base):
 
     # 单请求翻译任务
     def unit_translation_task(self) -> dict:
-        # 任务开始的时间
-        task_start_time = time.time()
         
         # Log source text for UI feedback
         source_preview = list(self.source_text_dict.values())
@@ -128,26 +127,28 @@ class TranslatorTask(Base):
             self.print(f"[dim][{self.task_id}] Translating: {preview_text}[/dim]")
             self.print(f"[STATUS] [{self.task_id}] Translating: {preview_text}")
 
+        wait_start_time = time.time()
         while True:
             # 检测是否收到停止翻译事件
             if Base.work_status == Base.STATUS.STOPING:
                 return {}
 
-            # 检查是否超时，超时则直接跳过当前任务，以避免死循环
-            if time.time() - task_start_time >= self.config.request_timeout:
-                return {}
-
             # 检查 RPM 和 TPM 限制，如果符合条件，则继续
             if self.request_limiter.check_limiter(self.request_tokens_consume):
                 break
+            
+            # 防止无限等待死锁
+            if time.time() - wait_start_time > 600:
+                 self.error(f"[{self.task_id}] Queue wait timeout (10m). Skipping.")
+                 return {}
 
             # 如果以上条件都不符合，则间隔 1 秒再次检查
             time.sleep(1)
+            
+        # 任务开始的时间 (真正开始处理，通过限流后)
+        task_start_time = time.time()
 
-        # 获取接口配置信息包
-        platform_config = self.config.get_platform_configuration("translationReq")
-
-        # --- NEW: Dry Run Logic ---
+        # --- NEW: Dry Run Logic (Only once) ---
         if self.config.get("enable_dry_run", True) and not getattr(Base, "_dry_run_done", False):
             # Use a lock to ensure only one thread triggers dry run if multiple start simultaneously
             dry_run_lock = getattr(Base, "_dry_run_lock", threading.Lock())
@@ -155,61 +156,146 @@ class TranslatorTask(Base):
             
             with dry_run_lock:
                 if not getattr(Base, "_dry_run_done", False):
-                    self.print(f"\n[bold yellow]{self.tra('msg_dry_run_title')}[/bold yellow]")
-                    self.print(f"[dim]{self.tra('msg_dry_run_hint')}[/dim]")
+                    self.print(f"\n[bold yellow]{Base.i18n.get('msg_dry_run_title')}[/bold yellow]")
+                    self.print(f"[dim]{Base.i18n.get('msg_dry_run_hint')}[/dim]")
                     self.print(f"[blue]SYSTEM:[/blue]\n{self.system_prompt}")
                     # Show the first message's content
                     if self.messages:
                         self.print(f"\n[green]USER (First Item):[/green]\n{self.messages[0].get('content')}")
                     
-                    from rich.prompt import Confirm
-                    if not Confirm.ask(f"\n{self.tra('msg_dry_run_confirm')}", default=True):
+                    # Handle input using Base.global_input_queue
+                    self.print(f"\n[bold magenta]{Base.i18n.get('msg_dry_run_confirm')} (y/n): [/bold magenta]")
+                    
+                    user_response = None
+                    wait_start = time.time()
+                    
+                    while True:
+                        if Base.work_status == Base.STATUS.STOPING:
+                            user_response = False
+                            break
+                            
+                        # Check timeout (e.g. 120s)
+                        if time.time() - wait_start > 120:
+                            self.print("[dim]Dry run timeout, auto-confirming...[/dim]")
+                            user_response = True
+                            break
+                            
+                        try:
+                            # Read from the shared queue populated by CLI InputListener
+                            import queue
+                            key = Base.global_input_queue.get_nowait()
+                            if key in ['y', 'Y', '\r', '\n']:
+                                user_response = True
+                                break
+                            elif key in ['n', 'N', 'q']:
+                                if key == 'q': self.signal_handler(None, None)
+                                user_response = False
+                                break
+                        except queue.Empty:
+                            time.sleep(0.1)
+                    
+                    if not user_response:
                         # Stop task if user cancels
                         Base.work_status = Base.STATUS.STOPING
                         return {}
+                    
                     Base._dry_run_done = True
         # --- End Dry Run ---
 
-        # 发起请求
-        requester = LLMRequester()
-        skip, response_think, response_content, prompt_tokens, completion_tokens = requester.sent_request(
-            self.messages,
-            self.system_prompt,
-            platform_config
-        )
+        # ---------------------------------------------------------
+        # API 请求重试循环 (Failover Loop)
+        # ---------------------------------------------------------
+        response_content = None
+        prompt_tokens = 0
+        completion_tokens = 0
+        response_think = None
 
-        # 如果请求结果标记为 skip，即有运行错误发生，则直接返回错误信息，停止后续任务
-        if skip == True:
-            return {
-                "check_result": False,
-                "row_count": 0,
-                "prompt_tokens": self.request_tokens_consume,
-                "completion_tokens": 0,
-                "extra_info": getattr(self, "extra_info", {})
-            }
+        while True:
+            # 0. 检查停止信号
+            if Base.work_status == Base.STATUS.STOPING:
+                return {}
 
-        # 返空判断
-        if response_content is None or not response_content.strip():
-            error = "API请求错误，模型回复内容为空，将在下一轮次重试"
-            self.print(
-                self.generate_log_table(
-                    *self.generate_log_rows(
-                        error,
-                        task_start_time,
-                        prompt_tokens if prompt_tokens is not None else self.request_tokens_consume,
-                        0,
-                        [],  
-                        [], 
-                        []   
-                    )
-                )
+            # 1. 获取最新配置 (以防 API 已切换)
+            platform_config = self.config.get_platform_configuration("translationReq")
+            current_api = platform_config.get("target_platform", "Unknown")
+            is_local = current_api.lower() in ["localllm", "sakura"]
+
+            # 2. 发起请求
+            requester = LLMRequester()
+            skip, status_tag, error_msg, p_tokens, c_tokens = requester.sent_request(
+                self.messages,
+                self.system_prompt,
+                platform_config
             )
-            return {
-                "check_result": False,
-                "row_count": 0,
-                "prompt_tokens": self.request_tokens_consume,
-                "completion_tokens": 0,
-            }         
+
+            # 3. 处理失败
+            if skip:
+                # 记录 Token 消耗 (即使失败也可能消耗了)
+                self.request_tokens_consume = p_tokens if p_tokens else self.request_tokens_consume
+
+                # 判断是否为 API 错误且允许重试
+                if status_tag == "API_FAIL" and self.config.enable_api_failover and not is_local:
+                    # 触发 TUI 状态更新：修复中
+                    self.emit(Base.EVENT.SYSTEM_STATUS_UPDATE, {"status": "fixing"})
+                    
+                    # 上报失败，触发计数和可能的切换
+                    self.emit(Base.EVENT.TASK_API_STATUS_REPORT, {"is_success": False})
+                    
+                    # 打印重试日志 (只发送 STATUS 消息，因为它会被 LogStream 拦截并处理)
+                    self.print(f"[STATUS] [{self.task_id}] API Error ({current_api}): {error_msg}. Retrying...")
+                    
+                    time.sleep(2)
+                    continue # 原地重试 (下一次循环会获取新的 platform_config)
+                
+                else:
+                    # 无法重试的错误，触发 TUI 状态更新：错误
+                    self.emit(Base.EVENT.SYSTEM_STATUS_UPDATE, {"status": "error"})
+                    error = f"API请求错误 ({status_tag})，回复为空或出错，将在下一轮次重试"
+                    self.print(
+                        self.generate_log_table(
+                            *self.generate_log_rows(
+                                error,
+                                task_start_time,
+                                p_tokens if p_tokens else 0,
+                                0,
+                                [],  
+                                [], 
+                                [f"Error: {error_msg}"]   
+                            )
+                        )
+                    )
+                    return {
+                        "check_result": False,
+                        "row_count": 0,
+                        "prompt_tokens": self.request_tokens_consume,
+                        "completion_tokens": 0,
+                    }
+
+            # 4. 处理成功
+            # 上报成功，触发 TUI 状态恢复
+            self.emit(Base.EVENT.SYSTEM_STATUS_UPDATE, {"status": "normal"})
+            self.emit(Base.EVENT.TASK_API_STATUS_REPORT, {"is_success": True})
+            
+            # 赋值并跳出循环进行后续处理
+            response_content = error_msg # 这里的 error_msg 实际上是 response_content，因为 LLMRequester 返回签名是 (skip, think, content...)
+            response_think = status_tag # status_tag 实际上是 think
+            # 修正变量名映射:
+            # Original: skip, response_think, response_content, prompt_tokens, completion_tokens
+            # Current:  skip, status_tag,     error_msg,        p_tokens,      c_tokens
+            # If skip=False: status_tag=think, error_msg=content
+            
+            prompt_tokens = p_tokens
+            completion_tokens = c_tokens
+            break 
+        
+        # ---------------------------------------------------------
+        # 后续处理 (提取、检查、保存)
+        # ---------------------------------------------------------
+
+        # 返空判断 (Double check)
+        if response_content is None or not response_content.strip():
+             # Logic same as above for generic error
+             return { "check_result": False, "row_count": 0, "prompt_tokens": prompt_tokens, "completion_tokens": 0 }
 
         # 提取回复内容
         response_dict = ResponseExtractor.text_extraction(self, self.source_text_dict, response_content)

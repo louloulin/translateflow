@@ -1,0 +1,80 @@
+import sys
+import threading
+import queue
+import time
+
+class InputListener:
+    def __init__(self):
+        self.input_queue = queue.Queue()
+        self.running = False
+        self.thread = None
+        self._setup_platform()
+
+    def _setup_platform(self):
+        """屏蔽多系统差异，统一底层实现"""
+        if sys.platform == "win32":
+            import msvcrt
+            self._getch = msvcrt.getch
+            self._kbhit = msvcrt.kbhit
+        else:
+            # Linux/Mac implementation using termios/tty
+            import tty
+            import termios
+            import select
+            
+            def _unix_getch():
+                fd = sys.stdin.fileno()
+                old_settings = termios.tcgetattr(fd)
+                try:
+                    tty.setraw(sys.stdin.fileno())
+                    ch = sys.stdin.read(1)
+                finally:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                return ch.encode('utf-8') # Consistent bytes return
+
+            def _unix_kbhit():
+                dr, dw, de = select.select([sys.stdin], [], [], 0)
+                return dr != []
+
+            self._getch = _unix_getch
+            self._kbhit = _unix_kbhit
+
+    def start(self):
+        if self.running: return
+        self.running = True
+        self.thread = threading.Thread(target=self._input_loop, daemon=True)
+        self.thread.start()
+
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join(timeout=0.5)
+
+    def _input_loop(self):
+        while self.running:
+            try:
+                if self._kbhit():
+                    char = self._getch()
+                    # Decode bytes to string
+                    try:
+                        char_str = char.decode('utf-8', 'ignore')
+                    except:
+                        char_str = ''
+                    
+                    if char_str:
+                        self.input_queue.put(char_str.lower()) # Standardize to lowercase
+                else:
+                    time.sleep(0.05) # Reduce CPU usage
+            except Exception:
+                pass
+
+    def get_key(self):
+        """Non-blocking get key"""
+        try:
+            return self.input_queue.get_nowait()
+        except queue.Empty:
+            return None
+
+    def clear(self):
+        with self.input_queue.mutex:
+            self.input_queue.queue.clear()

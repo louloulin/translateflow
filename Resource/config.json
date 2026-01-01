@@ -5,7 +5,7 @@
     "source_language": "Japanese",
     "target_language": "Chinese",
     "label_input_path": "./input",
-    "label_output_path": "./output",
+    "label_output_path": "H:\\小说\\月白\\月白\\0003_第3話 化生斬り_AiNiee_Output",
     "polishing_output_path": "./PolishingOutput",
     "translation_project": "AutoType",
     "exclude_rule_str": "",
@@ -155,5 +155,11 @@
     "show_detailed_logs": false,
     "enable_cache_backup": true,
     "enable_auto_restore_ebook": true,
-    "active_profile": "default"
+    "active_profile": "Elysia",
+    "recent_projects": [
+        "H:\\小说\\月白\\月白\\0003_第3話 化生斬り.txt",
+        "H:\\小说\\月白\\月白\\0002_第2話 月白.txt",
+        "H:\\小说\\月白\\月白\\0001_第1話 神話_AiNiee_Output\\0001_第1話 神話.txt",
+        "H:\\小说\\月白\\月白\\0001_第1話 神話.txt"
+    ]
 }

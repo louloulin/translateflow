@@ -1,4 +1,5 @@
 import time
+import os
 import threading
 import concurrent.futures
 
@@ -39,14 +40,97 @@ class TaskExecutor(Base):
         self.subscribe(Base.EVENT.TASK_STOP, self.task_stop)
         self.subscribe(Base.EVENT.TASK_START, self.task_start)
         self.subscribe(Base.EVENT.TASK_MANUAL_EXPORT, self.task_manual_export)
+        self.subscribe(Base.EVENT.TASK_API_STATUS_REPORT, self.on_api_status_report)
         self.subscribe(Base.EVENT.APP_SHUT_DOWN, self.app_shut_down)
 
         # Failover state
-        self.consecutive_errors = 0
+        self.global_consecutive_api_errors = 0
+        self._api_error_lock = threading.Lock()
         self.api_pipeline = []
         self.current_api_index = 0
         self.current_mode = None
+        
+        # Concurrency Control for Mission Control
+        self._concurrency_lock = threading.Lock()
+        self._current_active = 0
 
+    # API 状态报告事件处理
+    def on_api_status_report(self, event: int, data: dict) -> None:
+        is_success = data.get("is_success", False)
+        force_switch = data.get("force_switch", False)
+        
+        if force_switch:
+            with self._api_error_lock:
+                self._switch_api()
+                self.global_consecutive_api_errors = 0
+            return
+
+        self.report_api_status(is_success)
+
+    def _gated_run(self, task):
+        """指挥中心：动态门禁控制"""
+        while True:
+            if Base.work_status == Base.STATUS.STOPING: return None
+            with self._concurrency_lock:
+                # 实时检查配置中的线程限制
+                if self._current_active < self.config.actual_thread_counts:
+                    self._current_active += 1
+                    break
+            time.sleep(0.5)
+        
+        try:
+            return task.start()
+        finally:
+            with self._concurrency_lock:
+                self._current_active -= 1
+
+    # API 状态上报与轮转逻辑
+    def report_api_status(self, is_success: bool) -> None:
+        if not self.config.enable_api_failover or not self.api_pipeline:
+            return
+
+        with self._api_error_lock:
+            if is_success:
+                if self.global_consecutive_api_errors > 0:
+                    self.global_consecutive_api_errors = 0
+            else:
+                self.global_consecutive_api_errors += 1
+                threshold = self.config.api_failover_threshold
+                if self.global_consecutive_api_errors >= threshold:
+                    self.warning(f"API consecutive errors ({self.global_consecutive_api_errors}) reached threshold ({threshold}). Switching API...")
+                    self._switch_api()
+                    self.global_consecutive_api_errors = 0
+
+    def _switch_api(self) -> None:
+        try:
+            if len(self.api_pipeline) <= 1:
+                self.warning("No backup APIs available in pool.")
+                return
+
+            # Rotate pipeline
+            self.current_api_index = (self.current_api_index + 1) % len(self.api_pipeline)
+            new_api = self.api_pipeline[self.current_api_index]
+            
+            self.print(f"[bold yellow]↺ Switching API to: {new_api}[/bold yellow]")
+            
+            # Update Config safely
+            # Note: TaskConfig is shared, but we need to ensure atomic update if possible
+            # Or just rely on Python's GIL for dict updates
+            if self.current_mode == TaskType.TRANSLATION:
+                self.config.api_settings["translate"] = new_api
+            elif self.current_mode == TaskType.POLISH:
+                self.config.api_settings["polish"] = new_api
+            
+            # Re-prepare configuration (updates base_url, keys, models, etc.)
+            self.config.prepare_for_translation(self.current_mode)
+            
+            # Update limiter with new limits
+            self.request_limiter.set_limit(self.config.tpm_limit, self.config.rpm_limit)
+            
+            self.info(f"Successfully switched to {new_api}. New Model: {self.config.model}")
+            
+        except Exception as e:
+            self.error(f"Failed to switch API: {e}")
 
     # 应用关闭事件
     def app_shut_down(self, event: int, data: dict) -> None:
@@ -170,19 +254,20 @@ class TaskExecutor(Base):
             # 配置请求限制器
             self.request_limiter.set_limit(self.config.tpm_limit, self.config.rpm_limit)
 
-            # 初开始翻译时，生成监控数据
-            if continue_status == False:
+            # --- 修复：确保总行数始终被正确初始化 ---
+            if continue_status == False or self.cache_manager.project.stats_data is None:
                 self.project_status_data = CacheProjectStatistics()
                 self.cache_manager.project.stats_data = self.project_status_data
-            # 继续翻译时加载存储的监控数据
+                self.project_status_data.total_line = self.cache_manager.get_item_count()
             else:
                 self.project_status_data = self.cache_manager.project.stats_data
+                self.project_status_data.total_line = self.cache_manager.get_item_count()
                 self.project_status_data.start_time = time.time() # 重置开始时间
                 self.project_status_data.total_completion_tokens = 0 # 重置完成的token数量
+            # ----------------------------------------------------------------
 
-            # 重新同步计数器以反映缓存的当前真实状态（未考虑到被过滤条目）    
-            
-            # 更新监控面板信息
+            # 初始同步一次数据到 UI，确保不会显示为 0/0
+            self.project_status_data.line = self.cache_manager.get_item_count_by_status(TranslationStatus.TRANSLATED)
             self.emit(Base.EVENT.TASK_UPDATE, self.project_status_data.to_dict())
 
             # 触发插件事件
@@ -214,12 +299,6 @@ class TaskExecutor(Base):
                     self.warning("已达到最大翻译轮次，仍有部分文本未翻译，请检查结果 ...")
                     self.print("")
                     break
-
-                # 第一轮时且不是继续翻译时，记录总行数
-                if current_round == 0 and continue_status == False:
-                    self.project_status_data.total_line = item_count_status_untranslated
-                    # 立即同步总行数到 UI
-                    self.emit(Base.EVENT.TASK_UPDATE, self.project_status_data.to_dict())
 
                 # 第二轮开始对半切分
                 if current_round > 0:
@@ -301,10 +380,10 @@ class TaskExecutor(Base):
                 time.sleep(3)
                 self.print("")
 
-                # 开始执行翻译任务,构建异步线程池
-                with concurrent.futures.ThreadPoolExecutor(max_workers = self.config.actual_thread_counts, thread_name_prefix = "translator") as executor:
+                # 开始执行翻译任务,构建异步线程池 (使用 100 高限额，由 gated_run 实际控制并发)
+                with concurrent.futures.ThreadPoolExecutor(max_workers = 100, thread_name_prefix = "translator") as executor:
                     for task in tasks_list:
-                        future = executor.submit(task.start)
+                        future = executor.submit(self._gated_run, task)
                         future.add_done_callback(self.task_done_callback)  # 为future对象添加一个回调函数，当任务完成时会被调用，更新数据
 
             # 等待可能存在的缓存文件写入请求处理完毕
@@ -391,15 +470,23 @@ class TaskExecutor(Base):
             # 配置请求限制器
             self.request_limiter.set_limit(self.config.tpm_limit, self.config.rpm_limit)
 
-            # 初开始任务时，生成监控数据
-            if continue_status == False:
+            # --- 修复：确保总行数始终被正确初始化 ---
+            if continue_status == False or self.cache_manager.project.stats_data is None:
                 self.project_status_data = CacheProjectStatistics()
                 self.cache_manager.project.stats_data = self.project_status_data
-            # 继续翻译时加载存储的监控数据
+                self.project_status_data.total_line = self.cache_manager.get_item_count()
             else:
                 self.project_status_data = self.cache_manager.project.stats_data
+                self.project_status_data.total_line = self.cache_manager.get_item_count()
                 self.project_status_data.start_time = time.time() # 重置开始时间
                 self.project_status_data.total_completion_tokens = 0 # 重置完成的token数量                  
+            # ----------------------------------------------------------------
+
+            # 更新初始进度
+            if self.config.polishing_mode_selection == "source_text_polish":
+                self.project_status_data.line = self.cache_manager.get_item_count_by_status(TranslationStatus.UNTRANSLATED)
+            else:
+                self.project_status_data.line = self.cache_manager.get_item_count_by_status(TranslationStatus.POLISHED)
 
             # 更新监控面板信息
             self.emit(Base.EVENT.TASK_UPDATE, self.project_status_data.to_dict())
@@ -505,10 +592,10 @@ class TaskExecutor(Base):
                 time.sleep(3)
                 self.print("")
 
-                # 开始执行润色务,构建异步线程池
-                with concurrent.futures.ThreadPoolExecutor(max_workers = self.config.actual_thread_counts, thread_name_prefix = "translator") as executor:
+                # 开始执行润色务,构建异步线程池 (使用 100 高限额，由 gated_run 实际控制并发)
+                with concurrent.futures.ThreadPoolExecutor(max_workers = 100, thread_name_prefix = "translator") as executor:
                     for task in tasks_list:
-                        future = executor.submit(task.start)
+                        future = executor.submit(self._gated_run, task)
                         future.add_done_callback(self.task_done_callback)  # 为future对象添加一个回调函数，当任务完成时会被调用，更新数据
 
             # 等待可能存在的缓存文件写入请求处理完毕
@@ -550,25 +637,6 @@ class TaskExecutor(Base):
         try:
             result = future.result()
 
-            if result is None or not result.get("check_result"):
-                self.consecutive_errors += 1
-            else:
-                self.consecutive_errors = 0
-
-            # Check for failover
-            if self.config.enable_api_failover and len(self.api_pipeline) > 1 and self.consecutive_errors >= self.config.api_failover_threshold:
-                self.current_api_index = (self.current_api_index + 1) % len(self.api_pipeline)
-                new_api = self.api_pipeline[self.current_api_index]
-                
-                self.warning(f"API failures reached threshold. Failing over to next API: {new_api}")
-                
-                if self.current_mode:
-                    self.config.api_settings["translate" if self.current_mode == TaskType.TRANSLATION else "polish"] = new_api
-                    self.config.prepare_for_translation(self.current_mode)
-                    self.info(f"Successfully switched to {new_api}. RPM/TPM limits updated.")
-                
-                self.consecutive_errors = 0
-
             if result is None or len(result) == 0:
                 return
 
@@ -589,4 +657,3 @@ class TaskExecutor(Base):
 
         except Exception as e:
             self.error(f"Task callback error: {e}", e if self.is_debug() else None)
-

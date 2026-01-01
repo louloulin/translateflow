@@ -25,6 +25,67 @@ class TaskConfig(Base):
         self.apikey_index = 0
         self.apikey_list = []
 
+        # --- 初始化默认属性以防止 AttributeError ---
+        
+        # 文本处理相关数据
+        self.pre_translation_data = {}
+        self.post_translation_data = {}
+        self.exclusion_list_data = [] 
+        self.auto_process_text_code_segment = False
+        self.pre_translation_switch = False
+        self.post_translation_switch = False
+        self.prompt_dictionary_switch = False
+        self.prompt_dictionary_data = []
+        self.exclusion_list_switch = False
+        self.characterization_switch = False
+        self.characterization_data = []
+        self.world_building_switch = False
+        self.world_building_content = ""
+        self.writing_style_switch = False
+        self.writing_style_content = ""
+        self.translation_example_switch = False
+        self.translation_example_data = []
+        self.few_shot_and_example_switch = False
+
+        # 故障转移配置
+        self.enable_api_failover = False
+        self.backup_apis = []
+        self.api_failover_threshold = 3
+
+        # 平台和 API 设置默认值
+        self.platforms = {}
+        self.api_settings = {}
+        self.translation_prompt_selection = {}
+        self.polishing_prompt_selection = {}
+        self.user_thread_counts = 0
+        self.auto_set_output_path = False
+        self.request_timeout = 60
+
+        # 响应检查相关设置
+        self.response_check_switch = {
+            'newline_character_count_check': False,
+            'return_to_original_text_check': False,
+            'residual_original_text_check': False,
+            'reply_format_check': False
+        }
+
+        # 文件输出相关设置
+        self.keep_original_encoding = True
+
+        # 翻译和润色相关设置
+        self.source_language = "ja"
+        self.target_language = "zh"
+        self.label_input_path = ""
+        self.label_output_path = ""
+        self.translated_output_path = ""
+        self.polishing_output_path = ""
+        
+        # 任务执行相关设置
+        self.enable_retry = True
+        self.retry_count = 3
+        self.enable_fast_translate = False
+        self.enable_line_breaks = False
+        self.line_breaks_style = 0
 
     def __repr__(self) -> str:
         return (
@@ -38,6 +99,42 @@ class TaskConfig(Base):
             if isinstance(v, __class__.TYPE_FILTER)
         }
 
+    # 修复：添加 get 方法以兼容字典操作，解决 AttributeError
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
+    # 从字典加载配置 (用于从外部传入配置)
+    def load_config_from_dict(self, config_dict: dict) -> None:
+        for key, value in config_dict.items():
+            if key == "response_check_switch" and isinstance(value, dict):
+                current_value = getattr(self, key, {})
+                if isinstance(current_value, dict):
+                    new_value = current_value.copy()
+                    new_value.update(value)
+                    setattr(self, key, new_value)
+                else:
+                    setattr(self, key, value)
+            elif key == "platforms" and isinstance(value, dict):
+                # 对于 platforms 字典，进行深度合并而不是完全覆盖
+                current_platforms = getattr(self, key, {})
+                if isinstance(current_platforms, dict):
+                    for platform_key, platform_value in value.items():
+                        if platform_key in current_platforms and isinstance(current_platforms[platform_key], dict) and isinstance(platform_value, dict):
+                            current_platforms[platform_key].update(platform_value)
+                        else:
+                            current_platforms[platform_key] = platform_value
+                    setattr(self, key, current_platforms)
+                else:
+                    setattr(self, key, value)
+            elif key == "api_settings" and isinstance(value, dict):
+                current_api_settings = getattr(self, key, {})
+                if isinstance(current_api_settings, dict):
+                    current_api_settings.update(value)
+                    setattr(self, key, current_api_settings)
+                else:
+                    setattr(self, key, value)
+            else:
+                setattr(self, key, value)
 
     def get_next_apikey(self) -> str:
         """
@@ -64,67 +161,69 @@ class TaskConfig(Base):
         # 读取配置文件
         config = self.load_config()
 
-        # 将字典中的每一项赋值到类中的同名属性
-        for key, value in config.items():
-            setattr(self, key, value)
-            
-        # Ensure default values for data to avoid AttributeErrors
-        defaults = {
-            'pre_translation_data': [],
-            'post_translation_data': [],
-            'exclusion_list_data': [],
-            'characterization_data': [],
-            'translation_example_data': [],
-            'prompt_dictionary_data': [],
-            
-            'pre_translation_switch': False,
-            'post_translation_switch': False,
-            'auto_process_text_code_segment': False,
-            'prompt_dictionary_switch': False,
-            'exclusion_list_switch': False,
-            'characterization_switch': False,
-            'world_building_switch': False,
-            'writing_style_switch': False,
-            'translation_example_switch': False,
-            'few_shot_and_example_switch': False,
-            'auto_set_output_path': False,
-            'response_conversion_toggle': False,
-            'response_check_switch': {
-                'newline_character_count_check': True,
-                'return_to_original_text_check': True,
-                'residual_original_text_check': True,
-                'reply_format_check': True
-            },
-            
-            'api_settings': {"translate": None, "polish": None},
-            'world_building_content': "",
-            'writing_style_content': "",
-            'pre_line_counts': 0,
-            'round_limit': 1,
-            'actual_thread_counts': 5,
-            'user_thread_counts': 0,
-            'request_timeout': 60,
-            'tpm_limit': 10000000,
-            'rpm_limit': 4096,
-            'lines_limit': 20,
-            'tokens_limit': 1500,
-            'tokens_limit_switch': False,
-            'translation_project': "AutoType",
-            'source_language': "auto",
-            'target_language': "chinese_simplified",
-            'output_filename_suffix': "_translated",
-            'bilingual_text_order': "translation_first",
-            'translation_prompt_selection': {"last_selected_id": "common", "prompt_content": ""},
-            'keep_original_encoding': True,
-            'cache_backup_limit': 10,
-            'enable_api_failover': False,
-            'api_failover_threshold': 10,
-            'backup_apis': [],
-        }
+        # 从Base类中获取当前profile配置
+        from ModuleFolders.Base.Base import Base
+        import os
+        import rapidjson as json
         
-        for key, default_value in defaults.items():
-            if not hasattr(self, key):
-                setattr(self, key, default_value)
+        # 尝试从当前profile配置中读取配置
+        profiles_dir = os.path.join(".", "Resource", "profiles")
+        active_profile_name = getattr(Base, 'active_profile_name', 'default') or 'default'
+        active_profile_path = os.path.join(profiles_dir, f"{active_profile_name}.json")
+        
+        if os.path.exists(active_profile_path):
+            try:
+                with open(active_profile_path, "r", encoding="utf-8") as reader:
+                    profile_config = json.load(reader)
+                # 将profile配置合并到当前配置中，优先级更高
+                for key, value in profile_config.items():
+                    config[key] = value
+            except Exception as e:
+                self.error(f"读取profile配置失败: {e}")
+
+        # 尝试加载预设平台配置
+        preset_path = os.path.join(".", "Resource", "platforms", "preset.json")
+        if os.path.exists(preset_path):
+            try:
+                with open(preset_path, "r", encoding="utf-8") as reader:
+                    preset_config = json.load(reader)
+                
+                # 将预设平台配置合并到当前配置中，但不覆盖已有的配置
+                preset_platforms = preset_config.get("platforms", {})
+                
+                # 如果当前配置中没有平台配置，则使用预设的
+                if "platforms" not in config or not config["platforms"]:
+                    config["platforms"] = preset_platforms
+                else:
+                    # 否则，只添加当前配置中不存在的预设平台
+                    for platform_key, platform_value in preset_platforms.items():
+                        if platform_key not in config["platforms"]:
+                            config["platforms"][platform_key] = platform_value
+            except Exception as e:
+                self.error(f"读取预设平台配置失败: {e}")
+
+        # 将字典中的每一项赋值到类中的同名属性
+        # 如果配置文件中有这些 key，会覆盖 __init__ 中的默认值
+        for key, value in config.items():
+            # 针对字典类型的配置进行合并而非直接覆盖，防止默认键值丢失
+            if key == "response_check_switch" and isinstance(value, dict):
+                current_value = getattr(self, key, {})
+                if isinstance(current_value, dict):
+                    # 创建副本以避免修改类属性默认值（如果有共享引用）
+                    new_value = current_value.copy()
+                    new_value.update(value)
+                    setattr(self, key, new_value)
+                else:
+                    setattr(self, key, value)
+            else:
+                setattr(self, key, value)
+        
+        # 确保关键配置有合理的默认值，防止因配置文件缺失导致逻辑错误
+        if not hasattr(self, 'request_timeout') or self.request_timeout <= 0:
+            self.request_timeout = 60
+            
+        if not hasattr(self, 'actual_thread_counts') or self.actual_thread_counts <= 0:
+            self.actual_thread_counts = 3
 
     # API_URL 自动处理方法
     def process_api_url(self, raw_url: str, target_platform: str, auto_complete: bool) -> str:
@@ -145,8 +244,7 @@ class TaskConfig(Base):
 
         # 3. 自动补全 /v1 逻辑
         # 某些平台强制补全，或者配置开启了 auto_complete
-        # Remove forced auto-complete for local platforms to allow custom paths (e.g. root)
-        should_auto_complete = auto_complete
+        should_auto_complete = (target_platform in ["sakura", "LocalLLM"]) or auto_complete
 
         if should_auto_complete:
             version_suffixes = ["/v1", "/v2", "/v3", "/v4", "/v5", "/v6"]
@@ -172,24 +270,7 @@ class TaskConfig(Base):
             raise ValueError(f"当前配置文件中未设置 {mode} 的目标平台，请重新检查接口管理页面，是否设置了执行任务的接口。")
 
         # 获取模型类型
-        platform_info = self.platforms.get(self.target_platform, {})
-        # Try to get 'model' (single) or first from 'models' (list)
-        # Also respect existing self.model if it seems valid for this platform (simplification: just use platform config)
-        if "model" in platform_info:
-            self.model = platform_info["model"]
-        elif "models" in platform_info and isinstance(platform_info["models"], list) and len(platform_info["models"]) > 0:
-            # If self.model is already set (from root config) and valid, keep it?
-            # But usually we want to ensure we get a valid one for the platform.
-            # Let's fallback to the first model in the list if self.model is None or not in the list?
-            # For simplicity and safety, just pick the first one if 'model' key is missing.
-            # However, if user selected a specific model in GUI/CLI, it's stored in root "model".
-            # We should probably trust root "model" if it's not empty.
-            if not self.model: 
-                self.model = platform_info["models"][0]
-        
-        # Fallback if still None
-        if self.model is None:
-             self.model = "gpt-3.5-turbo" # Default fallback
+        self.model = self.platforms.get(self.target_platform).get("model")
 
         # 分割密钥字符串
         api_key = self.platforms.get(self.target_platform).get("api_key")
@@ -201,9 +282,7 @@ class TaskConfig(Base):
             self.apikey_index = 0
 
         # 处理 API URL 和限额
-        raw_url = self.platforms.get(self.target_platform).get("api_url", "")
-        if not raw_url:
-            raw_url = self.platforms.get(self.target_platform).get("url", "")
+        raw_url = self.platforms.get(self.target_platform).get("url", "")
         auto_complete_setting = self.platforms.get(self.target_platform).get("auto_complete", False)
         
         self.base_url = self.process_api_url(raw_url, self.target_platform, auto_complete_setting)
@@ -248,7 +327,7 @@ class TaskConfig(Base):
 
         # 如果是本地类接口，尝试访问slots数
         elif target_platform in ("sakura","LocalLLM"):
-            num = self.get_llama_cpp_slots_num(self.base_url)
+            num = self.get_llama_cpp_slots_num(self.platforms.get(target_platform).get("api_url"))
             actual_thread_counts = num if num > 0 else 4
             self.info(f"根据 llama.cpp 接口信息，自动设置同时执行的翻译任务数量为 {actual_thread_counts} 个 ...")
 
@@ -341,7 +420,5 @@ class TaskConfig(Base):
             "think_depth": think_depth,
             "thinking_budget": thinking_budget
         }
-
-
 
         return params
