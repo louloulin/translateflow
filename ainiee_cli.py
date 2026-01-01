@@ -101,16 +101,19 @@ class TaskUI:
             expand=True
         )
         self.task_id = self.progress.add_task("", total=100, action=i18n.get('label_initializing'))
+        
+        # 初始化用于组合的文本组件
         self.stats_text = Text("Waiting for data...", style="cyan")
+        self.current_status_key = 'label_status_normal' # 存储当前状态的 i18n 键
+        self.current_status_color = 'green' # 存储当前状态的颜色
+        self.current_border_color = "green" # 存储当前边框颜色
+
         self.layout = Layout()
         self.layout.split(Layout(name="upper", ratio=4, minimum_size=10), Layout(name="lower", size=6))
         
-        # 分离组件以确保渲染顺序
-        self.shortcuts_text = Text(i18n.get('label_shortcuts'), style="cyan")
-        self.status_text = Text(i18n.get('label_status_normal'), style="green")
-        
-        self.panel_group = Group(self.progress, self.stats_text, self.shortcuts_text, self.status_text)
-        self.layout["lower"].update(Panel(self.panel_group, title="Progress & Stats", border_style="green"))
+        # panel_group 只包含 progress 和 stats_text，因为 stats_text 会组合所有底部文本
+        self.panel_group = Group(self.progress, self.stats_text)
+        self.layout["lower"].update(Panel(self.panel_group, title="Progress & Stats", border_style=self.current_border_color))
 
     def update_status(self, event, data):
         status = data.get("status", "normal")
@@ -122,13 +125,13 @@ class TaskUI:
             "error": "label_status_error"
         }
         
-        color = color_map.get(status, "green")
-        status_key = status_key_map.get(status, "label_status_normal")
-        
-        self.status_text = Text(i18n.get(status_key), style=color)
-        self.panel_group = Group(self.progress, self.stats_text, self.shortcuts_text, self.status_text)
-        self.layout["lower"].update(Panel(self.panel_group, title="Progress & Stats", border_style=color))
-
+        # 只更新内部状态，不直接操作 UI 渲染
+        self.current_status_key = status_key_map.get(status, "label_status_normal")
+        self.current_status_color = color_map.get(status, "green")
+        self.current_border_color = self.current_status_color # 更新当前边框颜色
+        # 触发一次进度更新以确保 UI 刷新，但只传递必要参数
+        # update_progress 负责从 self.current_status_key 和 self.current_status_color 构建完整文本
+        self.update_progress(None, data)
 
     def log(self, msg):
         # 拦截 [STATUS] 消息，防止其污染日志和刷新 Action
@@ -179,18 +182,19 @@ class TaskUI:
         tpm_str = f"{(tpm_k * 1000):.0f}" if is_local else f"{tpm_k:.2f}k"
         token_display = f"{tokens}"
 
-        # 移除快捷键，它现在是独立组件
+        # 组合所有底部文本：统计信息 + 快捷键 + 系统状态
         stats_markup = (
             f"File: [bold]{current_file}[/]\n"
-            f"RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/] | Tokens: [bold]{token_display}[/] | Lines: [bold]{completed}/{total}[/]"
+            f"RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/] | Tokens: [bold]{token_display}[/] | Lines: [bold]{completed}/{total}[/]\n"
+            f"{i18n.get('label_shortcuts')} | [{self.current_status_color}]{i18n.get(self.current_status_key)}[/{self.current_status_color}]"
         )
         self.stats_text = Text.from_markup(stats_markup, style="cyan")
         
-        # 重新组合所有组件
-        self.panel_group = Group(self.progress, self.stats_text, self.shortcuts_text, self.status_text)
+        # panel_group 现在只包含 progress 和 stats_text
+        self.panel_group = Group(self.progress, self.stats_text)
         
-        current_border_color = "red" if "red" in str(self.status_text.style) else "yellow" if "yellow" in str(self.status_text.style) else "green"
-        self.layout["lower"].update(Panel(self.panel_group, title="Progress & Stats", border_style=current_border_color))
+        # 使用 self.current_border_color 来保持边框颜色一致性
+        self.layout["lower"].update(Panel(self.panel_group, title="Progress & Stats", border_style=self.current_border_color))
         # 使用固定的 Action 文本防止抖动
         self.progress.update(self.task_id, total=total, completed=completed, action=i18n.get('label_processing'))
 
