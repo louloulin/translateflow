@@ -49,6 +49,7 @@ from ModuleFolders.Domain.FileReader.FileReader import FileReader
 from ModuleFolders.Domain.FileOutputer.FileOutputer import FileOutputer
 from ModuleFolders.Service.SimpleExecutor.SimpleExecutor import SimpleExecutor
 from ModuleFolders.Service.TaskExecutor.TaskExecutor import TaskExecutor
+from ModuleFolders.Infrastructure.Update.UpdateManager import UpdateManager
 from ModuleFolders.Infrastructure.TaskConfig.TaskType import TaskType
 from ModuleFolders.Infrastructure.TaskConfig.TaskConfig import TaskConfig
 from ModuleFolders.Service.HttpService.HttpService import HttpService
@@ -225,6 +226,7 @@ class CLIMenu:
         self.simple_executor = SimpleExecutor()
         self.task_executor = TaskExecutor(self.plugin_manager, self.cache_manager, self.file_reader, self.file_outputer)
         self.file_selector = FileSelector(i18n)
+        self.update_manager = UpdateManager(i18n)
         
         # 输入监听器
         self.input_listener = InputListener()
@@ -477,21 +479,49 @@ class CLIMenu:
         else:
             sys.exit(0)
     def display_banner(self):
+        # 获取版本号
+        v_str = "V0.0.0"
+        try:
+            v_path = os.path.join(PROJECT_ROOT, "Resource", "Version", "version.json")
+            if os.path.exists(v_path):
+                with open(v_path, 'r', encoding='utf-8') as f:
+                    v_data = json.load(f)
+                    v_full = v_data.get("version", "")
+                    if 'V' in v_full: v_str = "V" + v_full.split('V')[-1].strip()
+        except: pass
+
         profile_display = f"[bold yellow]({self.active_profile_name})[/bold yellow]"
         console.clear()
-        console.print(Panel.fit(f"[bold cyan]AiNiee CLI[/bold cyan] {profile_display}\nGUI Original: By NEKOparapa\nCLI Version: By ShadowLoveElysia\nLang: {current_lang}", title="Welcome"))
+        console.print(Panel.fit(f"[bold cyan]AiNiee CLI[/bold cyan] [bold green]{v_str}[/bold green] {profile_display}\nGUI Original: By NEKOparapa\nCLI Version: By ShadowLoveElysia\nLang: {current_lang}", title="Welcome"))
 
     def main_menu(self):
         if "interface_language" not in self.config: self.first_time_lang_setup()
+
+        # 启动时自动检查更新
+        if self.config.get("enable_auto_update", False):
+            self.update_manager.check_update(silent=True)
+
         while True:
             self.display_banner()
             table = Table(show_header=False, box=None)
-            menus, colors = ["start_translation", "start_polishing", "export_only", "settings", "api_settings", "glossary", "profiles"], ["green", "green", "magenta", "blue", "blue", "yellow", "cyan"]
+            menus, colors = ["start_translation", "start_polishing", "export_only", "settings", "api_settings", "glossary", "profiles", "update"], ["green", "green", "magenta", "blue", "blue", "yellow", "cyan", "dim"]
             for i, (m, c) in enumerate(zip(menus, colors)): table.add_row(f"[{c}]{i+1}.[/]", i18n.get(f"menu_{m}"))
             table.add_row("[red]0.[/]", i18n.get("menu_exit")); console.print(table)
             choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(len(menus) + 1)], show_choices=False)
             console.print("\n")
-            [sys.exit, lambda: self.run_task(TaskType.TRANSLATION), lambda: self.run_task(TaskType.POLISH), self.run_export_only, self.settings_menu, self.api_settings_menu, self.prompt_menu, self.profiles_menu][choice]()
+            
+            actions = [
+                sys.exit, 
+                lambda: self.run_task(TaskType.TRANSLATION), 
+                lambda: self.run_task(TaskType.POLISH), 
+                self.run_export_only, 
+                self.settings_menu, 
+                self.api_settings_menu, 
+                self.prompt_menu, 
+                self.profiles_menu,
+                self.update_manager.start_update
+            ]
+            actions[choice]()
 
     def profiles_menu(self):
         while True:
@@ -639,17 +669,18 @@ class CLIMenu:
             table.add_row("17", i18n.get("setting_enable_retry"), "[green]ON[/]" if self.config.get("enable_retry", True) else "[red]OFF[/]")
             table.add_row("18", i18n.get("setting_enable_smart_round_limit"), "[green]ON[/]" if self.config.get("enable_smart_round_limit", False) else "[red]OFF[/]")
             table.add_row("19", i18n.get("setting_response_conversion_toggle"), "[green]ON[/]" if self.config.get("response_conversion_toggle", False) else "[red]OFF[/]")
+            table.add_row("20", i18n.get("setting_auto_update"), "[green]ON[/]" if self.config.get("enable_auto_update", False) else "[red]OFF[/]")
 
             table.add_section()
             # --- Section 3: Sub-menus & Advanced ---
-            table.add_row("20", i18n.get("setting_project_type"), self.config.get("translation_project", "AutoType"))
-            table.add_row("21", i18n.get("setting_trans_mode"), f"{limit_mode_str} ({self.config.get(limit_val_key, 20)})")
-            table.add_row("22", i18n.get("menu_api_pool_settings"), f"[cyan]{len(self.config.get('backup_apis', []))} APIs[/]")
-            table.add_row("23", i18n.get("menu_prompt_features"), "...")
-            table.add_row("24", i18n.get("menu_response_checks"), "...")
+            table.add_row("21", i18n.get("setting_project_type"), self.config.get("translation_project", "AutoType"))
+            table.add_row("22", i18n.get("setting_trans_mode"), f"{limit_mode_str} ({self.config.get(limit_val_key, 20)})")
+            table.add_row("23", i18n.get("menu_api_pool_settings"), f"[cyan]{len(self.config.get('backup_apis', []))} APIs[/]")
+            table.add_row("24", i18n.get("menu_prompt_features"), "...")
+            table.add_row("25", i18n.get("menu_response_checks"), "...")
 
             console.print(table); console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
-            choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(25)], show_choices=False)
+            choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(26)], show_choices=False)
             console.print("\n")
 
             if choice == 0: break
@@ -676,13 +707,14 @@ class CLIMenu:
             elif choice == 17: self.config["enable_retry"] = not self.config.get("enable_retry", True)
             elif choice == 18: self.config["enable_smart_round_limit"] = not self.config.get("enable_smart_round_limit", False)
             elif choice == 19: self.config["response_conversion_toggle"] = not self.config.get("response_conversion_toggle", False)
+            elif choice == 20: self.config["enable_auto_update"] = not self.config.get("enable_auto_update", False)
 
             # Section 3
-            elif choice == 20: self.project_type_menu()
-            elif choice == 21: self.trans_mode_menu()
-            elif choice == 22: self.api_pool_menu()
-            elif choice == 23: self.prompt_features_menu()
-            elif choice == 24: self.response_checks_menu()
+            elif choice == 21: self.project_type_menu()
+            elif choice == 22: self.trans_mode_menu()
+            elif choice == 23: self.api_pool_menu()
+            elif choice == 24: self.prompt_features_menu()
+            elif choice == 25: self.response_checks_menu()
 
             self.save_config()
 

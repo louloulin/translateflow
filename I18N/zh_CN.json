@@ -214,5 +214,8 @@
     "msg_epub_reuse": "[green]检测到已转换的临时 EPUB: {}，将直接使用。[/green]",
     "msg_epub_conv_start": "[cyan]未发现缓存，正在为 {} 启动转换中间件...[/cyan]",
     "msg_epub_conv_success": "[green]转换成功: {}[/green]",
-    "msg_epub_conv_fail": "[bold red]中间件错误: {}[/bold red]"
-}
+        "msg_epub_conv_fail": "[bold red]中间件错误: {}[/bold red]",
+        "menu_update": "检查并更新软件",
+        "setting_auto_update": "开启启动时自动检查更新"
+    }
+    

@@ -204,5 +204,8 @@
     "msg_epub_reuse": "[green]変換済みの一時 EPUB が見つかりました: {}。これを直接使用します。[/green]",
     "msg_epub_conv_start": "[cyan]キャッシュが見つかりません。{} の変換ミドルウェアを起動しています...[/cyan]",
     "msg_epub_conv_success": "[green]変換成功: {}[/green]",
-    "msg_epub_conv_fail": "[bold red]ミドルウェアエラー: {}[/bold red]"
-}
+        "msg_epub_conv_fail": "[bold red]ミドルウェアエラー: {}[/bold red]",
+        "menu_update": "アップデートを確認",
+        "setting_auto_update": "起動時に自動的にアップデートを確認する"
+    }
+    

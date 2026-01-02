@@ -213,5 +213,8 @@
     "msg_epub_reuse": "[green]Detected converted EPUB: {}. Using it directly.[/green]",
     "msg_epub_conv_start": "[cyan]Cache not found, calling conversion middleware for {}...[/cyan]",
     "msg_epub_conv_success": "[green]Conversion successful: {}[/green]",
-    "msg_epub_conv_fail": "[bold red]Middleware Error: {}[/bold red]"
-}
+        "msg_epub_conv_fail": "[bold red]Middleware Error: {}[/bold red]",
+        "menu_update": "Check for Updates",
+        "setting_auto_update": "Auto-check for updates on startup"
+    }
+    
