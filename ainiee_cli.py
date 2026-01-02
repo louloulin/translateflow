@@ -1226,25 +1226,35 @@ class CLIMenu:
                 
                 if original_ext in middleware_exts:
                     is_middleware_converted = True
-                    self.ui.log(f"[cyan]Detected {original_ext} format, calling conversion middleware...[/cyan]")
-                    temp_conv_dir = os.path.join(os.path.dirname(target_path), "temp_conv")
-                    os.makedirs(temp_conv_dir, exist_ok=True)
                     base_name = os.path.splitext(os.path.basename(target_path))[0]
-                    conv_script = os.path.join(PROJECT_ROOT, "批量电子书整合.py")
-                    cmd = f'uv run "{conv_script}" -p "{target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name}"'
-                    try:
-                        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-                        if result.returncode == 0:
-                            epubs = [f for f in os.listdir(temp_conv_dir) if f.endswith(".epub")]
-                            if epubs:
-                                new_path = os.path.join(temp_conv_dir, epubs[0])
-                                self.ui.log(f"[green]Conversion successful: {os.path.basename(new_path)}[/green]")
-                                target_path = new_path
-                            else: raise Exception("No EPUB found")
-                        else: raise Exception(f"Conversion failed: {result.stderr}")
-                    except Exception as e:
-                        self.ui.log(f"[bold red]Middleware Error: {e}[/bold red]")
-                        time.sleep(2); return 
+                    # 确保输出目录和临时转换文件夹已创建
+                    os.makedirs(opath, exist_ok=True)
+                    temp_conv_dir = os.path.join(opath, "temp_conv")
+                    
+                    # 逻辑优化：只要临时 EPUB 存在且有效，就跳过转换
+                    potential_epub = os.path.join(temp_conv_dir, f"{base_name}.epub")
+                    if os.path.exists(potential_epub) and os.path.getsize(potential_epub) > 0:
+                        self.ui.log(i18n.get("msg_epub_reuse").format(os.path.basename(potential_epub)))
+                        target_path = potential_epub
+                    else:
+                        self.ui.log(i18n.get("msg_epub_conv_start").format(original_ext))
+                        os.makedirs(temp_conv_dir, exist_ok=True)
+                        conv_script = os.path.join(PROJECT_ROOT, "批量电子书整合.py")
+                        # 增加 --AiNiee 参数以抑制版权信息写入
+                        cmd = f'uv run "{conv_script}" -p "{target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name}" --AiNiee'
+                        try:
+                            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                            if result.returncode == 0:
+                                epubs = [f for f in os.listdir(temp_conv_dir) if f.endswith(".epub")]
+                                if epubs:
+                                    new_path = os.path.join(temp_conv_dir, epubs[0])
+                                    self.ui.log(i18n.get("msg_epub_conv_success").format(os.path.basename(new_path)))
+                                    target_path = new_path
+                                else: raise Exception("No EPUB found")
+                            else: raise Exception(f"Conversion failed: {result.stderr}")
+                        except Exception as e:
+                            self.ui.log(i18n.get("msg_epub_conv_fail").format(e))
+                            time.sleep(2); return 
                 
                 # --- 1. 文件与缓存加载 ---
                 try:
@@ -1329,6 +1339,7 @@ class CLIMenu:
             EventManager.get_singleton().unsubscribe(Base.EVENT.TASK_STOP_DONE, on_stop)
             EventManager.get_singleton().unsubscribe(Base.EVENT.TASK_UPDATE, self.ui.update_progress)
             EventManager.get_singleton().unsubscribe(Base.EVENT.TASK_UPDATE, track_last_data)
+            EventManager.get_singleton().unsubscribe(Base.EVENT.SYSTEM_STATUS_UPDATE, self.ui.update_status)
             
             if success.is_set():
                 if self.config.get("enable_task_notification", True):
@@ -1343,9 +1354,9 @@ class CLIMenu:
                 report_table.add_row(f"[cyan]{i18n.get('label_report_total_time')}:[/]", f"[bold]{duration:.1f}s[/]")
                 console.print("\n"); console.print(Panel(report_table, title=f"[bold green]✓ {i18n.get('msg_task_report_title')}[/bold green]", expand=False))
 
-            if is_middleware_converted:
+            if success.is_set() and is_middleware_converted:
                 try:
-                    temp_dir = os.path.join(os.path.dirname(os.path.abspath(target_path)), "temp_conv")
+                    temp_dir = os.path.join(opath, "temp_conv")
                     if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
                 except: pass
             
@@ -1365,7 +1376,7 @@ class CLIMenu:
                          # We need to map back to original ext.
                          # Simplified: Just run the restore command
                          conv_script = os.path.join(PROJECT_ROOT, "批量电子书整合.py")
-                         cmd = f'uv run "{conv_script}" -p "{target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name}"'
+                         cmd = f'uv run "{conv_script}" -p "{target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name} --AiNiee"'
                          # Actually the restore logic in original code was complex mapping.
                          # For now, let's skip complex restoration to keep it safe or just log.
                          self.ui.log("[dim]Auto-restore skipped in new architecture (manual restore recommended if needed).[/dim]")

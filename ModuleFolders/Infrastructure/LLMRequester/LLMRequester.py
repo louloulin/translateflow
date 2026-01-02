@@ -22,6 +22,11 @@ class LLMRequester():
         backoff_delay = 2 # Initial 2s delay
         
         while current_retry < max_retries:
+            # 检查停止信号
+            from ModuleFolders.Base.Base import Base
+            if Base.work_status == Base.STATUS.STOPING:
+                return True, "STOPPED", "Task stopped by user", 0, 0
+
             # 获取平台参数
             target_platform = platform_config.get("target_platform")
             api_format = platform_config.get("api_format")
@@ -89,6 +94,8 @@ class LLMRequester():
             
             current_retry += 1
             if current_retry < max_retries:
+                if Base.work_status == Base.STATUS.STOPING:
+                    return True, "STOPPED", "Task stopped by user", 0, 0
                 import time
                 from rich import print
                 print(f"[[yellow]RETRY[/]] Request failed. Retrying in {backoff_delay}s... ({current_retry}/{max_retries-1})")

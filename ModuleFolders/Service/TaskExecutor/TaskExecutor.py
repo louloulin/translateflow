@@ -53,6 +53,7 @@ class TaskExecutor(Base):
         # Concurrency Control for Mission Control
         self._concurrency_lock = threading.Lock()
         self._current_active = 0
+        self.executor = None
 
     # API 状态报告事件处理
     def on_api_status_report(self, event: int, data: dict) -> None:
@@ -78,6 +79,10 @@ class TaskExecutor(Base):
                     break
             time.sleep(0.5)
         
+        if Base.work_status == Base.STATUS.STOPING:
+            with self._concurrency_lock: self._current_active -= 1
+            return {}
+
         try:
             return task.start()
         finally:
@@ -193,11 +198,21 @@ class TaskExecutor(Base):
     def task_stop(self, event: int, data: dict) -> None:
         # 设置运行状态为停止中
         Base.work_status = Base.STATUS.STOPING
+        
+        # 如果存在执行器，尝试停止接收新任务
+        if self.executor:
+            try:
+                self.executor.shutdown(wait=False)
+            except: pass
 
         def target() -> None:
+            # 增加超时退出机制，防止死锁
+            start_wait = time.time()
             while True:
                 time.sleep(0.5)
-                if Base.work_status == Base.STATUS.TASKSTOPPED:
+                if Base.work_status == Base.STATUS.TASKSTOPPED or time.time() - start_wait > 30:
+                    if Base.work_status != Base.STATUS.TASKSTOPPED:
+                         Base.work_status = Base.STATUS.TASKSTOPPED
                     self.print("")
                     self.info("翻译任务已停止 ...")
                     self.print("")
@@ -205,10 +220,15 @@ class TaskExecutor(Base):
                     break
 
         # 子线程循环检测停止状态
-        threading.Thread(target = target).start()
+        threading.Thread(target = target, daemon=True).start()
 
     # 任务开始事件
     def task_start(self, event: int, data: dict) -> None:
+        # 如果正在停止中，不接受新任务
+        if Base.work_status == Base.STATUS.STOPING:
+            self.warning("系统正在停止中，无法开始新任务。")
+            return
+
         # 获取配置信息
         continue_status = data.get("continue_status")
         current_mode = data.get("current_mode")
@@ -241,9 +261,6 @@ class TaskExecutor(Base):
         try:
             # 设置翻译状态为正在翻译状态
             Base.work_status = Base.STATUS.TASKING
-
-            # 读取配置文件，并保存到该类中
-            self.config.initialize()
 
             # Initialize failover before preparing translation
             self._initialize_failover()
@@ -294,11 +311,18 @@ class TaskExecutor(Base):
                     break
 
                 # 达到最大翻译轮次时
-                if item_count_status_untranslated > 0 and current_round == self.config.round_limit:
-                    self.print("")
-                    self.warning("已达到最大翻译轮次，仍有部分文本未翻译，请检查结果 ...")
-                    self.print("")
-                    break
+                if item_count_status_untranslated > 0:
+                    if self.config.enable_smart_round_limit and current_round == self.config.round_limit:
+                        # 动态增加 round_limit
+                        self.config.round_limit = int(self.config.round_limit * self.config.smart_round_limit_multiplier)
+                        self.warning(f"已达到最大翻译轮次，但仍有未翻译文本。智能轮次限制已将最大轮次增加到 {self.config.round_limit} ...")
+                        # 不中断循环，继续进行翻译
+                    elif not self.config.enable_smart_round_limit and current_round == self.config.round_limit:
+                        self.print("")
+                        self.warning("已达到最大翻译轮次，仍有部分文本未翻译，请检查结果 ...")
+                        self.print("")
+                        break
+
 
                 # 第二轮开始对半切分
                 if current_round > 0:
@@ -381,10 +405,15 @@ class TaskExecutor(Base):
                 self.print("")
 
                 # 开始执行翻译任务,构建异步线程池 (使用 100 高限额，由 gated_run 实际控制并发)
-                with concurrent.futures.ThreadPoolExecutor(max_workers = 100, thread_name_prefix = "translator") as executor:
-                    for task in tasks_list:
-                        future = executor.submit(self._gated_run, task)
-                        future.add_done_callback(self.task_done_callback)  # 为future对象添加一个回调函数，当任务完成时会被调用，更新数据
+                self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 100, thread_name_prefix = "translator")
+                try:
+                    with self.executor as executor:
+                        for task in tasks_list:
+                            if Base.work_status == Base.STATUS.STOPING: break
+                            future = executor.submit(self._gated_run, task)
+                            future.add_done_callback(self.task_done_callback)  # 为future对象添加一个回调函数，当任务完成时会被调用，更新数据
+                finally:
+                    self.executor = None
 
             # 等待可能存在的缓存文件写入请求处理完毕
             time.sleep(CacheManager.SAVE_INTERVAL)
@@ -456,13 +485,11 @@ class TaskExecutor(Base):
                 self.info(f"API Failover enabled. Pipeline: {' -> '.join(self.api_pipeline)}")
 
     # 润色主流程
-    def polish_start_target(self, continue_status: bool) -> None:
+    def polish_start_target(self, continue_status: bool, silent: bool = False) -> None:
         try:
             # 设置翻译状态为正在翻译状态
             Base.work_status = Base.STATUS.TASKING
 
-            # 读取配置文件，并保存到该类中
-            self.config.initialize()
 
             # 配置翻译平台信息
             self.config.prepare_for_translation(TaskType.POLISH)
@@ -512,17 +539,25 @@ class TaskExecutor(Base):
 
                 # 判断是否需要继续润色
                 if item_count_status_unpolishd == 0:
-                    self.print("")
-                    self.info("所有文本均已润色，润色任务已结束 ...")
-                    self.print("")
+                    if not silent:
+                        self.print("")
+                        self.info("所有文本均已润色，润色任务已结束 ...")
+                        self.print("")
                     break
 
                 # 达到最大任务轮次时
-                if item_count_status_unpolishd > 0 and current_round == self.config.round_limit:
-                    self.print("")
-                    self.warning("已达到最大任务轮次，仍有部分文本未翻译，请检查结果 ...")
-                    self.print("")
-                    break
+                if item_count_status_unpolishd > 0:
+                    if self.config.enable_smart_round_limit and current_round == self.config.round_limit:
+                        # 动态增加 round_limit
+                        self.config.round_limit = int(self.config.round_limit * self.config.smart_round_limit_multiplier)
+                        self.warning(f"已达到最大任务轮次，但仍有未润色文本。智能轮次限制已将最大轮次增加到 {self.config.round_limit} ...")
+                        # 不中断循环，继续进行润色
+                    elif not self.config.enable_smart_round_limit and current_round == self.config.round_limit:
+                        self.print("")
+                        self.warning("已达到最大任务轮次，仍有部分文本未翻译，请检查结果 ...")
+                        self.print("")
+                        break
+
 
                 # 第一轮时且不是继续润色时，记录总行数
                 if current_round == 0 and continue_status == False:
@@ -553,8 +588,9 @@ class TaskExecutor(Base):
 
                 # 生成润色任务合集列表
                 tasks_list = []
-                self.print("")
-                self.info(f"正在生成润色任务 ...")
+                if not silent:
+                    self.print("")
+                    self.info(f"正在生成润色任务 ...")
                 for i, (chunk, previous_chunk, file_path) in enumerate(zip(chunks, previous_chunks, file_paths), 1):
                     task = PolisherTask(self.config, self.plugin_manager, self.request_limiter)  # 实例化
                     task.task_id = f"{current_round + 1:02d}-{i:03d}"
@@ -562,41 +598,48 @@ class TaskExecutor(Base):
                     task.set_previous_items(previous_chunk)  # 传入该任务待润色文的上文
                     task.prepare()  # 预先构建消息列表
                     tasks_list.append(task)
-                self.info(f"已经生成全部润色任务 ...")
-                self.print("")
+                
+                if not silent:
+                    self.info(f"已经生成全部润色任务 ...")
+                    self.print("")
 
-                # 输出开始翻译的日志
-                self.print("")
-                self.info(f"当前轮次 - {current_round + 1}")
-                self.info(f"最大轮次 - {self.config.round_limit}")
-                self.info(f"项目类型 - {self.config.translation_project}")
-                self.print("")
-                self.info(f"接口名称 - {self.config.platforms.get(self.config.target_platform, {}).get("name", "未知")}")
-                self.info(f"接口地址 - {self.config.base_url}")
-                self.info(f"模型名称 - {self.config.model}")
-                self.print("")
-                self.info(f"RPM 限额 - {self.config.rpm_limit}")
-                self.info(f"TPM 限额 - {self.config.tpm_limit}")
+                    # 输出开始翻译的日志
+                    self.print("")
+                    self.info(f"当前轮次 - {current_round + 1}")
+                    self.info(f"最大轮次 - {self.config.round_limit}")
+                    self.info(f"项目类型 - {self.config.translation_project}")
+                    self.print("")
+                    self.info(f"接口名称 - {self.config.platforms.get(self.config.target_platform, {}).get("name", "未知")}")
+                    self.info(f"接口地址 - {self.config.base_url}")
+                    self.info(f"模型名称 - {self.config.model}")
+                    self.print("")
+                    self.info(f"RPM 限额 - {self.config.rpm_limit}")
+                    self.info(f"TPM 限额 - {self.config.tpm_limit}")
 
-                # 根据提示词规则打印基础指令
-                system = ""
-                if self.config.polishing_prompt_selection["last_selected_id"] == PromptBuilderEnum.POLISH_COMMON:
-                    system = PromptBuilderPolishing.build_system(self.config)
-                else:
-                    system = self.config.polishing_prompt_selection["prompt_content"]
-                self.print("")
-                if system:
-                    self.info(f"本次任务使用以下基础提示词：\n{system}\n") 
+                    # 根据提示词规则打印基础指令
+                    system = ""
+                    if self.config.polishing_prompt_selection["last_selected_id"] == PromptBuilderEnum.POLISH_COMMON:
+                        system = PromptBuilderPolishing.build_system(self.config)
+                    else:
+                        system = self.config.polishing_prompt_selection["prompt_content"]
+                    self.print("")
+                    if system:
+                        self.info(f"本次任务使用以下基础提示词：\n{system}\n") 
 
-                self.info(f"即将开始执行润色任务，预计任务总数为 {len(tasks_list)}, 同时执行的任务数量为 {self.config.actual_thread_counts}，请注意保持网络通畅 ...")
-                time.sleep(3)
-                self.print("")
+                    self.info(f"即将开始执行润色任务，预计任务总数为 {len(tasks_list)}, 同时执行的任务数量为 {self.config.actual_thread_counts}，请注意保持网络通畅 ...")
+                    time.sleep(3)
+                    self.print("")
 
                 # 开始执行润色务,构建异步线程池 (使用 100 高限额，由 gated_run 实际控制并发)
-                with concurrent.futures.ThreadPoolExecutor(max_workers = 100, thread_name_prefix = "translator") as executor:
-                    for task in tasks_list:
-                        future = executor.submit(self._gated_run, task)
-                        future.add_done_callback(self.task_done_callback)  # 为future对象添加一个回调函数，当任务完成时会被调用，更新数据
+                self.executor = concurrent.futures.ThreadPoolExecutor(max_workers = 100, thread_name_prefix = "translator")
+                try:
+                    with self.executor as executor:
+                        for task in tasks_list:
+                            if Base.work_status == Base.STATUS.STOPING: break
+                            future = executor.submit(self._gated_run, task)
+                            future.add_done_callback(self.task_done_callback)  # 为future对象添加一个回调函数，当任务完成时会被调用，更新数据
+                finally:
+                    self.executor = None
 
             # 等待可能存在的缓存文件写入请求处理完毕
             time.sleep(CacheManager.SAVE_INTERVAL)

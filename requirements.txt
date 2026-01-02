@@ -25,6 +25,9 @@ tqdm
 jaconv
 python-rapidjson
 protobuf==4.25.7
+EbookLib
+natsort
+Pillow
 # 获取iso语言代码对应的友好名称
 language-data
 langcodes

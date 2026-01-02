@@ -113,7 +113,11 @@ class OpenaiRequester(Base):
             if any(k in error_str for k in api_error_keywords):
                 error_type = "API_FAIL"
             
-            self.error(f"请求任务错误 ({error_type}) ... {e}", e if self.is_debug() else None)
+            if Base.work_status != Base.STATUS.STOPING:
+                self.error(f"请求任务错误 ({error_type}) ... {e}", e if self.is_debug() else None)
+            else:
+                self.print(f"[dim]Request aborted due to stop signal: {e}[/dim]")
+
             return True, error_type, str(e), 0, 0
 
         # 获取指令消耗

@@ -49,7 +49,7 @@ class CacheProject(ThreadSafeCache, ExtraMixin):
     project_id: str = ''
     project_type: str = ''
     project_name: str = ''
-    stats_data: CacheProjectStatistics = None
+    stats_data: CacheProjectStatistics = field(default_factory=CacheProjectStatistics)
     files: dict[str, CacheFile] = field(default_factory=dict)
     detected_encoding: str = "utf-8"
     detected_line_ending: str = "\n"

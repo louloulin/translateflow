@@ -28,7 +28,8 @@ class CacheManager(Base):
         # 线程锁
         self.file_lock = threading.Lock()
 
-        self.project = None
+        self.project = CacheProject()
+        self.project.stats_data = CacheProjectStatistics()
 
         # 注册事件
         self.subscribe(Base.EVENT.TASK_START, self.start_interval_saving)
@@ -239,6 +240,8 @@ class CacheManager(Base):
         CacheProject().detected_line_ending
         if "data" in project_data:
             init_data["stats_data"] = CacheProjectStatistics.from_dict(project_data["data"])
+        else:
+            init_data["stats_data"] = CacheProjectStatistics() # Ensure stats_data is always initialized
         if "file_encoding" in project_data:
             init_data["detected_encoding"] = project_data["file_encoding"]
         if "line_ending" in project_data:

@@ -186,7 +186,7 @@ class PolisherTask(Base):
         while True:
             # 0. 检查停止信号
             if Base.work_status == Base.STATUS.STOPING:
-                return {}
+                return {"check_result": False, "row_count": 0, "prompt_tokens": 0, "completion_tokens": 0}
 
             # 1. 获取最新配置
             platform_config = self.config.get_platform_configuration("polishingReq")
@@ -204,6 +204,10 @@ class PolisherTask(Base):
             # 3. 处理失败
             if skip:
                 self.request_tokens_consume = p_tokens if p_tokens else self.request_tokens_consume
+
+                # 如果是用户停止，直接静默返回
+                if status_tag == "STOPPED" or Base.work_status == Base.STATUS.STOPING:
+                    return {}
 
                 # Failover logic
                 if status_tag == "API_FAIL" and self.config.enable_api_failover and not is_local:
@@ -245,6 +249,10 @@ class PolisherTask(Base):
             prompt_tokens = p_tokens
             completion_tokens = c_tokens
             break
+
+        # 0.5 检查停止信号
+        if Base.work_status == Base.STATUS.STOPING:
+            return {"check_result": False, "row_count": 0, "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens}
 
         # ---------------------------------------------------------
         # 后续处理
@@ -339,21 +347,22 @@ class PolisherTask(Base):
 
 
             # 打印任务结果
-            self.print(f"[bold green]√ [{self.task_id}] Done! ({self.row_count} lines processed) | {(time.time() - task_start_time):.2f}s | {prompt_tokens}+{completion_tokens}T[/bold green]")
-            if self.is_debug() or self.config.show_detailed_logs:
-                self.print(
-                    self.generate_log_table(
-                        *self.generate_log_rows(
-                            f"[{self.task_id}] 任务结果",
-                            task_start_time,
-                            prompt_tokens,
-                            completion_tokens,
-                            text_dict.values(),
-                            response_dict.values(),
-                            self.extra_log,
+            if Base.work_status != Base.STATUS.STOPING:
+                self.print(f"[bold green]√ [{self.task_id}] Done! ({self.row_count} lines processed) | {(time.time() - task_start_time):.2f}s | {prompt_tokens}+{completion_tokens}T[/bold green]")
+                if self.is_debug() or self.config.show_detailed_logs:
+                    self.print(
+                        self.generate_log_table(
+                            *self.generate_log_rows(
+                                f"[{self.task_id}] 任务结果",
+                                task_start_time,
+                                prompt_tokens,
+                                completion_tokens,
+                                text_dict.values(),
+                                response_dict.values(),
+                                self.extra_log,
+                            )
                         )
                     )
-                )
 
 
         # 否则返回译文检查的结果

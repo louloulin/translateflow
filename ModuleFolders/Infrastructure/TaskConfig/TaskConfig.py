@@ -7,7 +7,7 @@ import rapidjson as json
 
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Infrastructure.TaskConfig.TaskType import TaskType
-
+from .default_config import DEFAULT_CONFIG
 
 # 接口请求器
 class TaskConfig(Base):
@@ -69,6 +69,8 @@ class TaskConfig(Base):
             'reply_format_check': False
         }
 
+        self.show_detailed_logs = False # Fix: Initialize show_detailed_logs
+
         # 文件输出相关设置
         self.keep_original_encoding = True
 
@@ -79,13 +81,22 @@ class TaskConfig(Base):
         self.label_output_path = ""
         self.translated_output_path = ""
         self.polishing_output_path = ""
+        self.translation_project = "AutoType" # NEW: 项目类型设置
         
         # 任务执行相关设置
         self.enable_retry = True
         self.retry_count = 3
+        self.round_limit = 3 # Changed default from 0 to 3 to allow multiple passes
+        self.enable_smart_round_limit = False # ADDED: Enable dynamic round limit adjustment
+        self.smart_round_limit_multiplier = 2 # ADDED: Multiplier for dynamic round limit adjustment
         self.enable_fast_translate = False
         self.enable_line_breaks = False
         self.line_breaks_style = 0
+        self.response_conversion_toggle = False # NEW: 简繁转换开关
+        self.opencc_preset = "s2twp.json" # NEW: 简繁转换配置
+        self.tokens_limit_switch = False # NEW: 切换 Token 模式还是 Line 模式
+        self.lines_limit = 20 # NEW: 每次翻译的行数限制，在 Token 模式下无效
+        self.pre_line_counts = 3 # NEW: 每次翻译获取上文的行数
 
     def __repr__(self) -> str:
         return (
@@ -157,66 +168,8 @@ class TaskConfig(Base):
             return key
 
     # 读取配置文件
-    def initialize(self) -> None:
-        # 读取配置文件
-        config = self.load_config()
-
-        # 从Base类中获取当前profile配置
-        from ModuleFolders.Base.Base import Base
-        import os
-        import rapidjson as json
-        
-        # 尝试从当前profile配置中读取配置
-        profiles_dir = os.path.join(".", "Resource", "profiles")
-        active_profile_name = getattr(Base, 'active_profile_name', 'default') or 'default'
-        active_profile_path = os.path.join(profiles_dir, f"{active_profile_name}.json")
-        
-        if os.path.exists(active_profile_path):
-            try:
-                with open(active_profile_path, "r", encoding="utf-8") as reader:
-                    profile_config = json.load(reader)
-                # 将profile配置合并到当前配置中，优先级更高
-                for key, value in profile_config.items():
-                    config[key] = value
-            except Exception as e:
-                self.error(f"读取profile配置失败: {e}")
-
-        # 尝试加载预设平台配置
-        preset_path = os.path.join(".", "Resource", "platforms", "preset.json")
-        if os.path.exists(preset_path):
-            try:
-                with open(preset_path, "r", encoding="utf-8") as reader:
-                    preset_config = json.load(reader)
-                
-                # 将预设平台配置合并到当前配置中，但不覆盖已有的配置
-                preset_platforms = preset_config.get("platforms", {})
-                
-                # 如果当前配置中没有平台配置，则使用预设的
-                if "platforms" not in config or not config["platforms"]:
-                    config["platforms"] = preset_platforms
-                else:
-                    # 否则，只添加当前配置中不存在的预设平台
-                    for platform_key, platform_value in preset_platforms.items():
-                        if platform_key not in config["platforms"]:
-                            config["platforms"][platform_key] = platform_value
-            except Exception as e:
-                self.error(f"读取预设平台配置失败: {e}")
-
-        # 将字典中的每一项赋值到类中的同名属性
-        # 如果配置文件中有这些 key，会覆盖 __init__ 中的默认值
-        for key, value in config.items():
-            # 针对字典类型的配置进行合并而非直接覆盖，防止默认键值丢失
-            if key == "response_check_switch" and isinstance(value, dict):
-                current_value = getattr(self, key, {})
-                if isinstance(current_value, dict):
-                    # 创建副本以避免修改类属性默认值（如果有共享引用）
-                    new_value = current_value.copy()
-                    new_value.update(value)
-                    setattr(self, key, new_value)
-                else:
-                    setattr(self, key, value)
-            else:
-                setattr(self, key, value)
+    def initialize(self, config_dict: dict) -> None:
+        self.load_config_from_dict(config_dict)
         
         # 确保关键配置有合理的默认值，防止因配置文件缺失导致逻辑错误
         if not hasattr(self, 'request_timeout') or self.request_timeout <= 0:
@@ -282,7 +235,7 @@ class TaskConfig(Base):
             self.apikey_index = 0
 
         # 处理 API URL 和限额
-        raw_url = self.platforms.get(self.target_platform).get("url", "")
+        raw_url = self.platforms.get(self.target_platform).get("api_url", "")
         auto_complete_setting = self.platforms.get(self.target_platform).get("auto_complete", False)
         
         self.base_url = self.process_api_url(raw_url, self.target_platform, auto_complete_setting)
