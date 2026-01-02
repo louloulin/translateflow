@@ -76,11 +76,23 @@ uv run ainiee_cli.py translate "H:\\Novels\\MyBook.txt" -o "H:\\Novels\\MyBook_O
 *   `translate` / `polish` / `export`: Specifies the task type.
 *   `H:\\Novels\\MyBook.txt`: (Positional argument) Input file or folder path.
 *   `-o, --output`: Specifies the output path.
-*   `-p, --profile`: Specifies the configuration profile name (e.g., `Elysia`).
+*   `-p, --profile`: Specifies the configuration profile name.
 *   `-s, --source`: Specifies the source language.
 *   `-t, --target`: Specifies the target language.
+*   `--type`: Specifies the project type (e.g., `Txt`, `Epub`, `MTool`).
 *   `--resume`: Automatically resumes the task if a cache is detected.
-*   `--yes`: Non-interactive mode; automatically answers `yes` to all confirmation prompts.
+*   `--yes`: Non-interactive mode; automatically answers `yes`.
+*   **[New] Advanced Overrides:**
+    *   `--threads`: Concurrent thread counts.
+    *   `--rounds`: Max execution rounds.
+    *   `--retry`: Max retry counts.
+    *   `--timeout`: API timeout in seconds.
+    *   `--platform`: Override target platform.
+    *   `--model`: Override model name.
+    *   `--api-url`: Override API URL.
+    *   `--api-key`: Override API Key.
+    *   `--lines` / `--tokens`: Override batch size.
+    *   `--failover`: `on/off` toggle for API failover.
 
 ---
 

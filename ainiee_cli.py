@@ -244,11 +244,42 @@ class CLIMenu:
             self.save_config(save_root=True)
             self.load_config() # 重新加载配置
         
-        # 覆盖配置
+        # 覆盖基础配置
         if args.source_lang: self.config["source_language"] = args.source_lang
         if args.target_lang: self.config["target_language"] = args.target_lang
         if args.output_path: self.config["label_output_path"] = args.output_path
+        if args.project_type: self.config["translation_project"] = args.project_type
         
+        # 覆盖并发与重试配置
+        if args.threads is not None: self.config["user_thread_counts"] = args.threads
+        if args.retry is not None: self.config["retry_count"] = args.retry
+        if args.timeout is not None: self.config["request_timeout"] = args.timeout
+        if args.rounds is not None: self.config["round_limit"] = args.rounds
+        if args.pre_lines is not None: self.config["pre_line_counts"] = args.pre_lines
+
+        # 覆盖切分逻辑
+        if args.lines is not None:
+            self.config["tokens_limit_switch"] = False
+            self.config["lines_limit"] = args.lines
+        if args.tokens is not None:
+            self.config["tokens_limit_switch"] = True
+            self.config["tokens_limit"] = args.tokens
+
+        # 覆盖 API 与平台配置
+        if args.platform: self.config["target_platform"] = args.platform
+        if args.model: self.config["model"] = args.model
+        if args.api_url: self.config["base_url"] = args.api_url
+        if args.api_key:
+            self.config["api_key"] = args.api_key
+            # 同步到具体平台配置中
+            tp = self.config.get("target_platform", "")
+            if tp and tp in self.config.get("platforms", {}):
+                self.config["platforms"][tp]["api_key"] = args.api_key
+
+        # 覆盖高级参数
+        if args.think_depth is not None: self.config["think_depth"] = args.think_depth
+        if args.failover is not None: self.config["enable_api_failover"] = args.failover == "on"
+
         self.save_config()
 
         task_map = {
@@ -1486,15 +1517,37 @@ def main():
     # 将 --help 参数单独处理，以便自定义帮助信息
     parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS, help='Show this help message and exit.')
 
+    # 核心任务参数
     parser.add_argument('task', nargs='?', choices=['translate', 'polish', 'export'], help=i18n.get('help_task'))
     parser.add_argument('input_path', nargs='?', help=i18n.get('help_input'))
     
+    # 路径与环境
     parser.add_argument('-o', '--output', dest='output_path', help=i18n.get('help_output'))
     parser.add_argument('-p', '--profile', dest='profile', help=i18n.get('help_profile'))
     parser.add_argument('-s', '--source', dest='source_lang', help=i18n.get('help_source'))
     parser.add_argument('-t', '--target', dest='target_lang', help=i18n.get('help_target'))
+    parser.add_argument('--type', dest='project_type', help="Project type (Txt, Epub, MTool, RenPy, etc.)")
+    
+    # 运行策略
     parser.add_argument('-r', '--resume', action='store_true', help=i18n.get('help_resume'))
     parser.add_argument('-y', '--yes', action='store_true', dest='non_interactive', help=i18n.get('help_yes'))
+    parser.add_argument('--threads', type=int, help="Concurrent thread counts (0 for auto)")
+    parser.add_argument('--retry', type=int, help="Max retry counts for failed requests")
+    parser.add_argument('--rounds', type=int, help="Max execution rounds")
+    parser.add_argument('--timeout', type=int, help="Request timeout in seconds")
+
+    # API 与模型配置
+    parser.add_argument('--platform', help="Target platform (e.g., Openai, LocalLLM, sakura)")
+    parser.add_argument('--model', help="Model name")
+    parser.add_argument('--api-url', help="Base URL for the API")
+    parser.add_argument('--api-key', help="API Key")
+    parser.add_argument('--think-depth', type=int, help="Reasoning depth (0-10000)")
+    parser.add_argument('--failover', choices=['on', 'off'], help="Enable or disable API failover")
+
+    # 文本处理逻辑
+    parser.add_argument('--lines', type=int, help="Lines per request (Line Mode)")
+    parser.add_argument('--tokens', type=int, help="Tokens per request (Token Mode)")
+    parser.add_argument('--pre-lines', type=int, help="Context lines to include")
 
     args = parser.parse_args()
 

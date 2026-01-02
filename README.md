@@ -77,11 +77,23 @@ uv run ainiee_cli.py translate H:\小说\我的书.txt -o H:\小说\我的书_Ou
 *   `translate` / `polish` / `export`: 指定任务类型。
 *   `H:\小说\我的书.txt`: (位置参数) 输入文件或文件夹路径。
 *   `-o, --output`: 指定输出路径。
-*   `-p, --profile`: 指定配置 Profile 名称（例如 `Elysia`）。
+*   `-p, --profile`: 指定配置 Profile 名称。
 *   `-s, --source`: 指定源语言。
 *   `-t, --target`: 指定目标语言。
+*   `--type`: 指定项目类型 (如 `Txt`, `Epub`, `MTool`, `RenPy` 等)。
 *   `--resume`: 如果检测到缓存，自动恢复任务。
 *   `--yes`: 非交互模式，对所有确认提示自动回答 `yes`。
+*   **[New] 高级参数覆盖：**
+    *   `--threads`: 并发线程数。
+    *   `--rounds`: 最大任务轮次。
+    *   `--retry`: 单请求最大重试次数。
+    *   `--timeout`: API 超时时间。
+    *   `--platform`: 覆盖目标平台。
+    *   `--model`: 覆盖模型名称。
+    *   `--api-url`: 覆盖 API 地址。
+    *   `--api-key`: 覆盖 API 密钥。
+    *   `--lines` / `--tokens`: 覆盖单批处理量。
+    *   `--failover`: `on/off` 切换故障转移。
 
 ---
 
