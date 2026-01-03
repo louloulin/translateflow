@@ -211,6 +211,44 @@ class TaskUI:
         # 使用固定的 Action 文本防止抖动
         self.progress.update(self.task_id, total=total, completed=completed, action=i18n.get('label_processing'))
 
+class WebLogger:
+    def __init__(self, stream=None):
+        self.last_stats_time = 0
+        self.stream = stream or sys.__stdout__
+
+    def log(self, msg):
+        if isinstance(msg, str):
+            # Strip simple rich markup
+            clean = re.sub(r'\[/?[a-zA-Z\s]+\]', '', msg)
+            try:
+                self.stream.write(clean + '\n')
+                self.stream.flush()
+            except: pass
+
+    def update_progress(self, event, data):
+        if not data: return
+        
+        if time.time() - self.last_stats_time < 0.5:
+            return
+        self.last_stats_time = time.time()
+
+        d = data
+        completed = d.get("line", 0)
+        total = d.get("total_line", 1)
+        tokens = d.get("token", 0)
+        elapsed = d.get("time", 0)
+        
+        rpm = (d.get("total_requests", 0) / (elapsed / 60)) if elapsed > 0 else 0
+        tpm_k = (tokens / (elapsed / 60) / 1000) if elapsed > 0 else 0
+        
+        try:
+            self.stream.write(f"[STATS] RPM: {rpm:.2f} | TPM: {tpm_k:.2f}k | Progress: {completed}/{total} | Tokens: {tokens}\n")
+            self.stream.flush()
+        except: pass
+
+    def update_status(self, event, data):
+        pass
+
 class CLIMenu:
     def __init__(self):
         self.root_config_path = os.path.join(PROJECT_ROOT, "Resource", "config.json")
@@ -294,7 +332,8 @@ class CLIMenu:
                 task_map[args.task],
                 target_path=args.input_path,
                 continue_status=args.resume,
-                non_interactive=args.non_interactive
+                non_interactive=args.non_interactive,
+                web_mode=args.web_mode
             )
         elif args.task == 'export':
             self.run_export_only(
@@ -504,8 +543,15 @@ class CLIMenu:
         while True:
             self.display_banner()
             table = Table(show_header=False, box=None)
-            menus, colors = ["start_translation", "start_polishing", "export_only", "settings", "api_settings", "glossary", "profiles", "update"], ["green", "green", "magenta", "blue", "blue", "yellow", "cyan", "dim"]
-            for i, (m, c) in enumerate(zip(menus, colors)): table.add_row(f"[{c}]{i+1}.[/]", i18n.get(f"menu_{m}"))
+            menus = ["start_translation", "start_polishing", "export_only", "settings", "api_settings", "glossary", "profiles", "update", "start_web_server"]
+            colors = ["green", "green", "magenta", "blue", "blue", "yellow", "cyan", "dim", "bold magenta"]
+            
+            for i, (m, c) in enumerate(zip(menus, colors)): 
+                label = i18n.get(f"menu_{m}")
+                if m == "start_web_server" and label == f"menu_{m}":
+                    label = "Start Web Server" # Fallback if not in json
+                table.add_row(f"[{c}]{i+1}.[/]", label)
+                
             table.add_row("[red]0.[/]", i18n.get("menu_exit")); console.print(table)
             choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(len(menus) + 1)], show_choices=False)
             console.print("\n")
@@ -519,7 +565,8 @@ class CLIMenu:
                 self.api_settings_menu, 
                 self.prompt_menu, 
                 self.profiles_menu,
-                self.update_manager.start_update
+                self.update_manager.start_update,
+                self.start_web_server
             ]
             actions[choice]()
 
@@ -1075,7 +1122,7 @@ class CLIMenu:
             time.sleep(1)
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]"); time.sleep(2)
-    def run_task(self, task_mode, target_path=None, continue_status=False, non_interactive=False):
+    def run_task(self, task_mode, target_path=None, continue_status=False, non_interactive=False, web_mode=False):
         # 如果是非交互模式，直接跳过菜单
         if target_path is None:
             last_path = self.config.get("label_input_path")
@@ -1172,8 +1219,23 @@ class CLIMenu:
         console.print(f"[dim]{i18n.get('label_input')}: {target_path}[/dim]")
         console.print(f"[dim]{i18n.get('label_output')}: {opath}[/dim]")
 
+        # Initialize variables for finally block safety
+        current_listener = None
+        log_file = None
+        task_success = False
+
+        original_stdout, original_stderr = sys.stdout, sys.stderr
+        
+        # Ensure our UI console uses the REAL stdout to avoid recursion
+        self.ui_console = Console(file=original_stdout)
+
         # Start Logic
-        self.ui = TaskUI(); Base.print = self.ui.log
+        if web_mode:
+            self.ui = WebLogger(stream=original_stdout)
+        else:
+            self.ui = TaskUI()
+            
+        Base.print = self.ui.log
         self.stop_requested = False
         self.live_state = [True] # 必须在这里初始化，防止 LogStream 报错
 
@@ -1192,14 +1254,8 @@ class CLIMenu:
         import ModuleFolders.Domain.FileReader.ReaderUtil as ReaderUtilModule
         TiktokenLoaderModule._SUPPRESS_OUTPUT = True
         ReaderUtilModule._SUPPRESS_OUTPUT = True
-
-        original_stdout, original_stderr = sys.stdout, sys.stderr
-        
-        # Ensure our UI console uses the REAL stdout to avoid recursion
-        self.ui_console = Console(file=original_stdout)
         
         # --- NEW: Session Logger ---
-        log_file = None
         if self.config.get("enable_session_logging", True):
             try:
                 log_dir = os.path.join(opath, "logs")
@@ -1216,44 +1272,32 @@ class CLIMenu:
                 self.parent = parent
             def write(self, msg): 
                 if not msg: return
-                
-                # Strip ANSI codes for logic and file
-                ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-                clean_msg = ansi_escape.sub('', msg).strip()
+                msg_str = str(msg)
                 
                 if self.f:
                     try:
-                        self.f.write(f"[{time.strftime('%H:%M:%S')}] {clean_msg}\n")
+                        self.f.write(f"[{time.strftime('%H:%M:%S')}] {msg_str}\n")
                         self.f.flush()
                     except: pass
 
-                if not clean_msg or msg.startswith('\r'): return 
-                
-                # Aggressive filtering of UI artifacts or huge text blocks
-                if " --> " in clean_msg and len(clean_msg) > 100:
-                    return
-                
-                if any(c in clean_msg for c in "╭╮╯╰─│") and len(clean_msg) > 500:
-                    return
-
-                # Handle Status Updates specially - 增强拦截
-                if "[STATUS]" in clean_msg:
-                    # 仅拦截，不更新 Action，防止抖动
+                # Handle Status Updates specially
+                if "[STATUS]" in msg_str:
                     return
 
                 # Decide where to output based on Live state
                 if self.parent and self.parent.live_state[0]:
-                    if clean_msg: self.ui.log(msg)
+                    if msg_str.strip(): self.ui.log(msg_str)
                 else:
-                    original_stdout.write(msg + "\n")
+                    original_stdout.write(msg_str + "\n")
                     original_stdout.flush()
             def flush(self): pass
         
         sys.stdout = sys.stderr = LogStream(self.ui, log_file, self)
 
         # 启动键盘监听
-        self.input_listener.start()
-        self.input_listener.clear()
+        if not web_mode:
+            self.input_listener.start()
+            self.input_listener.clear()
 
         # 定义完成事件
         self.task_running = True; finished = threading.Event(); success = threading.Event()
@@ -1262,6 +1306,8 @@ class CLIMenu:
 
         def on_complete(e, d): 
             self.ui.log(f"[bold green]{i18n.get('msg_task_completed')}[/bold green]")
+            nonlocal task_success
+            task_success = True
             success.set(); finished.set()
         def on_stop(e, d): 
             self.ui.log(f"[bold yellow]{i18n.get('msg_task_stopped')}[/bold yellow]")
@@ -1279,17 +1325,26 @@ class CLIMenu:
             last_task_data = d
         EventManager.get_singleton().subscribe(Base.EVENT.TASK_UPDATE, track_last_data)
 
-        try:
-            # 提前启动 Live，确保加载过程可见
-            with Live(self.ui.layout, console=self.ui_console, refresh_per_second=10, screen=True, transient=False) as live:
+        # Wrapper to run task logic (so we can use it with or without Live)
+        def run_task_logic():
                 self.ui.log(f"{i18n.get('msg_task_started')}")
 
                 # --- Middleware Conversion Logic (Moved Inside Live) ---
                 middleware_exts = ['.mobi', '.azw3', '.kepub', '.fb2', '.lit', '.lrf', '.pdb', '.pmlz', '.rb', '.rtf', '.tcr', '.txtz', '.htmlz']
                 
+                # We need to access target_path from outer scope. 
+                # Since we modify it, we should be careful. 
+                # In python 3, we can use nonlocal for rebind, but target_path is local variable.
+                # Let's use a mutable container or just refer to it.
+                # Actually, the previous code structure had this logic inside 'with Live'.
+                # We will just copy-paste the logic here.
+                
+                current_target_path = target_path
+                is_middleware_converted_local = False
+
                 if original_ext in middleware_exts:
-                    is_middleware_converted = True
-                    base_name = os.path.splitext(os.path.basename(target_path))[0]
+                    is_middleware_converted_local = True
+                    base_name = os.path.splitext(os.path.basename(current_target_path))[0]
                     # 确保输出目录和临时转换文件夹已创建
                     os.makedirs(opath, exist_ok=True)
                     temp_conv_dir = os.path.join(opath, "temp_conv")
@@ -1298,13 +1353,13 @@ class CLIMenu:
                     potential_epub = os.path.join(temp_conv_dir, f"{base_name}.epub")
                     if os.path.exists(potential_epub) and os.path.getsize(potential_epub) > 0:
                         self.ui.log(i18n.get("msg_epub_reuse").format(os.path.basename(potential_epub)))
-                        target_path = potential_epub
+                        current_target_path = potential_epub
                     else:
                         self.ui.log(i18n.get("msg_epub_conv_start").format(original_ext))
                         os.makedirs(temp_conv_dir, exist_ok=True)
                         conv_script = os.path.join(PROJECT_ROOT, "批量电子书整合.py")
                         # 增加 --AiNiee 参数以抑制版权信息写入
-                        cmd = f'uv run "{conv_script}" -p "{target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name}" --AiNiee'
+                        cmd = f'uv run "{conv_script}" -p "{current_target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name}" --AiNiee'
                         try:
                             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
                             if result.returncode == 0:
@@ -1312,7 +1367,7 @@ class CLIMenu:
                                 if epubs:
                                     new_path = os.path.join(temp_conv_dir, epubs[0])
                                     self.ui.log(i18n.get("msg_epub_conv_success").format(os.path.basename(new_path)))
-                                    target_path = new_path
+                                    current_target_path = new_path
                                 else: raise Exception("No EPUB found")
                             else: raise Exception(f"Conversion failed: {result.stderr}")
                         except Exception as e:
@@ -1321,7 +1376,7 @@ class CLIMenu:
                 
                 # --- 1. 文件与缓存加载 ---
                 try:
-                    cache_project = self.file_reader.read_files(self.config.get("translation_project", "AutoType"), target_path, self.config.get("exclude_rule_str", ""))
+                    cache_project = self.file_reader.read_files(self.config.get("translation_project", "AutoType"), current_target_path, self.config.get("exclude_rule_str", ""))
                     if not cache_project:
                         self.ui.log("[red]No files loaded.[/red]")
                         time.sleep(2); raise Exception("Load failed")
@@ -1339,7 +1394,7 @@ class CLIMenu:
                     {
                         "continue_status": continue_status, 
                         "current_mode": task_mode,
-                        "session_input_path": target_path,
+                        "session_input_path": current_target_path,
                         "session_output_path": opath
                     }
                 )
@@ -1347,54 +1402,66 @@ class CLIMenu:
                 # --- 4. 主循环与输入监听 ---
                 is_paused = False
                 while not finished.is_set():
-                    key = self.input_listener.get_key()
-                    if key:
-                        if key == 'q':
-                            self.ui.log("[bold red]Stop requested via keyboard...[/bold red]")
-                            self.signal_handler(None, None)
-                        elif key == 'p':
-                            if Base.work_status == Base.STATUS.TASKING:
-                                self.ui.log("[bold yellow]Pausing System (Stopping processes)...[/bold yellow]")
-                                # 更新状态通知 TaskExecutor 停止
-                                EventManager.get_singleton().emit(Base.EVENT.TASK_STOP, {})
-                                self.ui.update_status(None, {"status": "paused"})
-                                is_paused = True
-                        elif key == 'r':
-                            if is_paused:
-                                self.ui.log("[bold green]Resuming System...[/bold green]")
-                                # 使用 continue_status=True 和 silent=True 重新启动
-                                EventManager.get_singleton().emit(
-                                    Base.EVENT.TASK_START, 
-                                    {
-                                        "continue_status": True, 
-                                        "current_mode": task_mode,
-                                        "session_input_path": target_path,
-                                        "session_output_path": opath,
-                                        "silent": True
-                                    }
-                                )
-                                self.ui.update_status(None, {"status": "normal"})
-                                is_paused = False
-                        elif key == '-': # 减少线程
-                            old_val = self.task_executor.config.actual_thread_counts
-                            new_val = max(1, old_val - 1)
-                            self.task_executor.config.actual_thread_counts = new_val
-                            self.ui.log(f"[yellow]{i18n.get('msg_thread_changed').format(new_val)}[/yellow]")
-                        elif key == '+': # 增加线程
-                            old_val = self.task_executor.config.actual_thread_counts
-                            new_val = min(100, old_val + 1)
-                            self.task_executor.config.actual_thread_counts = new_val
-                            self.ui.log(f"[green]{i18n.get('msg_thread_changed').format(new_val)}[/green]")
-                        elif key == 'k': # 热切换 API
-                            self.ui.log(f"[cyan]{i18n.get('msg_api_switching_manual')}[/cyan]")
-                            EventManager.get_singleton().emit(Base.EVENT.TASK_API_STATUS_REPORT, {"force_switch": True})
+                    if not web_mode:
+                        key = self.input_listener.get_key()
+                        if key:
+                            if key == 'q':
+                                self.ui.log("[bold red]Stop requested via keyboard...[/bold red]")
+                                self.signal_handler(None, None)
+                            elif key == 'p':
+                                if Base.work_status == Base.STATUS.TASKING:
+                                    self.ui.log("[bold yellow]Pausing System (Stopping processes)...[/bold yellow]")
+                                    # 更新状态通知 TaskExecutor 停止
+                                    EventManager.get_singleton().emit(Base.EVENT.TASK_STOP, {})
+                                    self.ui.update_status(None, {"status": "paused"})
+                                    is_paused = True
+                            elif key == 'r':
+                                if is_paused:
+                                    self.ui.log("[bold green]Resuming System...[/bold green]")
+                                    # 使用 continue_status=True 和 silent=True 重新启动
+                                    EventManager.get_singleton().emit(
+                                        Base.EVENT.TASK_START, 
+                                        {
+                                            "continue_status": True, 
+                                            "current_mode": task_mode,
+                                            "session_input_path": current_target_path,
+                                            "session_output_path": opath,
+                                            "silent": True
+                                        }
+                                    )
+                                    self.ui.update_status(None, {"status": "normal"})
+                                    is_paused = False
+                            elif key == '-': # 减少线程
+                                old_val = self.task_executor.config.actual_thread_counts
+                                new_val = max(1, old_val - 1)
+                                self.task_executor.config.actual_thread_counts = new_val
+                                self.ui.log(f"[yellow]{i18n.get('msg_thread_changed').format(new_val)}[/yellow]")
+                            elif key == '+': # 增加线程
+                                old_val = self.task_executor.config.actual_thread_counts
+                                new_val = min(100, old_val + 1)
+                                self.task_executor.config.actual_thread_counts = new_val
+                                self.ui.log(f"[green]{i18n.get('msg_thread_changed').format(new_val)}[/green]")
+                            elif key == 'k': # 热切换 API
+                                self.ui.log(f"[cyan]{i18n.get('msg_api_switching_manual')}[/cyan]")
+                                EventManager.get_singleton().emit(Base.EVENT.TASK_API_STATUS_REPORT, {"force_switch": True})
                     
                     time.sleep(0.1)
+                
+                return is_middleware_converted_local
+
+        try:
+            if web_mode:
+                 is_middleware_converted = run_task_logic()
+            else:
+                # 提前启动 Live，确保加载过程可见
+                with Live(self.ui.layout, console=self.ui_console, refresh_per_second=10, screen=True, transient=False) as live:
+                    is_middleware_converted = run_task_logic()
 
         except KeyboardInterrupt: self.signal_handler(None, None)
         except Exception: pass 
         finally:
-            self.input_listener.stop()
+            if not web_mode:
+                self.input_listener.stop()
             if log_file: log_file.close()
             sys.stdout, sys.stderr = original_stdout, original_stderr
             self.task_running = False; Base.print = self.original_print
@@ -1411,11 +1478,14 @@ class CLIMenu:
                 
                 # Summary Report
                 lines = last_task_data.get("line", 0); tokens = last_task_data.get("token", 0); duration = last_task_data.get("time", 1)
-                report_table = Table(show_header=False, box=None, padding=(0, 2))
-                report_table.add_row(f"[cyan]{i18n.get('label_report_total_lines')}:[/]", f"[bold]{lines}[/]")
-                report_table.add_row(f"[cyan]{i18n.get('label_report_total_tokens')}:[/]", f"[bold]{tokens}[/]")
-                report_table.add_row(f"[cyan]{i18n.get('label_report_total_time')}:[/]", f"[bold]{duration:.1f}s[/]")
-                console.print("\n"); console.print(Panel(report_table, title=f"[bold green]✓ {i18n.get('msg_task_report_title')}[/bold green]", expand=False))
+                if not web_mode:
+                    report_table = Table(show_header=False, box=None, padding=(0, 2))
+                    report_table.add_row(f"[cyan]{i18n.get('label_report_total_lines')}:[/]", f"[bold]{lines}[/]")
+                    report_table.add_row(f"[cyan]{i18n.get('label_report_total_tokens')}:[/]", f"[bold]{tokens}[/]")
+                    report_table.add_row(f"[cyan]{i18n.get('label_report_total_time')}:[/]", f"[bold]{duration:.1f}s[/]")
+                    console.print("\n"); console.print(Panel(report_table, title=f"[bold green]✓ {i18n.get('msg_task_report_title')}[/bold green]", expand=False))
+                else:
+                    print(f"[STATS] RPM: 0.00 | TPM: 0.00k | Progress: {lines}/{lines} | Tokens: {tokens}") # Final Stat
 
             if success.is_set() and is_middleware_converted:
                 try:
@@ -1423,7 +1493,8 @@ class CLIMenu:
                     if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
                 except: pass
             
-            Prompt.ask(f"\n{i18n.get('msg_task_ended')}")
+            if not web_mode and not non_interactive:
+                Prompt.ask(f"\n{i18n.get('msg_task_ended')}")
             
             # --- Post-Task Logic (Reverse Conversion) ---
             if task_success and is_middleware_converted and self.config.get("enable_auto_restore_ebook", False):
@@ -1451,7 +1522,7 @@ class CLIMenu:
                     try: winsound.MessageBeep()
                     except: print("\a")
             
-            if not non_interactive:
+            if not non_interactive and not web_mode:
                 Prompt.ask(f"\n{i18n.get('msg_task_ended')}")
 
 
@@ -1543,6 +1614,110 @@ class CLIMenu:
             
         Prompt.ask(f"\n{i18n.get('msg_press_enter')}")
 
+    def start_web_server(self):
+        try:
+            import fastapi
+            import uvicorn
+        except ImportError:
+            console.print("[red]Missing dependencies: fastapi, uvicorn. Please install them to use Web Server.[/red]")
+            console.print("Try: pip install fastapi uvicorn[standard]")
+            Prompt.ask("\nPress Enter to return...")
+            return
+
+        from Tools.WebServer.web_server import run_server
+        import Tools.WebServer.web_server as ws_module
+        
+        # --- Inject Host Logic ---
+        
+        def host_create_profile(new_name, base_name=None):
+            # Same robust logic as CLI
+            if not new_name: raise Exception("Name empty")
+            new_path = os.path.join(self.profiles_dir, f"{new_name}.json")
+            if os.path.exists(new_path): raise Exception("Exists")
+            
+            # 1. Preset
+            preset = {}
+            preset_path = os.path.join(PROJECT_ROOT, "Resource", "platforms", "preset.json")
+            if os.path.exists(preset_path):
+                with open(preset_path, 'r', encoding='utf-8') as f: preset = json.load(f)
+            
+            # 2. Base
+            base_config = {}
+            if not base_name: base_name = self.active_profile_name
+            base_path = os.path.join(self.profiles_dir, f"{base_name}.json")
+            if os.path.exists(base_path):
+                with open(base_path, 'r', encoding='utf-8') as f: base_config = json.load(f)
+            
+            # 3. Merge
+            preset.update(base_config)
+            
+            # 4. Save
+            with open(new_path, 'w', encoding='utf-8') as f:
+                json.dump(preset, f, indent=4, ensure_ascii=False)
+
+        def host_rename_profile(old_name, new_name):
+            old_path = os.path.join(self.profiles_dir, f"{old_name}.json")
+            new_path = os.path.join(self.profiles_dir, f"{new_name}.json")
+            if not os.path.exists(old_path): raise Exception("Not found")
+            if os.path.exists(new_path): raise Exception("Target exists")
+            
+            os.rename(old_path, new_path)
+            
+            # Update Active if needed
+            if self.active_profile_name == old_name:
+                self.active_profile_name = new_name
+                self.root_config["active_profile"] = new_name
+                self.save_config(save_root=True)
+
+        def host_delete_profile(name):
+            target = os.path.join(self.profiles_dir, f"{name}.json")
+            if not os.path.exists(target): raise Exception("Not found")
+            if name == self.active_profile_name: raise Exception("Cannot delete active profile")
+            
+            # Check count
+            cnt = len([f for f in os.listdir(self.profiles_dir) if f.endswith(".json")])
+            if cnt <= 1: raise Exception("Cannot delete last profile")
+            
+            os.remove(target)
+
+        ws_module.profile_handlers['create'] = host_create_profile
+        ws_module.profile_handlers['rename'] = host_rename_profile
+        ws_module.profile_handlers['delete'] = host_delete_profile
+
+        # Detect Local IP
+        local_ip = "127.0.0.1"
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+        except: pass
+
+        console.print("[green]Starting Web Server...[/green]")
+        console.print("[dim]Press Ctrl+C to stop the server and return to menu.[/dim]")
+        
+        server_thread = run_server(host="0.0.0.0", port=8000)
+        
+        if server_thread:
+            import webbrowser
+            time.sleep(1) 
+            console.print(Panel(
+                f"Local: [bold cyan]http://127.0.0.1:8000[/bold cyan]\n"
+                f"Network: [bold cyan]http://{local_ip}:8000[/bold cyan]",
+                title="Web Server Active",
+                border_style="green",
+                expand=False
+            ))
+            webbrowser.open("http://127.0.0.1:8000")
+            
+            try:
+                while server_thread.is_alive():
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                console.print("\n[yellow]Stopping Web Server...[/yellow]")
+                pass
+
 def main():
     parser = argparse.ArgumentParser(description="AiNiee CLI - A powerful tool for AI-driven translation and polishing.", add_help=False)
     
@@ -1575,6 +1750,8 @@ def main():
     parser.add_argument('--api-key', help="API Key")
     parser.add_argument('--think-depth', type=int, help="Reasoning depth (0-10000)")
     parser.add_argument('--failover', choices=['on', 'off'], help="Enable or disable API failover")
+    
+    parser.add_argument('--web-mode', action='store_true', help="Enable Web Server compatible output mode")
 
     # 文本处理逻辑
     parser.add_argument('--lines', type=int, help="Lines per request (Line Mode)")

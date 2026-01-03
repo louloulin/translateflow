@@ -105,6 +105,27 @@ Once launched, you can navigate the following features via the interactive menu:
 *   **Profiles**: **[New]** Center for switching and managing configuration profiles.
 *   **Settings / API Settings**: Categorized parameter settings with hot-reload support.
 *   **Glossary**: Preview and apply prompt templates.
+*   **Start Web Server**: **[New]** Launch the modern Web Dashboard.
+
+---
+
+## 🌐 Web Dashboard
+
+**[New]** For a more intuitive experience, this project now includes a React-based Web Dashboard.
+
+### How to Start
+1.  Run `uv run ainiee_cli.py` to enter the main menu.
+2.  Select **9. Start Web Server**.
+3.  The program will automatically detect your LAN IP and start the service (default port `8000`), opening the dashboard in your default browser.
+
+### Features
+*   **Visual Dashboard**: Real-time charts showing RPM, TPM, and task progress.
+*   **Network Access**: Monitor your translation tasks remotely via LAN IP. You can also use tunneling tools (e.g., `frp`, `cloudflared`) for external network access.
+*   **Profile Management**: Create, rename, delete, or switch configuration profiles directly from the web UI.
+*   **State Recovery**: Automatically synchronizes task status, logs, and chart history even after a page refresh.
+
+> **⚠️ Important Note**:
+> **The Web Dashboard is currently in Beta and may have compatibility issues with certain devices (e.g., mobile browsers). If you require maximum stability (e.g., for very large batch tasks), please continue to use the native TUI mode.**
 
 ---
 
