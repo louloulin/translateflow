@@ -12,6 +12,7 @@ import threading
 import warnings
 import locale
 import collections
+import glob
 import rapidjson as json
 import shutil
 import winsound
@@ -92,9 +93,23 @@ def mask_key(key):
     if len(key) < 8: return "*" * len(key)
     return key[:4] + "****" + key[-4:]
 
+def open_in_editor(file_path):
+    try:
+        if sys.platform == 'win32':
+            os.startfile(file_path)
+        elif sys.platform == 'darwin':
+            subprocess.run(['open', file_path])
+        else:
+            subprocess.run(['xdg-open', file_path])
+        return True
+    except Exception as e:
+        console.print(f"[red]Failed to open editor: {e}[/red]")
+        return False
+
 class TaskUI:
     def __init__(self):
-        self.logs = collections.deque(maxlen=20)
+        self.logs = collections.deque(maxlen=100) # Increase maxlen for better filtering
+        self.log_filter = "ALL" # Can be "ALL" or "ERROR"
         self.progress = Progress(
             SpinnerColumn(),
             TextColumn("[bold blue]{task.fields[action]}", justify="left"),
@@ -114,34 +129,53 @@ class TaskUI:
         self.layout = Layout()
         self.layout.split(Layout(name="upper", ratio=4, minimum_size=10), Layout(name="lower", size=6))
         
-        # panel_group 只包含 progress 和 stats_text，因为 stats_text 会组合所有底部文本
         self.panel_group = Group(self.progress, self.stats_text)
         self.layout["lower"].update(Panel(self.panel_group, title="Progress & Stats", border_style=self.current_border_color))
+        self.refresh_logs() # Initial log panel rendering
 
     def update_status(self, event, data):
         status = data.get("status", "normal")
-        color_map = {"normal": "green", "fixing": "yellow", "warning": "yellow", "error": "red", "paused": "yellow"}
+        color_map = {"normal": "green", "fixing": "yellow", "warning": "yellow", "error": "red", "paused": "yellow", "critical_error": "red"}
         status_key_map = {
             "normal": "label_status_normal",
             "fixing": "label_status_fixing",
             "warning": "label_status_warning",
             "error": "label_status_error",
-            "paused": "label_status_paused"
+            "paused": "label_status_paused",
+            "critical_error": "label_status_critical_error"
         }
         
-        # 只更新内部状态，不直接操作 UI 渲染
         self.current_status_key = status_key_map.get(status, "label_status_normal")
         self.current_status_color = color_map.get(status, "green")
-        self.current_border_color = self.current_status_color # 更新当前边框颜色
-        # 触发一次进度更新以确保 UI 刷新
+        self.current_border_color = self.current_status_color
         self.update_progress(None, {})
 
+    def _is_error_log(self, log_item: Text):
+        """Heuristically determines if a log entry is an error."""
+        text = log_item.plain.lower()
+        err_words = ['error', 'fail', 'failed', 'exception', 'traceback', 'critical', 'panic', '✗']
+        # Check for red style or error keywords
+        return any(style.color == "red" for style in log_item.spans) or any(word in text for word in err_words)
+
+    def refresh_logs(self):
+        """Renders the log panel according to the current filter."""
+        if self.log_filter == "ALL":
+            display_logs = self.logs
+        else: # ERROR
+            display_logs = [log for log in self.logs if self._is_error_log(log)]
+        
+        log_group = Group(*display_logs)
+        self.layout["upper"].update(Panel(log_group, title=f"Logs ({self.log_filter})", border_style="blue", padding=(0, 1)))
+
+    def toggle_log_filter(self):
+        self.log_filter = "ERROR" if self.log_filter == "ALL" else "ALL"
+        self.log(f"[dim]Log view set to: {self.log_filter}[/dim]")
+        self.refresh_logs()
+
     def log(self, msg):
-        # 拦截 [STATUS] 消息，防止其污染日志和刷新 Action
         if isinstance(msg, str) and "[STATUS]" in msg:
             return
 
-        # 简单的消息去重（防止同一时刻 stdout/stderr 重复输出）
         clean_msg_for_dedup = str(msg).strip()
         current_time = time.time()
         if hasattr(self, "_last_msg") and self._last_msg == clean_msg_for_dedup and (current_time - getattr(self, "_last_msg_time", 0)) < 0.5:
@@ -149,11 +183,9 @@ class TaskUI:
         self._last_msg = clean_msg_for_dedup
         self._last_msg_time = current_time
 
-        # 修复颜色丢失：支持 Markup 并带上时间戳
         timestamp = f"[{time.strftime('%H:%M:%S')}] "
         if isinstance(msg, str):
             try:
-                # 尝试解析 AiNiee 常用的 Markup 标记
                 new_log = Text.from_markup(timestamp + msg.strip())
             except:
                 new_log = Text(timestamp + msg.strip())
@@ -165,13 +197,12 @@ class TaskUI:
                 new_log = Text.from_ansi(timestamp + buf.getvalue().strip())
 
         self.logs.append(new_log)
-        log_group = Group(*self.logs)
-        self.layout["upper"].update(Panel(log_group, title="Logs", border_style="blue", padding=(0, 1)))
+        self.refresh_logs() # Refresh view with new log
 
     def update_progress(self, event, data):
         # 如果是空数据更新（由 update_status 触发），我们需要保留之前的数值
         if not hasattr(self, "_last_progress_data"):
-            self._last_progress_data = {"line": 0, "total_line": 1, "token": 0, "time": 0, "file_name": "...", "total_requests": 0}
+            self._last_progress_data = {"line": 0, "total_line": 1, "token": 0, "time": 0, "file_name": "...", "total_requests": 0, "file_path_full": None}
         
         if data:
             self._last_progress_data.update(data)
@@ -194,21 +225,27 @@ class TaskUI:
         tpm_str = f"{(tpm_k * 1000):.0f}" if is_local else f"{tpm_k:.2f}k"
         token_display = f"{tokens}"
 
-        # 组合所有底部文本：统计信息 + 快捷键 + 系统状态
+        # Status and Hotkeys
         status_text = i18n.get(self.current_status_key)
+        log_level_key = 'label_log_level_all' if self.log_filter == 'ALL' else 'label_log_level_error'
+        log_level_text = i18n.get(log_level_key)
+        
+        # V for View (logs), K for Key switch, N for Next file
+        hotkeys = "[dim]Shortcuts: [P] Pause | [R] Resume | [Q] Stop | [V] View Logs | [N] Skip File | [-/+] Threads | [[]/[]] Split | [K] Next Key[/dim]"
+        if self.parent_cli and self.parent_cli.input_listener.disabled:
+             hotkeys = "[dim]Hotkeys disabled (No TTY detected)[/dim]"
+        
         stats_markup = (
             f"File: [bold]{current_file}[/]\n"
             f"RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/] | Tokens: [bold]{token_display}[/] | Lines: [bold]{completed}/{total}[/]\n"
-            f"{i18n.get('label_shortcuts')} | [{self.current_status_color}]{status_text}[/{self.current_status_color}]"
+            f"{hotkeys}\n"
+            f"Status: [{self.current_status_color}]{status_text}[/{self.current_status_color}] | {log_level_text}"
         )
         self.stats_text = Text.from_markup(stats_markup, style="cyan")
         
-        # panel_group 现在只包含 progress 和 stats_text
         self.panel_group = Group(self.progress, self.stats_text)
         
-        # 使用 self.current_border_color 来保持边框颜色一致性
         self.layout["lower"].update(Panel(self.panel_group, title="Progress & Stats", border_style=self.current_border_color))
-        # 使用固定的 Action 文本防止抖动
         self.progress.update(self.task_id, total=total, completed=completed, action=i18n.get('label_processing'))
 
 class WebLogger:
@@ -533,8 +570,39 @@ class CLIMenu:
         console.clear()
         console.print(Panel.fit(f"[bold cyan]AiNiee CLI[/bold cyan] [bold green]{v_str}[/bold green] {profile_display}\nGUI Original: By NEKOparapa\nCLI Version: By ShadowLoveElysia\nLang: {current_lang}", title="Welcome"))
 
+    def run_wizard(self):
+        self.display_banner()
+        console.print(Panel("[bold cyan]Welcome to AiNiee CLI! Let's run a quick setup wizard.[/bold cyan]"))
+        
+        # 1. UI Language
+        self.first_time_lang_setup()
+        
+        # 2. Translation Languages
+        console.print(f"\n[bold]1. {i18n.get('setting_src_lang')}/{i18n.get('setting_tgt_lang')}[/bold]")
+        self.config["source_language"] = Prompt.ask(i18n.get('prompt_source_lang'), default="Japanese")
+        self.config["target_language"] = Prompt.ask(i18n.get('prompt_target_lang'), default="Chinese")
+        
+        # 3. API Platform
+        console.print(f"\n[bold]2. {i18n.get('menu_api_settings')}[/bold]")
+        console.print(f"1. {i18n.get('menu_api_online')}\n2. {i18n.get('menu_api_local')}")
+        api_choice = IntPrompt.ask(i18n.get('prompt_select'), choices=["1", "2"], default=1)
+        self.select_api_menu(online=(api_choice == 1)) # This method handles platform selection and key input
+        
+        # 4. Validation
+        console.print(f"\n[bold]3. {i18n.get('menu_api_validate')}[/bold]")
+        self.validate_api()
+        
+        # 5. Save and complete
+        self.root_config["wizard_completed"] = True
+        self.save_config(save_root=True)
+        self.save_config() # Save the profile as well
+        
+        console.print(f"\n[bold green]✓ {i18n.get('msg_saved')} Wizard complete! Entering the main menu...[/bold green]")
+        time.sleep(2)
+
     def main_menu(self):
-        if "interface_language" not in self.config: self.first_time_lang_setup()
+        if not self.root_config.get("wizard_completed"):
+            self.run_wizard()
 
         # 启动时自动检查更新
         if self.config.get("enable_auto_update", False):
@@ -704,37 +772,38 @@ class CLIMenu:
             table.add_row("8", i18n.get("setting_retry_count"), str(self.config.get("retry_count", 3)))
             table.add_row("9", i18n.get("setting_round_limit"), str(self.config.get("round_limit", 3)))
             table.add_row("10", i18n.get("setting_cache_backup_limit"), str(self.config.get("cache_backup_limit", 10)))
+            table.add_row("11", i18n.get("setting_failover_threshold"), str(self.config.get("critical_error_threshold", 5)))
 
             table.add_section()
             # --- Section 2: Feature Toggles ---
-            table.add_row("11", i18n.get("setting_detailed_logs"), "[green]ON[/]" if self.config.get("show_detailed_logs", False) else "[red]OFF[/]")
-            table.add_row("12", i18n.get("setting_cache_backup"), "[green]ON[/]" if self.config.get("enable_cache_backup", True) else "[red]OFF[/]")
-            table.add_row("13", i18n.get("setting_auto_restore_ebook"), "[green]ON[/]" if self.config.get("enable_auto_restore_ebook", True) else "[red]OFF[/]")
-            table.add_row("14", i18n.get("setting_dry_run"), "[green]ON[/]" if self.config.get("enable_dry_run", True) else "[red]OFF[/]")
-            table.add_row("15", i18n.get("setting_retry_backoff"), "[green]ON[/]" if self.config.get("enable_retry_backoff", True) else "[red]OFF[/]")
-            table.add_row("16", i18n.get("setting_session_logging"), "[green]ON[/]" if self.config.get("enable_session_logging", True) else "[red]OFF[/]")
-            table.add_row("17", i18n.get("setting_enable_retry"), "[green]ON[/]" if self.config.get("enable_retry", True) else "[red]OFF[/]")
-            table.add_row("18", i18n.get("setting_enable_smart_round_limit"), "[green]ON[/]" if self.config.get("enable_smart_round_limit", False) else "[red]OFF[/]")
-            table.add_row("19", i18n.get("setting_response_conversion_toggle"), "[green]ON[/]" if self.config.get("response_conversion_toggle", False) else "[red]OFF[/]")
-            table.add_row("20", i18n.get("setting_auto_update"), "[green]ON[/]" if self.config.get("enable_auto_update", False) else "[red]OFF[/]")
+            table.add_row("12", i18n.get("setting_detailed_logs"), "[green]ON[/]" if self.config.get("show_detailed_logs", False) else "[red]OFF[/]")
+            table.add_row("13", i18n.get("setting_cache_backup"), "[green]ON[/]" if self.config.get("enable_cache_backup", True) else "[red]OFF[/]")
+            table.add_row("14", i18n.get("setting_auto_restore_ebook"), "[green]ON[/]" if self.config.get("enable_auto_restore_ebook", True) else "[red]OFF[/]")
+            table.add_row("15", i18n.get("setting_dry_run"), "[green]ON[/]" if self.config.get("enable_dry_run", True) else "[red]OFF[/]")
+            table.add_row("16", i18n.get("setting_retry_backoff"), "[green]ON[/]" if self.config.get("enable_retry_backoff", True) else "[red]OFF[/]")
+            table.add_row("17", i18n.get("setting_session_logging"), "[green]ON[/]" if self.config.get("enable_session_logging", True) else "[red]OFF[/]")
+            table.add_row("18", i18n.get("setting_enable_retry"), "[green]ON[/]" if self.config.get("enable_retry", True) else "[red]OFF[/]")
+            table.add_row("19", i18n.get("setting_enable_smart_round_limit"), "[green]ON[/]" if self.config.get("enable_smart_round_limit", False) else "[red]OFF[/]")
+            table.add_row("20", i18n.get("setting_response_conversion_toggle"), "[green]ON[/]" if self.config.get("response_conversion_toggle", False) else "[red]OFF[/]")
+            table.add_row("21", i18n.get("setting_auto_update"), "[green]ON[/]" if self.config.get("enable_auto_update", False) else "[red]OFF[/]")
 
             table.add_section()
             # --- Section 3: Sub-menus & Advanced ---
-            table.add_row("21", i18n.get("setting_project_type"), self.config.get("translation_project", "AutoType"))
-            table.add_row("22", i18n.get("setting_trans_mode"), f"{limit_mode_str} ({self.config.get(limit_val_key, 20)})")
-            table.add_row("23", i18n.get("menu_api_pool_settings"), f"[cyan]{len(self.config.get('backup_apis', []))} APIs[/]")
-            table.add_row("24", i18n.get("menu_prompt_features"), "...")
-            table.add_row("25", i18n.get("menu_response_checks"), "...")
+            table.add_row("22", i18n.get("setting_project_type"), self.config.get("translation_project", "AutoType"))
+            table.add_row("23", i18n.get("setting_trans_mode"), f"{limit_mode_str} ({self.config.get(limit_val_key, 20)})")
+            table.add_row("24", i18n.get("menu_api_pool_settings"), f"[cyan]{len(self.config.get('backup_apis', []))} APIs[/]")
+            table.add_row("25", i18n.get("menu_prompt_features"), "...")
+            table.add_row("26", i18n.get("menu_response_checks"), "...")
 
             console.print(table); console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
-            choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(26)], show_choices=False)
+            choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(27)], show_choices=False)
             console.print("\n")
 
             if choice == 0: break
 
             # Section 1
-            elif choice == 1: self.config["label_input_path"] = Prompt.ask(i18n.get('prompt_input_path'), default=self.config.get("label_input_path", ""))
-            elif choice == 2: self.config["label_output_path"] = Prompt.ask(i18n.get('prompt_output_path'), default=self.config.get("label_output_path", ""))
+            elif choice == 1: self.config["label_input_path"] = Prompt.ask(i18n.get('prompt_input_path'), default=self.config.get("label_input_path", "")).strip().strip('"').strip("'")
+            elif choice == 2: self.config["label_output_path"] = Prompt.ask(i18n.get('prompt_output_path'), default=self.config.get("label_output_path", "")).strip().strip('"').strip("'")
             elif choice == 3: self.config["source_language"] = Prompt.ask(i18n.get('prompt_source_lang'), default=self.config.get("source_language"))
             elif choice == 4: self.config["target_language"] = Prompt.ask(i18n.get('prompt_target_lang'), default=self.config.get("target_language"))
             elif choice == 5: self.config["user_thread_counts"] = IntPrompt.ask(i18n.get('setting_thread_count'), default=self.config.get("user_thread_counts", 0))
@@ -745,23 +814,24 @@ class CLIMenu:
             elif choice == 8: self.config["retry_count"] = IntPrompt.ask(i18n.get('setting_retry_count'), default=self.config.get("retry_count", 3))
             elif choice == 9: self.config["round_limit"] = IntPrompt.ask(i18n.get('setting_round_limit'), default=self.config.get("round_limit", 3))
             elif choice == 10: self.config["cache_backup_limit"] = IntPrompt.ask(i18n.get('setting_cache_backup_limit'), default=self.config.get("cache_backup_limit", 10))
-            elif choice == 11: self.config["show_detailed_logs"] = not self.config.get("show_detailed_logs", False)
-            elif choice == 12: self.config["enable_cache_backup"] = not self.config.get("enable_cache_backup", True)
-            elif choice == 13: self.config["enable_auto_restore_ebook"] = not self.config.get("enable_auto_restore_ebook", True)
-            elif choice == 14: self.config["enable_dry_run"] = not self.config.get("enable_dry_run", True)
-            elif choice == 15: self.config["enable_retry_backoff"] = not self.config.get("enable_retry_backoff", True)
-            elif choice == 16: self.config["enable_session_logging"] = not self.config.get("enable_session_logging", True)
-            elif choice == 17: self.config["enable_retry"] = not self.config.get("enable_retry", True)
-            elif choice == 18: self.config["enable_smart_round_limit"] = not self.config.get("enable_smart_round_limit", False)
-            elif choice == 19: self.config["response_conversion_toggle"] = not self.config.get("response_conversion_toggle", False)
-            elif choice == 20: self.config["enable_auto_update"] = not self.config.get("enable_auto_update", False)
+            elif choice == 11: self.config["critical_error_threshold"] = IntPrompt.ask(i18n.get('setting_failover_threshold'), default=self.config.get("critical_error_threshold", 5))
+            elif choice == 12: self.config["show_detailed_logs"] = not self.config.get("show_detailed_logs", False)
+            elif choice == 13: self.config["enable_cache_backup"] = not self.config.get("enable_cache_backup", True)
+            elif choice == 14: self.config["enable_auto_restore_ebook"] = not self.config.get("enable_auto_restore_ebook", True)
+            elif choice == 15: self.config["enable_dry_run"] = not self.config.get("enable_dry_run", True)
+            elif choice == 16: self.config["enable_retry_backoff"] = not self.config.get("enable_retry_backoff", True)
+            elif choice == 17: self.config["enable_session_logging"] = not self.config.get("enable_session_logging", True)
+            elif choice == 18: self.config["enable_retry"] = not self.config.get("enable_retry", True)
+            elif choice == 19: self.config["enable_smart_round_limit"] = not self.config.get("enable_smart_round_limit", False)
+            elif choice == 20: self.config["response_conversion_toggle"] = not self.config.get("response_conversion_toggle", False)
+            elif choice == 21: self.config["enable_auto_update"] = not self.config.get("enable_auto_update", False)
 
             # Section 3
-            elif choice == 21: self.project_type_menu()
-            elif choice == 22: self.trans_mode_menu()
-            elif choice == 23: self.api_pool_menu()
-            elif choice == 24: self.prompt_features_menu()
-            elif choice == 25: self.response_checks_menu()
+            elif choice == 22: self.project_type_menu()
+            elif choice == 23: self.trans_mode_menu()
+            elif choice == 24: self.api_pool_menu()
+            elif choice == 25: self.prompt_features_menu()
+            elif choice == 26: self.response_checks_menu()
 
             self.save_config()
 
@@ -880,16 +950,24 @@ class CLIMenu:
         while True:
             self.display_banner(); current_p, current_m = self.config.get("target_platform", "None"), self.config.get("model", "None")
             console.print(Panel(f"[bold]{i18n.get('menu_api_settings')}[/bold] [dim](Current: {current_p} - {current_m})[/dim]"))
-            menus=["online", "local", "validate", "manual"]
+            menus=["online", "local", "validate", "manual", "edit_in_editor"]
             table = Table(show_header=False, box=None)
-            for i, m in enumerate(menus): table.add_row(f"[{'cyan' if i<2 else 'green' if i<3 else 'yellow'}]{i+1}.[/]", i18n.get(f"menu_api_{m}"))
+            for i, m in enumerate(menus): 
+                table.add_row(f"[{'cyan' if i<2 else 'green' if i<3 else 'yellow' if i < 4 else 'magenta'}]{i+1}.[/]", i18n.get(f"menu_api_{m}" if m != "edit_in_editor" else "menu_edit_in_editor"))
             console.print(table); console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
-            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=list("01234"), show_choices=False)
+            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=list("012345"), show_choices=False)
             console.print()
             if choice == 0: break
             elif choice in [1, 2]: self.select_api_menu(online=choice==1)
             elif choice == 3: self.validate_api()
             elif choice == 4: self.manual_edit_api_menu()
+            elif choice == 5:
+                profile_path = os.path.join(self.profiles_dir, f"{self.active_profile_name}.json")
+                if open_in_editor(profile_path):
+                    Prompt.ask(f"\n{i18n.get('msg_press_enter_after_save')}")
+                    self.load_config() # Reload all configs
+                    console.print(f"[green]Profile '{self.active_profile_name}' reloaded.[/green]")
+                time.sleep(1)
     def select_api_menu(self, online: bool):
         local_keys = ["localllm", "sakura"]; platforms = self.config.get("platforms", {})
         options = {k: v for k, v in platforms.items() if (k.lower() not in local_keys) == online}
@@ -1065,17 +1143,18 @@ class CLIMenu:
             table = Table(show_header=False, box=None)
             table.add_row("[cyan]1.[/]", f"{i18n.get('menu_toggle_switch')} (Current: [green]{'ON' if sw else 'OFF'}[/green])")
             table.add_row("[cyan]2.[/]", f"{i18n.get('menu_dict_import' if 'dict' in switch_key else 'menu_exclusion_import')} (Current items: {len(data)})")
-            table.add_row("[cyan]3.[/]", f"{i18n.get('menu_clear_data')}")
+            table.add_row("[cyan]3.[/]", f"{i18n.get('menu_edit_in_editor')}")
+            table.add_row("[cyan]4.[/]", f"{i18n.get('menu_clear_data')}")
             console.print(table)
             console.print(f"\n[dim]0. {i18n.get('menu_back')}[/dim]")
             
-            c = IntPrompt.ask(i18n.get('prompt_select'), choices=["0", "1", "2", "3"], show_choices=False)
+            c = IntPrompt.ask(i18n.get('prompt_select'), choices=["0", "1", "2", "3", "4"], show_choices=False)
             
             if c == 0: break
             elif c == 1:
                 self.config[switch_key] = not sw
             elif c == 2:
-                path = Prompt.ask(i18n.get('prompt_json_path')).strip('"').strip("'")
+                path = Prompt.ask(i18n.get('prompt_json_path')).strip().strip('"').strip("'")
                 if os.path.exists(path):
                     try:
                         with open(path, 'r', encoding='utf-8') as f:
@@ -1090,7 +1169,33 @@ class CLIMenu:
                 else:
                     console.print(f"[red]{i18n.get('err_not_file')}[/red]")
                 time.sleep(1)
-            elif c == 3:
+            elif c == 3: # Edit in Editor
+                temp_dir = os.path.join(PROJECT_ROOT, "output", "temp_edit")
+                os.makedirs(temp_dir, exist_ok=True)
+                temp_path = os.path.join(temp_dir, f"{data_key}.json")
+                
+                try:
+                    with open(temp_path, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=4, ensure_ascii=False)
+                    
+                    if open_in_editor(temp_path):
+                        Prompt.ask(f"\n{i18n.get('msg_press_enter_after_save')}")
+                        with open(temp_path, 'r', encoding='utf-8') as f:
+                            new_data = json.load(f)
+                            if isinstance(new_data, list):
+                                self.config[data_key] = new_data
+                                console.print(f"[green]{i18n.get('msg_data_loaded').format(len(new_data))}[/green]")
+                            else:
+                                console.print(f"[red]{i18n.get('msg_json_root_error')}[/red]")
+                    
+                except Exception as e:
+                    console.print(f"[red]Error during editing: {e}[/red]")
+                finally:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                time.sleep(1)
+
+            elif c == 4:
                 if Confirm.ask(i18n.get("menu_clear_data") + "?"):
                     self.config[data_key] = []
                     console.print(f"[yellow]{i18n.get('msg_data_cleared')}[/yellow]")
@@ -1189,6 +1294,18 @@ class CLIMenu:
             if not target_path:
                 return
 
+        # Smart suggestion for folders
+        if os.path.isdir(target_path):
+            candidates = []
+            for ext in ("*.txt", "*.epub"):
+                candidates.extend(glob.glob(os.path.join(target_path, ext)))
+            
+            if len(candidates) == 1:
+                file_name = os.path.basename(candidates[0])
+                if Confirm.ask(f"\n[cyan]Found a single file '{file_name}' in this directory. Process this file instead of the whole folder?[/cyan]", default=True):
+                    target_path = candidates[0]
+                    console.print(f"[dim]Switched target to file: {target_path}[/dim]")
+
         # --- 非交互模式的路径处理 ---
         if not os.path.exists(target_path):
             console.print(f"[red]Error: Input path '{target_path}' not found.[/red]")
@@ -1210,9 +1327,63 @@ class CLIMenu:
 
         self.save_config()
         
-        if not continue_status and os.path.exists(os.path.join(opath, "cache", "AinieeCacheData.json")):
+        # --- NEW: Enhanced Output Directory Handling ---
+        if not continue_status and os.path.exists(opath) and not non_interactive:
+            cache_exists = os.path.exists(os.path.join(opath, "cache", "AinieeCacheData.json"))
+            console.print(Panel(i18n.get("menu_output_exists_prompt"), title=f"[yellow]{i18n.get('menu_output_exists_title')}[/yellow]", expand=False))
+            
+            options, choices_map = [], {}
+            
+            if cache_exists:
+                options.append(f"1. {i18n.get('option_resume')}")
+                choices_map["1"] = "resume"
+            else:
+                options.append(f"[dim]1. {i18n.get('option_resume')} ({i18n.get('err_resume_no_cache')})[/dim]")
+
+            options.append(f"2. {i18n.get('option_archive')}")
+            choices_map["2"] = "archive"
+            options.append(f"3. {i18n.get('option_overwrite')}")
+            choices_map["3"] = "overwrite"
+            options.append(f"0. {i18n.get('option_cancel')}")
+            choices_map["0"] = "cancel"
+
+            console.print("\n".join(options))
+            
+            valid_choices = [k for k, v in choices_map.items() if v != "resume" or cache_exists]
+            choice_str = Prompt.ask(f"\n{i18n.get('prompt_select')}", choices=valid_choices, show_choices=False)
+            action = choices_map.get(choice_str)
+
+            if action == "resume":
+                continue_status = True
+            elif action == "archive":
+                timestamp = time.strftime('%Y%m%d_%H%M%S')
+                backup_path = f"{opath}_backup_{timestamp}"
+                try:
+                    os.rename(opath, backup_path)
+                    console.print(i18n.get('msg_archive_success').format(os.path.basename(backup_path)))
+                except OSError as e:
+                    console.print(f"[red]Error archiving directory: {e}[/red]")
+                    return
+                continue_status = False
+            elif action == "overwrite":
+                if Confirm.ask(i18n.get('msg_overwrite_confirm').format(os.path.basename(opath)), default=False):
+                    try:
+                        shutil.rmtree(opath)
+                        console.print(f"[green]'{os.path.basename(opath)}' deleted.[/green]")
+                    except OSError as e:
+                        console.print(f"[red]Error deleting directory: {e}[/red]")
+                        return
+                else:
+                    console.print("[yellow]Overwrite cancelled.[/yellow]")
+                    return
+                continue_status = False
+            elif action == "cancel":
+                return
+        
+        # Fallback for non-interactive or simple resume case
+        elif not continue_status and os.path.exists(os.path.join(opath, "cache", "AinieeCacheData.json")):
              if non_interactive:
-                 continue_status = True # 在 -y 模式下自动恢复
+                 continue_status = True
              elif Confirm.ask(f"\n[yellow]Detected existing cache for this file. Resume?[/yellow]", default=True):
                  continue_status = True
         
@@ -1234,6 +1405,7 @@ class CLIMenu:
             self.ui = WebLogger(stream=original_stdout)
         else:
             self.ui = TaskUI()
+            self.ui.parent_cli = self # Give UI a reference back to the main CLI
             
         Base.print = self.ui.log
         self.stop_requested = False
@@ -1242,6 +1414,9 @@ class CLIMenu:
         # 确保 TaskExecutor 的配置与 CLIMenu 的配置同步
         self.task_executor.config.load_config_from_dict(self.config)
         
+        if self.input_listener.disabled and not web_mode:
+            self.ui.log("[bold yellow]Warning: Keyboard listener failed to initialize (no TTY found). Hotkeys will be disabled.[/bold yellow]")
+
         original_ext = os.path.splitext(target_path)[1].lower()
         is_middleware_converted = False
 
@@ -1266,11 +1441,20 @@ class CLIMenu:
 
         # Redirect stdout/stderr to capture errors in UI
         class LogStream:
+            _local = threading.local() # For recursion guard
+
             def __init__(self, ui, f=None, parent=None): 
                 self.ui = ui
                 self.f = f
                 self.parent = parent
+                self._local.is_writing = False
+
             def write(self, msg): 
+                if hasattr(self._local, 'is_writing') and self._local.is_writing:
+                    original_stdout.write(f"\n[LogStream Recursion] {msg}\n")
+                    original_stdout.flush()
+                    return
+
                 if not msg: return
                 msg_str = str(msg)
                 
@@ -1280,16 +1464,22 @@ class CLIMenu:
                         self.f.flush()
                     except: pass
 
-                # Handle Status Updates specially
                 if "[STATUS]" in msg_str:
                     return
-
-                # Decide where to output based on Live state
-                if self.parent and self.parent.live_state[0]:
-                    if msg_str.strip(): self.ui.log(msg_str)
-                else:
-                    original_stdout.write(msg_str + "\n")
+                
+                self._local.is_writing = True
+                try:
+                    if self.parent and self.parent.live_state[0]:
+                        if msg_str.strip(): self.ui.log(msg_str)
+                    else:
+                        original_stdout.write(msg_str + "\n")
+                        original_stdout.flush()
+                except Exception as e:
+                    original_stdout.write(f"\n[LogStream UI Error] {e}\n")
                     original_stdout.flush()
+                finally:
+                    self._local.is_writing = False
+
             def flush(self): pass
         
         sys.stdout = sys.stderr = LogStream(self.ui, log_file, self)
@@ -1431,6 +1621,28 @@ class CLIMenu:
                                     )
                                     self.ui.update_status(None, {"status": "normal"})
                                     is_paused = False
+                            elif key == 'v':
+                                self.ui.toggle_log_filter()
+                            elif key == '[' or key == ']':
+                                cfg = self.task_executor.config
+                                if cfg.tokens_limit_switch:
+                                    current_val = cfg.tokens_limit
+                                    step = 100
+                                    new_val = max(100, current_val - step) if key == '[' else min(16000, current_val + step)
+                                    cfg.tokens_limit = new_val
+                                    self.ui.log(i18n.get('msg_split_limit_changed').format(new_val, "tokens"))
+                                else:
+                                    current_val = cfg.lines_limit
+                                    step = 1
+                                    new_val = max(1, current_val - step) if key == '[' else min(100, current_val + step)
+                                    cfg.lines_limit = new_val
+                                    self.ui.log(i18n.get('msg_split_limit_changed').format(new_val, "lines"))
+                            elif key == 'n':
+                                current_file_path = self.ui._last_progress_data.get('file_path_full')
+                                if current_file_path:
+                                    file_name = os.path.basename(current_file_path)
+                                    self.ui.log(i18n.get('msg_skipping_file').format(file_name))
+                                    EventManager.get_singleton().emit("TASK_SKIP_FILE_REQUEST", {"file_path_full": current_file_path})
                             elif key == '-': # 减少线程
                                 old_val = self.task_executor.config.actual_thread_counts
                                 new_val = max(1, old_val - 1)
@@ -1565,6 +1777,18 @@ class CLIMenu:
             if not target_path: 
                 return
 
+        # Smart suggestion for folders
+        if os.path.isdir(target_path):
+            candidates = []
+            for ext in ("*.txt", "*.epub"):
+                candidates.extend(glob.glob(os.path.join(target_path, ext)))
+            
+            if len(candidates) == 1:
+                file_name = os.path.basename(candidates[0])
+                if Confirm.ask(f"\n[cyan]Found a single file '{file_name}' in this directory. Search for cache based on this file instead of the folder?[/cyan]", default=True):
+                    target_path = candidates[0]
+                    console.print(f"[dim]Switched target to file: {target_path}[/dim]")
+
         # 2. Setup paths
         if not os.path.exists(target_path):
             console.print(f"[red]Error: Input path '{target_path}' not found.[/red]")
@@ -1584,7 +1808,7 @@ class CLIMenu:
             if non_interactive:
                 console.print(f"[red]Aborting in non-interactive mode.[/red]")
                 return
-            opath = Prompt.ask(i18n.get('msg_enter_output_path')).strip('"').strip("'")
+            opath = Prompt.ask(i18n.get('msg_enter_output_path')).strip().strip('"').strip("'")
             if opath.lower() == 'q':
                 return
             cache_path = os.path.join(opath, "cache", "AinieeCacheData.json")

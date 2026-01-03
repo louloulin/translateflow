@@ -216,6 +216,24 @@
     "msg_epub_conv_success": "[green]转换成功: {}[/green]",
         "msg_epub_conv_fail": "[bold red]中间件错误: {}[/bold red]",
         "menu_update": "检查并更新软件",
-        "setting_auto_update": "开启启动时自动检查更新"
+        "setting_auto_update": "开启启动时自动检查更新",
+        "menu_edit_in_editor": "在系统编辑器中打开",
+        "msg_press_enter_after_save": "请在编辑器中修改并保存，关闭后返回此处按回车键重新加载...",
+        "label_status_critical_error": "× 严重错误: 任务已暂停，请检查。按 [R] 恢复或 [Q] 退出。",
+        "label_log_level_all": "日志：全部",
+        "label_log_level_error": "日志：仅错误",
+        "label_shortcuts": "[dim]快捷键: [P]暂停 [R]恢复 [Q]停止 [V]日志 [N]跳过文件 [-/+]线程 [[]/[]]分割 [K]换Key[/dim]",
+        "msg_split_limit_changed": "系统: 分割限制已调整为 {} {}",
+        "msg_skipping_file": "系统: 跳过当前文件 {}",
+        "label_status_paused": "‖ 系统已暂停",
+        "menu_output_exists_title": "输出目录已存在",
+        "menu_output_exists_prompt": "检测到已有输出目录，您希望如何操作？",
+        "option_resume": "断点续传",
+        "option_archive": "归档旧目录并重新开始",
+        "option_overwrite": "覆盖 (删除旧目录)",
+        "option_cancel": "取消任务",
+        "err_resume_no_cache": "[bold red]无法断点续传：未找到缓存文件。[/bold red]",
+        "msg_archive_success": "[green]旧目录已归档至: {}[/green]",
+        "msg_overwrite_confirm": "[bold red]警告：此操作将永久删除 '{}' 及其所有内容，无法撤销。您确定要继续吗？[/bold red]"
     }
     

@@ -18,6 +18,7 @@
     "translation_example_data": [],
     "few_shot_and_example_switch": false,
     "enable_api_failover": false,
+    "critical_error_threshold": 5,
     "backup_apis": [],
     "api_failover_threshold": 3,
     "user_thread_counts": 0,

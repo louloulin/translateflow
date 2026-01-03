@@ -206,6 +206,23 @@
     "msg_epub_conv_success": "[green]変換成功: {}[/green]",
         "msg_epub_conv_fail": "[bold red]ミドルウェアエラー: {}[/bold red]",
         "menu_update": "アップデートを確認",
-        "setting_auto_update": "起動時に自動的にアップデートを確認する"
-    }
-    
+        "setting_auto_update": "起動時に自動的にアップデートを確認する",
+    "menu_edit_in_editor": "システムエディタで開く",
+    "msg_press_enter_after_save": "エディタで編集して保存し、閉じてからここに戻ってEnterキーを押してリロードしてください...",
+    "label_status_critical_error": "× 重大なエラー：タスクは一時停止しました。[R]で再開、[Q]で終了。",
+    "label_log_level_all": "ログ：すべて",
+        "label_log_level_error": "ログ：エラーのみ",
+        "label_shortcuts": "[dim]ショートカット: [P]一時停止 [R]再開 [Q]停止 [V]ログ [N]スキップ [-/+]スレ [[]/[]]分割 [K]キー[/dim]",
+        "msg_split_limit_changed": "システム: 分割制限を {} {} に変更しました",
+        "msg_skipping_file": "システム: 現在のファイルをスキップしています {}",
+        "label_status_paused": "‖ システム一時停止中",
+        "menu_output_exists_title": "出力ディレクトリが存在します",
+        "menu_output_exists_prompt": "既存の出力ディレクトリが見つかりました。どうしますか？",
+        "option_resume": "キャッシュから再開",
+        "option_archive": "古いをアーカイブして再起動",
+        "option_overwrite": "上書き (古いディレクトリを削除)",
+        "option_cancel": "タスクをキャンセル",
+        "err_resume_no_cache": "[bold red]再開できません：キャッシュファイルが見つかりません。[/bold red]",
+        "msg_archive_success": "[green]古いディレクトリを {} にアーカイブしました[/green]",
+        "msg_overwrite_confirm": "[bold red]警告：これにより '{}' とそのすべての内容が永久に削除されます。この操作は元に戻せません。続行しますか？[/bold red]"
+    }    

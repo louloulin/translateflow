@@ -41,7 +41,12 @@ class TaskExecutor(Base):
         self.subscribe(Base.EVENT.TASK_START, self.task_start)
         self.subscribe(Base.EVENT.TASK_MANUAL_EXPORT, self.task_manual_export)
         self.subscribe(Base.EVENT.TASK_API_STATUS_REPORT, self.on_api_status_report)
+        self.subscribe("TASK_SKIP_FILE_REQUEST", self.on_skip_file_request)
         self.subscribe(Base.EVENT.APP_SHUT_DOWN, self.app_shut_down)
+
+        # Skip File state
+        self.skipped_files = set()
+        self._skip_lock = threading.Lock()
 
         # Failover state
         self.global_consecutive_api_errors = 0
@@ -63,10 +68,38 @@ class TaskExecutor(Base):
         if force_switch:
             with self._api_error_lock:
                 self._switch_api()
-                self.global_consecutive_api_errors = 0
+                self.consecutive_errors = 0 # Reset on manual switch
             return
 
-        self.report_api_status(is_success)
+        with self._api_error_lock:
+            if is_success:
+                self.consecutive_errors = 0
+            else:
+                self.consecutive_errors += 1
+                
+                # Check for critical error threshold
+                threshold = self.config.critical_error_threshold or 5
+                if self.consecutive_errors >= threshold:
+                    self.error(f"Critical error threshold ({threshold}) reached. Pausing task.")
+                    self.emit(Base.EVENT.SYSTEM_STATUS_UPDATE, {"status": "critical_error"})
+                    self.emit(Base.EVENT.TASK_STOP, {})
+                    self.consecutive_errors = 0 # Reset after triggering
+                    return # Stop further processing to avoid conflict with failover
+
+                # Standard failover logic
+                if self.config.enable_api_failover and self.api_pipeline:
+                    failover_threshold = self.config.api_failover_threshold
+                    if self.consecutive_errors >= failover_threshold:
+                        self.warning(f"API consecutive errors ({self.consecutive_errors}) reached failover threshold ({failover_threshold}). Switching API...")
+                        self._switch_api()
+                        self.consecutive_errors = 0
+
+    def on_skip_file_request(self, event, data):
+        with self._skip_lock:
+            path = data.get("file_path_full")
+            if path:
+                self.skipped_files.add(path)
+                self.print(f"[bold yellow]Skip request received for {os.path.basename(path)}. New tasks for this file will be ignored.[/bold yellow]")
 
     def _gated_run(self, task):
         """指挥中心：动态门禁控制"""
@@ -84,6 +117,9 @@ class TaskExecutor(Base):
             return {}
 
         try:
+            with self._skip_lock:
+                if hasattr(task, 'file_path_full') and task.file_path_full in self.skipped_files:
+                    return None # Skip execution
             return task.start()
         finally:
             with self._concurrency_lock:
@@ -228,6 +264,15 @@ class TaskExecutor(Base):
         if Base.work_status == Base.STATUS.STOPING:
             self.warning("系统正在停止中，无法开始新任务。")
             return
+            
+        # Reset error counter at the very beginning of a new task
+        self.consecutive_errors = 0
+        if not data.get("silent", False): # Don't reset status on silent resume
+            self.emit(Base.EVENT.SYSTEM_STATUS_UPDATE, {"status": "normal"})
+
+        # Clear skipped files list for the new session
+        with self._skip_lock:
+            self.skipped_files.clear()
 
         # 获取配置信息
         continue_status = data.get("continue_status")
@@ -348,19 +393,26 @@ class TaskExecutor(Base):
                 total_files = len(unique_files)
 
                 for i, (chunk, previous_chunk, file_path) in enumerate(zip(chunks, previous_chunks, file_paths), 1):
+                    # Skip task creation if file is marked for skipping
+                    with self._skip_lock:
+                        if file_path in self.skipped_files:
+                            continue
+
                     # 确定该任务的主语言
                     language_stats = self.cache_manager.project.get_file(file_path).language_stats # 获取该文件的语言检测数据
                     file_source_lang = get_source_language_for_file(self.config.source_language,self.config.target_language,language_stats)
 
                     task = TranslatorTask(self.config, self.plugin_manager, self.request_limiter, file_source_lang)  # 实例化
                     task.task_id = f"{current_round + 1:02d}-{i:03d}"
+                    task.file_path_full = file_path
                     
                     # Store file info in task for callback
                     f_info = file_info_map.get(file_path)
                     task.extra_info = {
                         "file_name": f_info["name"],
                         "file_index": f_info["index"],
-                        "total_files": total_files
+                        "total_files": total_files,
+                        "file_path_full": file_path
                     }
 
                     task.set_items(chunk)  # 传入该任务待翻译原文

@@ -36,6 +36,8 @@ This project introduces **`uv`**, a modern Python package manager, and implement
 
 ## 🚀 Quick Start
 
+---
+
 We highly recommend using **[uv](https://github.com/astral-sh/uv)** to launch this project for the fastest environment resolution and cleanest dependency isolation.
 
 ### 1. Install uv

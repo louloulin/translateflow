@@ -215,6 +215,24 @@
     "msg_epub_conv_success": "[green]Conversion successful: {}[/green]",
         "msg_epub_conv_fail": "[bold red]Middleware Error: {}[/bold red]",
         "menu_update": "Check for Updates",
-        "setting_auto_update": "Auto-check for updates on startup"
+        "setting_auto_update": "Auto-check for updates on startup",
+        "menu_edit_in_editor": "Open in System Editor",
+        "msg_press_enter_after_save": "Please edit and save in the editor, then return here and press Enter to reload...",
+        "label_status_critical_error": "CRITICAL: Task paused. [R]esume or [Q]uit.",
+        "label_log_level_all": "Logs: All",
+        "label_log_level_error": "Logs: Errors Only",
+        "label_shortcuts": "[dim]Shortcuts: [P]Pause [R]Resume [Q]Stop [V]Log [N]Skip [-/+]Thr [[]/[]]Split [K]Key[/dim]",
+        "msg_split_limit_changed": "System: Split limit changed to {} {}",
+        "msg_skipping_file": "System: Skipping current file {}",
+        "label_status_paused": "‖ System Paused",
+        "menu_output_exists_title": "Output Directory Exists",
+        "menu_output_exists_prompt": "An existing output directory was found. What would you like to do?",
+        "option_resume": "Resume from cache",
+        "option_archive": "Archive old and restart",
+        "option_overwrite": "Overwrite (Delete old directory)",
+        "option_cancel": "Cancel task",
+        "err_resume_no_cache": "[bold red]Cannot resume: No cache file found.[/bold red]",
+        "msg_archive_success": "[green]Old directory archived to: {}[/green]",
+        "msg_overwrite_confirm": "[bold red]WARNING: This will permanently delete '{}' and all its contents. This action cannot be undone. Are you sure you want to continue?[/bold red]"
     }
     

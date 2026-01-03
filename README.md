@@ -35,8 +35,6 @@
 
 ---
 
-## 🚀 快速开始 (Quick Start)
-
 本项目推荐使用 **[uv](https://github.com/astral-sh/uv)** 进行启动，以获得最快的环境解析速度和最纯净的依赖隔离。
 
 ### 1. 安装 uv
