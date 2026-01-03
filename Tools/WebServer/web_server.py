@@ -17,7 +17,7 @@ try:
     from pydantic import BaseModel
 except ImportError:
     # This error will be caught and handled in ainiee_cli.py
-    raise ImportError("Required packages are missing. Please run 'pip install fastapi uvicorn[standard] pydantic'.")
+    raise ImportError("Required packages are missing. Please run 'uv add fastapi uvicorn[standard] pydantic'.,Or run 'uv sync'")
 
 # --- Add Project Root to Python Path ---
 # This ensures that we can import modules from the main project (e.g., ainiee_cli)
