@@ -38,7 +38,7 @@ spacy
 sudachipy
 sudachidict-core
 
-# mediapipe
+mediapipe
 absl-py
 attrs>=19.1.0
 flatbuffers>=2.0
