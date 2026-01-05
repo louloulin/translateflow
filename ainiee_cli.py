@@ -1151,7 +1151,11 @@ class CLIMenu:
             sw = self.config.get(switch_key, False)
             data = self.config.get(data_key, [])
             
-            console.print(Panel(f"[bold]{title}[/bold]"))
+            panel_title = f"[bold]{title}[/bold]"
+            if "exclusion" in data_key:
+                panel_title += i18n.get("tip_exclusion_regex")
+                
+            console.print(Panel(panel_title))
             table = Table(show_header=False, box=None)
             table.add_row("[cyan]1.[/]", f"{i18n.get('menu_toggle_switch')} (Current: [green]{'ON' if sw else 'OFF'}[/green])")
             table.add_row("[cyan]2.[/]", f"{i18n.get('menu_dict_import' if 'dict' in switch_key else 'menu_exclusion_import')} (Current items: {len(data)})")
@@ -1170,10 +1174,49 @@ class CLIMenu:
                 if os.path.exists(path):
                     try:
                         with open(path, 'r', encoding='utf-8') as f:
-                            new_data = json.load(f)
+                            content = f.read()
+                        
+                        # Try standard load first
+                        try:
+                            new_data = json.loads(content)
+                        except json.JSONDecodeError as e:
+                            new_data = None
+                            console.print(f"[red]JSON Syntax Error: {e}[/red]")
+                            if Confirm.ask("Format invalid. Attempt auto-repair using json_repair library?", default=True):
+                                try:
+                                    import json_repair
+                                except ImportError:
+                                    console.print("[yellow]Installing json_repair using uv...[/yellow]")
+                                    subprocess.check_call(["uv", "add", "json_repair"])
+                                    import json_repair
+                                
+                                try:
+                                    new_data = json_repair.loads(content)
+                                    console.print("[green]Repaired successfully![/green]")
+                                except Exception as repair_err:
+                                    console.print(f"[red]Repair failed: {repair_err}[/red]")
+                        
+                        if new_data is not None:
                             if isinstance(new_data, list):
-                                self.config[data_key] = new_data
-                                console.print(f"[green]{i18n.get('msg_data_loaded').format(len(new_data))}[/green]")
+                                # Format Validation
+                                is_glossary = "dict" in switch_key
+                                required_keys = {"src", "dst", "info"} if is_glossary else {"markers", "info", "regex"}
+                                
+                                valid_items = []
+                                for item in new_data:
+                                    if isinstance(item, dict) and all(k in item for k in required_keys):
+                                        valid_items.append(item)
+                                
+                                if len(valid_items) == len(new_data):
+                                    self.config[data_key] = new_data
+                                    console.print(f"[green]{i18n.get('msg_data_loaded').format(len(new_data))}[/green]")
+                                else:
+                                    console.print(f"[yellow]Loaded {len(new_data)} items, but only {len(valid_items)} matched the required format: {required_keys}[/yellow]")
+                                    if len(valid_items) > 0 and Confirm.ask("Load valid items only?", default=True):
+                                        self.config[data_key] = valid_items
+                                        console.print(f"[green]Loaded {len(valid_items)} valid items.[/green]")
+                                    else:
+                                        console.print("[red]Import cancelled (format mismatch).[/red]")
                             else:
                                 console.print(f"[red]{i18n.get('msg_json_root_error')}[/red]")
                     except Exception as e:

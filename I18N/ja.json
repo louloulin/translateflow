@@ -132,6 +132,7 @@
     "menu_api_think_depth": "思考深度",
     "prompt_json_path": "JSONファイルのパスを入力",
     "prompt_think_depth": "思考深度 (0-10000)",
+    "tip_exclusion_regex": " [dim](上級者向け設定)[/dim]",
     "menu_sub_type_select": "詳細タイプを選択",
     "menu_profile_select": "アクティブにするプロファイルを選択",
     "menu_profile_create": "新しいプロファイルを作成",

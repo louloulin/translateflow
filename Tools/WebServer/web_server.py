@@ -11,17 +11,20 @@ from typing import List, Dict, Any, Optional
 
 # --- Pre-emptive Import for FastAPI & Pydantic ---
 try:
-    from fastapi import FastAPI, HTTPException, Body
+    from fastapi import FastAPI, HTTPException, Body, File, UploadFile
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
     from pydantic import BaseModel
 except ImportError:
     # This error will be caught and handled in ainiee_cli.py
-    raise ImportError("Required packages are missing. Please run 'uv add fastapi uvicorn[standard] pydantic'.,Or run 'uv sync'")
+    raise ImportError("Required packages are missing. Please run 'uv add fastapi uvicorn[standard] pydantic python-multipart'.,Or run 'uv sync'")
 
 # --- Add Project Root to Python Path ---
 # This ensures that we can import modules from the main project (e.g., ainiee_cli)
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+UPDATETEMP_PATH = os.path.join(PROJECT_ROOT, "updatetemp") # Define upload directory
+TEMP_EDIT_PATH = os.path.join(PROJECT_ROOT, "output", "temp_edit") # Define draft directory
+
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
@@ -320,6 +323,16 @@ class ProfileRenameRequest(BaseModel):
 class ProfileDeleteRequest(BaseModel):
     profile: str
 
+class GlossaryItem(BaseModel):
+    src: str
+    dst: str
+    info: Optional[str] = None
+
+class ExclusionItem(BaseModel):
+    markers: str
+    info: Optional[str] = None
+    regex: Optional[str] = None
+
 class TaskPayload(BaseModel):
     """Pydantic model that EXACTLY matches the frontend's TaskPayload interface in types.ts"""
     task: str
@@ -472,6 +485,60 @@ async def save_config(config: AppConfig):
         return {"message": "Config saved successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to write to config file: {e}")
+
+@app.get("/api/glossary", response_model=List[GlossaryItem])
+async def get_glossary():
+    config = await get_config()
+    return config.get("prompt_dictionary_data", [])
+
+@app.post("/api/glossary")
+async def save_glossary(items: List[GlossaryItem]):
+    global _config_cache
+    target_path = get_active_profile_path()
+    
+    try:
+        # Load current config
+        with open(target_path, 'r', encoding='utf-8-sig') as f:
+            current_config = json.load(f)
+        
+        # Update glossary
+        current_config["prompt_dictionary_data"] = [item.dict() for item in items]
+        
+        # Save back
+        with open(target_path, 'w', encoding='utf-8') as f:
+            json.dump(current_config, f, indent=4, ensure_ascii=False)
+            
+        _config_cache.clear() # Invalidate cache
+        return {"message": "Glossary saved successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save glossary: {e}")
+
+@app.get("/api/exclusion", response_model=List[ExclusionItem])
+async def get_exclusion():
+    config = await get_config()
+    return config.get("exclusion_list_data", [])
+
+@app.post("/api/exclusion")
+async def save_exclusion(items: List[ExclusionItem]):
+    global _config_cache
+    target_path = get_active_profile_path()
+    
+    try:
+        # Load current config
+        with open(target_path, 'r', encoding='utf-8-sig') as f:
+            current_config = json.load(f)
+        
+        # Update exclusion list
+        current_config["exclusion_list_data"] = [item.dict() for item in items]
+        
+        # Save back
+        with open(target_path, 'w', encoding='utf-8') as f:
+            json.dump(current_config, f, indent=4, ensure_ascii=False)
+            
+        _config_cache.clear() # Invalidate cache
+        return {"message": "Exclusion list saved successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save exclusion list: {e}")
 
 @app.get("/api/profiles", response_model=List[str])
 async def get_profiles():
@@ -697,6 +764,93 @@ async def get_task_status():
         "logs": list(task_manager.logs),
         "chart_data": list(task_manager.chart_data)
     }
+
+# --- File Management Endpoints ---
+
+@app.post("/api/files/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """
+    Uploads a file to the project's 'updatetemp' directory.
+    """
+    try:
+        os.makedirs(UPDATETEMP_PATH, exist_ok=True)
+        file_location = os.path.join(UPDATETEMP_PATH, file.filename)
+        
+        # Security check: Ensure file stays within update temp (basic path traversal check)
+        if not os.path.abspath(file_location).startswith(os.path.abspath(UPDATETEMP_PATH)):
+             raise HTTPException(status_code=400, detail="Invalid file path")
+
+        with open(file_location, "wb+") as file_object:
+            file_object.write(await file.read())
+            
+        return {"info": f"file '{file.filename}' saved at '{file_location}'", "path": file_location}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload file: {e}")
+
+@app.get("/api/files/temp")
+async def list_temp_files():
+    """
+    Lists files in the 'updatetemp' directory.
+    """
+    if not os.path.exists(UPDATETEMP_PATH):
+        return []
+    
+    files = []
+    for f in os.listdir(UPDATETEMP_PATH):
+        full_path = os.path.join(UPDATETEMP_PATH, f)
+        if os.path.isfile(full_path):
+            files.append({
+                "name": f,
+                "path": full_path,
+                "size": os.path.getsize(full_path)
+            })
+    return files
+
+# --- Draft Management Endpoints ---
+
+@app.post("/api/draft/glossary")
+async def save_glossary_draft(items: List[GlossaryItem]):
+    try:
+        os.makedirs(TEMP_EDIT_PATH, exist_ok=True)
+        draft_path = os.path.join(TEMP_EDIT_PATH, "glossary_draft.json")
+        with open(draft_path, 'w', encoding='utf-8') as f:
+            json.dump([item.dict() for item in items], f, indent=4, ensure_ascii=False)
+        return {"message": "Glossary draft saved."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save glossary draft: {e}")
+
+@app.get("/api/draft/glossary")
+async def get_glossary_draft():
+    draft_path = os.path.join(TEMP_EDIT_PATH, "glossary_draft.json")
+    if not os.path.exists(draft_path):
+        return []
+    try:
+        with open(draft_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return []
+
+@app.post("/api/draft/exclusion")
+async def save_exclusion_draft(items: List[ExclusionItem]):
+    try:
+        os.makedirs(TEMP_EDIT_PATH, exist_ok=True)
+        draft_path = os.path.join(TEMP_EDIT_PATH, "exclusion_draft.json")
+        with open(draft_path, 'w', encoding='utf-8') as f:
+            json.dump([item.dict() for item in items], f, indent=4, ensure_ascii=False)
+        return {"message": "Exclusion draft saved."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save exclusion draft: {e}")
+
+@app.get("/api/draft/exclusion")
+async def get_exclusion_draft():
+    draft_path = os.path.join(TEMP_EDIT_PATH, "exclusion_draft.json")
+    if not os.path.exists(draft_path):
+        return []
+    try:
+        with open(draft_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return []
 
 # --- Static File Serving for the React Frontend ---
 
