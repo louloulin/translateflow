@@ -56,7 +56,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### 2. 获取代码
 ```bash
-git clone -b cli-enhanced https://github.com/YourRepo/AiNiee.git
+git clone -b cli-enhanced https://github.com/ShadowLoveElysia/AiNiee.git
 cd AiNiee
 ```
 
