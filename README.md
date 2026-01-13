@@ -29,6 +29,7 @@
 *   **实时任务指挥中心 (Live Mission Control)**： **[New]** 引入全新的 TUI 任务状态与控制中心，支持：
     *   **动态并发调整**：在任务运行时，通过键盘 `+` 和 `-` 键实时增减并发线程数。
     *   **API Key 热切换**：通过键盘 `K` 键强制触发 API Key 轮换，应对特定 API 的调用限制。
+    *   **网页监控面板 [New]**：通过键盘 `M` 键立即启动后台 WebServer 并自动打开浏览器监控当前任务。此时 TUI 面板将进入托管模式，所有日志与状态将实时同步至网页端。
     *   **系统状态监控**：底部状态栏实时显示系统运行状态（正常/修复中/警告/错误）， 并联动改变面板边框颜色。
     *   **预估成本与时间**：任务启动前，自动预估本次任务的总 Token 消耗、在线 API 预估费用及预计完成时间（ETA），并在日志窗格中醒目提示（仅供参考）。
 *   **可视化交互体验**：基于 `Rich` 构建的现代化 TUI，提供实时性能监控（RPM/TPM）、双屏日志分离（coming soon）及类 BIOS 的交互式设置菜单。
@@ -56,7 +57,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### 2. 获取代码
 ```bash
-git clone -b cli-enhanced https://github.com/ShadowLoveElysia/AiNiee.git
+git clone -b cli-enhanced https://github.com/YourRepo/AiNiee.git
 cd AiNiee
 ```
 
