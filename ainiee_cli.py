@@ -29,6 +29,7 @@ from rich.layout import Layout
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, TimeElapsedColumn, SpinnerColumn
 from rich import print
 from rich.text import Text
+from rich.align import Align
 
 warnings.filterwarnings('ignore')
 
@@ -118,6 +119,8 @@ class TaskUI:
         self._lock = threading.RLock()
         self.logs = collections.deque(maxlen=100) # Increase maxlen for better filtering
         self.log_filter = "ALL" # Can be "ALL" or "ERROR"
+        self.taken_over = False
+        self.web_task_manager = None
         self.progress = Progress(
             SpinnerColumn(),
             TextColumn("[bold blue]{task.fields[action]}", justify="left"),
@@ -201,6 +204,17 @@ class TaskUI:
         self._last_msg = clean_msg_for_dedup
         self._last_msg_time = current_time
 
+        # Push to WebServer if available
+        if self.web_task_manager:
+            # We need a plain text version for the web
+            plain_msg = clean_msg_for_dedup
+            if '[' in plain_msg and ']' in plain_msg:
+                 plain_msg = re.sub(r'\[/?[a-zA-Z\s]+\]', '', plain_msg)
+            self.web_task_manager.push_log(plain_msg)
+
+        if self.taken_over:
+            return
+
         timestamp = f"[{time.strftime('%H:%M:%S')}] "
         if isinstance(msg, str):
             try:
@@ -239,6 +253,42 @@ class TaskUI:
                 tpm_k = (tokens / (elapsed / 60) / 1000)
             else:
                 rpm, tpm_k = 0, 0
+            
+            # Push stats to WebServer if available
+            if self.web_task_manager:
+                self.web_task_manager.push_stats({
+                    "rpm": rpm,
+                    "tpm": tpm_k,
+                    "totalProgress": total,
+                    "completedProgress": completed,
+                    "totalTokens": tokens,
+                    "elapsedTime": elapsed,
+                    "currentFile": d.get("file_name", "N/A"),
+                    "status": "running"
+                })
+
+            if self.taken_over:
+                takeover_content = [
+                    Text("\n\n"),
+                    Text(i18n.get("msg_tui_takeover_main"), style="bold green", justify="center"),
+                    Text(i18n.get("msg_tui_takeover_sub"), style="bold cyan", justify="center"),
+                    Text(f"\nURL: http://{getattr(self, '_server_ip', '127.0.0.1')}:8000\n", style="underline yellow", justify="center"),
+                ]
+                
+                # Add Japanese specific warning if applicable
+                if i18n.lang == "ja":
+                    takeover_content.append(Text(f"\n{i18n.get('msg_ja_no_support_notice')}", style="italic dim red", justify="center"))
+                
+                takeover_content.append(Text("\n"))
+
+                notice = Panel(
+                    Align.center(Group(*takeover_content)),
+                    title=f"[bold red]{i18n.get('msg_tui_takeover_title')}[/bold red]",
+                    border_style="bold red"
+                )
+                self.layout["upper"].update(notice)
+                self.layout["lower"].update(Panel(Align.center(Text(i18n.get("msg_tui_takeover_status"), style="blink yellow")), title="Status", border_style="yellow"))
+                return
 
             current_file = d.get("file_name", "...")
             rpm_str = f"{rpm:.1f}" if is_local else f"{rpm:.2f}"
@@ -259,6 +309,10 @@ class TaskUI:
                 f"RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/] | Tokens: [bold]{token_display}[/] | Lines: [bold]{completed}/{total}[/]\n"
                 f"{hotkeys} | Status: [{self.current_status_color}]{status_text}[/{self.current_status_color}] | {log_level_text}"
             )
+            # Add explicit monitor hint if not web mode
+            if not isinstance(self.parent_cli.ui, WebLogger):
+                stats_markup += f"\n[bold green][M] 启动网页监控面板[/bold green]"
+            
             self.stats_text = Text.from_markup(stats_markup, style="cyan")
             
             self.panel_group = Group(self.progress, self.stats_text)
@@ -339,6 +393,105 @@ class CLIMenu:
         
         signal.signal(signal.SIGINT, self.signal_handler)
         self.task_running, self.original_print = False, Base.print
+        self.web_server_thread = None
+
+    def handle_monitor_shortcut(self):
+        """Handle the 'm' shortcut to open the web monitor."""
+        # Detect Local IP
+        local_ip = "127.0.0.1"
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+        except: pass
+
+        if self.web_server_thread is None or not self.web_server_thread.is_alive():
+            # Start server in background
+            try:
+                from Tools.WebServer.web_server import run_server
+                import Tools.WebServer.web_server as ws_module
+                
+                # Setup handlers (same as in start_web_server)
+                ws_module.profile_handlers['create'] = self._host_create_profile
+                ws_module.profile_handlers['rename'] = self._host_rename_profile
+                ws_module.profile_handlers['delete'] = self._host_delete_profile
+
+                self.web_server_thread = run_server(host="0.0.0.0", port=8000, monitor_mode=True)
+                Base.print(f"[bold green]{i18n.get('msg_web_server_started_bg')}[/bold green]")
+                Base.print(f"[cyan]您可以通过 http://{local_ip}:8000 访问网页监控面板[/cyan]")
+                
+                # Signal TUI takeover if running
+                if self.task_running and hasattr(self, "ui") and isinstance(self.ui, TaskUI):
+                    self.ui.web_task_manager = ws_module.task_manager
+                    self.ui._server_ip = local_ip
+                    
+                    # Push existing logs to web task manager
+                    with self.ui._lock:
+                        for log_item in self.ui.logs:
+                            ws_module.task_manager.push_log(log_item.plain)
+
+                    self.ui.taken_over = True
+                    self.ui.update_progress(None, {}) # Force UI refresh
+            except Exception as e:
+                Base.print(f"[red]Failed to start Web Server: {e}[/red]")
+                return
+
+        import webbrowser
+        # Pass mode=monitor as a query parameter
+        webbrowser.open(f"http://127.0.0.1:8000/?mode=monitor#/monitor")
+
+    def _host_create_profile(self, new_name, base_name=None):
+        # Same robust logic as CLI
+        if not new_name: raise Exception("Name empty")
+        new_path = os.path.join(self.profiles_dir, f"{new_name}.json")
+        if os.path.exists(new_path): raise Exception("Exists")
+        
+        # 1. Preset
+        preset = {}
+        preset_path = os.path.join(PROJECT_ROOT, "Resource", "platforms", "preset.json")
+        if os.path.exists(preset_path):
+            with open(preset_path, 'r', encoding='utf-8') as f: preset = json.load(f)
+        
+        # 2. Base
+        base_config = {}
+        if not base_name: base_name = self.active_profile_name
+        base_path = os.path.join(self.profiles_dir, f"{base_name}.json")
+        if os.path.exists(base_path):
+            with open(base_path, 'r', encoding='utf-8') as f: base_config = json.load(f)
+        
+        # 3. Merge
+        preset.update(base_config)
+        
+        # 4. Save
+        with open(new_path, 'w', encoding='utf-8') as f:
+            json.dump(preset, f, indent=4, ensure_ascii=False)
+
+    def _host_rename_profile(self, old_name, new_name):
+        old_path = os.path.join(self.profiles_dir, f"{old_name}.json")
+        new_path = os.path.join(self.profiles_dir, f"{new_name}.json")
+        if not os.path.exists(old_path): raise Exception("Not found")
+        if os.path.exists(new_path): raise Exception("Target exists")
+        
+        os.rename(old_path, new_path)
+        
+        # Update Active if needed
+        if self.active_profile_name == old_name:
+            self.active_profile_name = new_name
+            self.root_config["active_profile"] = new_name
+            self.save_config(save_root=True)
+
+    def _host_delete_profile(self, name):
+        target = os.path.join(self.profiles_dir, f"{name}.json")
+        if not os.path.exists(target): raise Exception("Not found")
+        if name == self.active_profile_name: raise Exception("Cannot delete active profile")
+        
+        # Check count
+        cnt = len([f for f in os.listdir(self.profiles_dir) if f.endswith(".json")])
+        if cnt <= 1: raise Exception("Cannot delete last profile")
+        
+        os.remove(target)
 
     def run_non_interactive(self, args):
         """处理命令行参数，以非交互模式运行任务"""
@@ -2046,6 +2199,8 @@ class CLIMenu:
                             elif key == 'k': # 热切换 API
                                 self.ui.log(f"[cyan]{i18n.get('msg_api_switching_manual')}[/cyan]")
                                 EventManager.get_singleton().emit(Base.EVENT.TASK_API_STATUS_REPORT, {"force_switch": True})
+                            elif key == 'm': # Open Web Monitor
+                                self.handle_monitor_shortcut()
                     
                     time.sleep(0.1)
                 

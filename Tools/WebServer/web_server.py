@@ -60,6 +60,20 @@ class TaskManager:
             "currentFile": "N/A"
         }
 
+    def push_log(self, message: str, type: str = "info"):
+        """Directly push a log message from the host process."""
+        self.logs.append({"timestamp": time.time(), "message": message, "type": type})
+
+    def push_stats(self, stats: Dict[str, Any]):
+        """Directly push stats from the host process."""
+        self.stats.update(stats)
+        # Also update chart data
+        self.chart_data.append({
+            "time": time.strftime('%H:%M:%S'),
+            "rpm": self.stats.get("rpm", 0),
+            "tpm": self.stats.get("tpm", 0)
+        })
+
     def _log_and_parse(self, stream):
         """Read from a stream, log the output, and parse for stats."""
         # The stream provides correctly decoded strings because of the `encoding` setting in Popen
@@ -274,6 +288,11 @@ class TaskManager:
 
 task_manager = TaskManager()
 
+# --- Global System Mode ---
+# monitor: Only monitoring is allowed
+# full: Full control (default)
+SYSTEM_MODE = "full"
+
 # --- Simple In-Memory Caches for API Endpoints ---
 _version_cache: Dict[str, Any] = {}
 _config_cache: Dict[str, Any] = {}
@@ -464,6 +483,10 @@ def save_config_generic(key: str, value: Any):
         raise HTTPException(status_code=500, detail=f"Failed to save setting {key}: {e}")
 
 # --- API Endpoints ---
+
+@app.get("/api/system/mode")
+async def get_system_mode():
+    return {"mode": SYSTEM_MODE}
 
 @app.get("/api/version")
 async def get_version():
@@ -1191,8 +1214,11 @@ async def serve_index():
 
 # --- Main Server Runner Function (to be called from ainiee_cli.py) ---
 
-def run_server(host: str = "127.0.0.1", port: int = 8000):
+def run_server(host: str = "127.0.0.1", port: int = 8000, monitor_mode: bool = False):
     """Starts the FastAPI server in a separate thread."""
+    global SYSTEM_MODE
+    SYSTEM_MODE = "monitor" if monitor_mode else "full"
+    
     try:
         import uvicorn
 
