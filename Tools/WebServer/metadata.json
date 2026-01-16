@@ -1,0 +1,5 @@
+{
+  "name": "AiNiee Control Center",
+  "description": "A modern, high-performance dashboard for the AiNiee LLM Translation & Polishing tool.",
+  "requestFramePermissions": []
+}
