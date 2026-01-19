@@ -318,5 +318,9 @@
         "msg_task_removed": "タスクが削除されました",
         "msg_remove_failed": "削除に失敗しました",
         "msg_invalid_index": "無効なインデックス",
-        "prompt_press_enter_continue": "Enterを押して続行..."
+        "prompt_press_enter_continue": "Enterを押して続行...",
+        "prompt_task_id_from": "ソースタスクID",
+        "prompt_task_id_to": "ターゲットタスクID",
+        "msg_task_move_failed": "タスクの移動に失敗しました",
+        "label_shortcuts_queue": "[dim]ショートカット: [P]一時停止 [R]再開 [Q]停止 [V]ログ [N]スキップ [-/+]スレ [[]/[]]分割 [K]キー [M]モニター [E]キュー編集[/dim]"
     }

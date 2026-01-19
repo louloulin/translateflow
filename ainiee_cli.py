@@ -400,7 +400,11 @@ class TaskUI:
             rpm_str = f"{rpm:.2f}"
             tpm_str = f"{tpm_k:.2f}k"
             status_text = i18n.get(self.current_status_key)
-            hotkeys = i18n.get("label_shortcuts")
+            # 根据是否为队列模式显示不同的快捷键
+            if hasattr(self, '_is_queue_mode') and self._is_queue_mode:
+                hotkeys = i18n.get("label_shortcuts_queue")
+            else:
+                hotkeys = i18n.get("label_shortcuts")
             
             stats_markup = (
                 f"File: [bold]{current_file}[/] | RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/] | Tokens: [bold]{tokens}[/]\n"

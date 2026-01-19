@@ -325,5 +325,9 @@
         "msg_task_removed": "Task removed",
         "msg_remove_failed": "Remove failed",
         "msg_invalid_index": "Invalid index",
-        "prompt_press_enter_continue": "Press Enter to continue..."
+        "prompt_press_enter_continue": "Press Enter to continue...",
+        "prompt_task_id_from": "Source Task ID",
+        "prompt_task_id_to": "Target Task ID",
+        "msg_task_move_failed": "Failed to move task",
+        "label_shortcuts_queue": "[dim]Shortcuts: [P]Pause [R]Resume [Q]Stop [V]Log [N]Skip [-/+]Thr [[]/[]]Split [K]Key [M]Monitor [E]Queue[/dim]"
     }

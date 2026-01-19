@@ -326,5 +326,9 @@
         "msg_task_removed": "任务已删除",
         "msg_remove_failed": "删除失败",
         "msg_invalid_index": "无效的索引",
-        "prompt_press_enter_continue": "按回车键继续..."
+        "prompt_press_enter_continue": "按回车键继续...",
+        "prompt_task_id_from": "源任务ID",
+        "prompt_task_id_to": "目标任务ID",
+        "msg_task_move_failed": "任务移动失败",
+        "label_shortcuts_queue": "[dim]快捷键: [P]暂停 [R]恢复 [Q]停止 [V]日志 [N]跳过文件 [-/+]线程 [[]/[]]分割 [K]换Key [M]监控 [E]队列编辑[/dim]"
     }
