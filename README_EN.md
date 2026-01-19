@@ -36,17 +36,69 @@ This project introduces **`uv`**, a modern Python package manager, and implement
     *   Introduces a brand-new plugin system, allowing for safe and modular feature extensions without altering the core codebase.
     *   **Built-in RAG Plugin**: Comes with an out-of-the-box RAG (Retrieval-Augmented Generation) Context Plugin. When enabled, it automatically retrieves historical translations to provide crucial context for long-form content, significantly improving terminological and stylistic consistency.
     *   **Centralized Management**: Both the main CLI menu and the Web UI feature a dedicated "Plugin Management" page, allowing you to discover and toggle all available plugins with a single click.
+*   **[New] Intelligent Task Queue System**:
+    *   **Multi-Modal Queue Management**: Create, edit, and delete translation task queues in both TUI interactive menus and WebServer visual interfaces.
+    *   **Flexible Queue Scheduling**: Dynamic queue ordering support - WebServer interface offers mouse drag-and-drop sorting, while TUI interface provides keyboard-driven interactive reordering.
+    *   **Hot Task Modification**: During queue execution, modify pending task parameters in real-time via WebServer without stopping the current running task. All queue changes are displayed with operation logs in the TUI console.
+    *   **Batch Processing Optimization**: Pre-configure multiple tasks with different files or translation strategies, the system will execute them sequentially, perfect for large-scale translation workflows.
+*   **[New] Thinking Mode Enhancement**:
+    *   **Universal Platform Compatibility**: Fixed thinking mode compatibility issues across multiple AI platforms, now supporting all mainstream online API platforms and third-party gateways.
+    *   **Smart Parameter Configuration**: Thinking mode settings are now permanently displayed in all interfaces regardless of platform constraints, with different compatibility warnings for online APIs vs local models.
+    *   **Unified Interface Experience**: Fixed inconsistent display of thinking mode parameters between CLI menus and Web dashboard, ensuring a unified user experience.
 
 ---
 
 ## 🚀 Quick Start
 
+This project provides multiple startup methods. Choose the one that best suits your use case.
+
+## 🚀 Method 1: One-Click Launch (Recommended)
+
+### 1. Get the Code
+```bash
+git clone https://github.com/ShadowLoveElysia/AiNiee-CLI.git
+cd AiNiee-CLI
+```
+
+### 2. Environment Setup (First Run)
+
+**Windows:**
+```batch
+Double-click prepare.bat
+```
+
+**Linux / macOS:**
+```bash
+chmod +x prepare.sh
+./prepare.sh
+```
+
+The prepare script automatically:
+- Detects and installs `uv` (if not installed)
+- Creates virtual environment
+- Installs all project dependencies
+
+### 3. Launch Application
+
+After environment setup, simply run:
+
+**Windows:**
+```batch
+Double-click Launch.bat
+```
+
+**Linux / macOS:**
+```bash
+./Launch.sh
+```
+
 ---
 
-We highly recommend using **[uv](https://github.com/astral-sh/uv)** to launch this project for the fastest environment resolution and cleanest dependency isolation.
+## 🛠️ Method 2: Manual Configuration (Advanced Users)
+
+If you prefer to configure the environment manually:
 
 ### 1. Install uv
-If `uv` is not yet installed in your environment:
 
 **Windows (PowerShell):**
 ```powershell
@@ -58,10 +110,34 @@ powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### 2. Clone the Repository
+**Android (Termux) - Method 1 (Direct Installation):**
 ```bash
-git clone -b cli-enhanced https://github.com/YourRepo/AiNiee.git
-cd AiNiee
+# Update package sources
+pkg update && pkg upgrade
+# Install Python if not already installed
+pkg install python
+# Install uv via pip
+pip install uv
+```
+
+**Android (Termux) - Method 2 (Proot-Distro Ubuntu):**
+```bash
+# Install proot-distro
+pkg install proot-distro
+# Install Ubuntu environment
+proot-distro install ubuntu
+# Login to Ubuntu environment
+proot-distro login ubuntu
+# Install uv in Ubuntu
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+> **📱 Termux Users**: For mobile devices, we recommend using the **WebServer mode with online API** for the best experience. The web interface is optimized for touch interactions and remote monitoring.
+
+### 2. Get the Code
+```bash
+git clone https://github.com/ShadowLoveElysia/AiNiee-CLI.git
+cd AiNiee-CLI
 ```
 
 ### 3. Instant Launch
@@ -72,15 +148,23 @@ No need to manually create virtual environments or install pip dependencies. Sim
 uv run ainiee_cli.py
 ```
 
-### 4. Command-Line Argument Launch (Non-Interactive CLI)
+---
+
+## 💻 Command-Line Arguments (Non-Interactive Mode)
 **[New]** This project supports launching translation or export tasks directly via command-line arguments, suitable for script integration and automation.
 
 **Translation Task Example:**
 ```bash
 uv run ainiee_cli.py translate "H:\\Novels\\MyBook.txt" -o "H:\\Novels\\MyBook_Output" -p MyProfile -s Japanese -t Chinese --resume --yes
 ```
+
+**Queue Task Example:**
+```bash
+uv run ainiee_cli.py queue --queue-file "H:\\Novels\\my_queue.json" --yes
+```
+
 **Argument Description:**
-*   `translate` / `polish` / `export`: Specifies the task type.
+*   `translate` / `polish` / `export` / `queue`: Specifies the task type.
 *   `H:\\Novels\\MyBook.txt`: (Positional argument) Input file or folder path.
 *   `-o, --output`: Specifies the output path.
 *   `-p, --profile`: Specifies the configuration profile name.
@@ -99,7 +183,11 @@ uv run ainiee_cli.py translate "H:\\Novels\\MyBook.txt" -o "H:\\Novels\\MyBook_O
     *   `--api-url`: Override API URL.
     *   `--api-key`: Override API Key.
     *   `--lines` / `--tokens`: Override batch size.
+    *   `--pre-lines`: Context lines to include.
     *   `--failover`: `on/off` toggle for API failover.
+    *   `--think-depth`: Thinking mode depth level (0-10000, 0 to disable).
+    *   `--thinking-budget`: Thinking mode token budget limit.
+    *   `--queue-file`: Specifies the task queue JSON file path (only for `queue` task type).
 
 ---
 
@@ -109,6 +197,7 @@ Once launched, you can navigate the following features via the interactive menu:
 
 *   **Start Translation / Polishing**: Core translation and polishing tasks (supports automatic resume).
 *   **Export Only**: Quick export mode for existing cache files.
+*   **Task Queue**: **[New]** Intelligent task queue management center for batch task configuration and execution.
 *   **Profiles**: **[New]** Center for switching and managing configuration profiles.
 *   **Settings / API Settings**: Categorized parameter settings with hot-reload support.
 *   **Glossary**: Preview and apply prompt templates.
@@ -122,13 +211,15 @@ Once launched, you can navigate the following features via the interactive menu:
 
 ### How to Start
 1.  Run `uv run ainiee_cli.py` to enter the main menu.
-2.  Select **9. Start Web Server**.
+2.  Select **12. Start Web Server**.
 3.  The program will automatically detect your LAN IP and start the service (default port `8000`), opening the dashboard in your default browser.
 
 ### Features
 *   **Visual Dashboard**: Real-time charts showing RPM, TPM, and task progress.
 *   **Network Access**: Monitor your translation tasks remotely via LAN IP. You can also use tunneling tools (e.g., `frp`, `cloudflared`) for external network access.
 *   **Profile Management**: Create, rename, delete, or switch configuration profiles directly from the web UI.
+*   **[New] Queue Management Center**: Intuitive queue management interface with mouse drag-and-drop task reordering, real-time task parameter editing, and queue item addition/deletion. All operations sync with TUI console logs.
+*   **[New] Thinking Mode Configuration**: Complete thinking mode parameter configuration interface with compatibility hints and optimization suggestions for different AI platforms.
 *   **[New] Plugin Center**: A dedicated plugin management page in the Web UI allows users to intuitively enable or disable advanced features like RAG through a card-based interface.
 *   **State Recovery**: Automatically synchronizes task status, logs, and chart history even after a page refresh.
 

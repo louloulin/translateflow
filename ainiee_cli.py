@@ -395,13 +395,33 @@ class TaskUI:
                 target_pane = "body" if self.show_detailed else "upper"
                 # ... 此处逻辑简略，保持内部原有 takeover 实现 ...
 
+            # 检查是否为队列模式
+            is_queue_mode = False
+            if self.parent_cli and hasattr(self.parent_cli, '_is_queue_mode'):
+                is_queue_mode = self.parent_cli._is_queue_mode
+
             # 更新统计文字
             current_file = d.get("file_name", "...")
+
+            # 在队列模式下，尝试从队列管理器获取当前处理的文件信息
+            if is_queue_mode and self.parent_cli:
+                try:
+                    import os
+                    from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager
+                    qm = QueueManager()
+                    if qm.current_task_index >= 0 and qm.current_task_index < len(qm.tasks):
+                        current_task = qm.tasks[qm.current_task_index]
+                        if current_task and hasattr(current_task, 'input_path'):
+                            current_file = os.path.basename(current_task.input_path)
+                except:
+                    pass  # 静默忽略错误，使用默认文件名
+
             rpm_str = f"{rpm:.2f}"
             tpm_str = f"{tpm_k:.2f}k"
             status_text = i18n.get(self.current_status_key)
             # 根据是否为队列模式显示不同的快捷键
-            if hasattr(self, '_is_queue_mode') and self._is_queue_mode:
+
+            if is_queue_mode:
                 hotkeys = i18n.get("label_shortcuts_queue")
             else:
                 hotkeys = i18n.get("label_shortcuts")
@@ -545,6 +565,11 @@ class CLIMenu:
         self.task_running, self.original_print = False, Base.print
         self.web_server_thread = None
 
+        # 队列日志监控相关
+        self._last_queue_log_size = 0
+        self._queue_log_monitor_thread = None
+        self._queue_log_monitor_running = False
+
     def handle_monitor_shortcut(self):
         """Handle the 'm' shortcut to open the web monitor."""
         # Detect Local IP
@@ -596,26 +621,197 @@ class CLIMenu:
         webbrowser.open(f"http://127.0.0.1:8000/?mode=monitor#/monitor")
 
     def handle_queue_editor_shortcut(self):
-        """Handle the 'e' shortcut to open the real-time queue editor."""
+        """Handle the 'e' shortcut for TUI queue management."""
         try:
-            # 检查是否处于队列模式
-            if not hasattr(self, '_is_queue_mode') or not self._is_queue_mode:
-                self.ui.log(f"[yellow]{i18n.get('msg_queue_editor_not_available')}[/yellow]")
+            from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager
+            qm = QueueManager()
+
+            if not qm.tasks:
+                self.ui.log(f"[yellow]{i18n.get('msg_queue_empty_cannot_edit')}[/yellow]")
                 return
 
-            from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager
-            queue_manager = QueueManager()
+            # 显示队列状态
+            self.ui.log(f"[cyan]{i18n.get('msg_queue_status_display')}[/cyan]")
+            self.show_queue_status(qm)
 
-            # 暂时停止Live TUI
-            self.ui.log(f"[cyan]{i18n.get('msg_queue_editor_opening')}[/cyan]")
-
-            # 在新线程中运行队列编辑器，避免阻塞主执行
-            import threading
-            editor_thread = threading.Thread(target=self._run_queue_editor, args=(queue_manager,), daemon=True)
-            editor_thread.start()
+            # 显示TUI编辑限制提示
+            self.ui.log(f"[yellow]{i18n.get('msg_tui_edit_limitation')}[/yellow]")
+            self.ui.log(f"[dim]{i18n.get('msg_use_h_key_for_web')}[/dim]")
 
         except Exception as e:
-            self.ui.log(f"[red]Failed to open queue editor: {e}[/red]")
+            self.ui.log(f"[red]Failed to handle queue editor: {e}[/red]")
+
+
+    def handle_web_queue_shortcut(self):
+        """Handle the 'h' shortcut to open the WebUI queue management page."""
+        try:
+            self.ui.log(f"[cyan]{i18n.get('msg_queue_web_opening')}[/cyan]")
+            self.ensure_web_server_running()
+            self.open_queue_page()
+        except Exception as e:
+            self.ui.log(f"[red]Failed to open web queue manager: {e}[/red]")
+
+    def start_queue_log_monitor(self):
+        """启动队列日志监控"""
+        if self._queue_log_monitor_running:
+            return
+
+        self._queue_log_monitor_running = True
+        self._queue_log_monitor_thread = threading.Thread(
+            target=self._queue_log_monitor_loop,
+            daemon=True
+        )
+        self._queue_log_monitor_thread.start()
+
+    def stop_queue_log_monitor(self):
+        """停止队列日志监控"""
+        self._queue_log_monitor_running = False
+        if self._queue_log_monitor_thread and self._queue_log_monitor_thread.is_alive():
+            self._queue_log_monitor_thread.join(timeout=1.0)
+
+    def _queue_log_monitor_loop(self):
+        """队列日志监控主循环"""
+        try:
+            from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager
+            qm = QueueManager()
+            log_file = qm.get_queue_log_path()
+
+            while self._queue_log_monitor_running:
+                try:
+                    if os.path.exists(log_file):
+                        current_size = os.path.getsize(log_file)
+                        if current_size > self._last_queue_log_size:
+                            # 文件有新内容，读取新的日志条目
+                            self._display_new_queue_logs(log_file)
+                            self._last_queue_log_size = current_size
+
+                    time.sleep(1)  # 每秒检查一次
+
+                except Exception as e:
+                    # 监控过程中的错误不应该中断监控
+                    pass
+
+        except Exception as e:
+            # 如果无法启动监控，静默失败
+            pass
+
+    def _display_new_queue_logs(self, log_file):
+        """显示新的队列日志条目"""
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f:
+                f.seek(self._last_queue_log_size)
+                new_content = f.read()
+
+            if new_content.strip():
+                lines = new_content.strip().split('\n')
+                for line in lines:
+                    if line.strip():
+                        # 移除时间戳前缀，只显示消息内容
+                        if '] ' in line and line.startswith('['):
+                            message = line.split('] ', 1)[1]
+                        else:
+                            message = line
+
+                        # 在TUI中显示队列操作日志
+                        if hasattr(self, 'ui') and self.ui:
+                            self.ui.log(f"[cyan][Queue][/cyan] {message}")
+
+        except Exception as e:
+            # 读取日志时出错，静默失败
+            pass
+
+    def ensure_web_server_running(self):
+        """Ensure web server is running in background, start if needed."""
+        # 检查服务器是否已经在运行
+        import socket
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            result = sock.connect_ex(('127.0.0.1', 8000))
+            sock.close()
+
+            if result == 0:
+                # 服务器已在运行
+                self.ui.log(f"[green]{i18n.get('msg_web_server_ready')}[/green]")
+                self.start_queue_log_monitor()  # 启动队列日志监控
+                return
+        except:
+            pass
+
+        # 服务器未运行，在后台启动
+        try:
+            import fastapi
+            import uvicorn
+        except ImportError:
+            self.ui.log("[red]Missing dependencies: fastapi, uvicorn. Cannot start web server.[/red]")
+            raise Exception("Missing web server dependencies")
+
+        self.ui.log(f"[cyan]{i18n.get('msg_web_server_starting_background')}[/cyan]")
+
+        # 在后台线程中启动Web服务器
+        import threading
+        from Tools.WebServer.web_server import run_server
+
+        def start_server():
+            try:
+                run_server(host="127.0.0.1", port=8000, monitor_mode=False)
+            except Exception as e:
+                self.ui.log(f"[red]Failed to start web server: {e}[/red]")
+
+        server_thread = threading.Thread(target=start_server, daemon=True)
+        server_thread.start()
+
+        # 等待服务器启动
+        import time
+        for i in range(10):  # 最多等待5秒
+            time.sleep(0.5)
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                result = sock.connect_ex(('127.0.0.1', 8000))
+                sock.close()
+                if result == 0:
+                    self.ui.log(f"[green]{i18n.get('msg_web_server_ready')}[/green]")
+                    self.start_queue_log_monitor()  # 启动队列日志监控
+                    return
+            except:
+                pass
+
+        # 超时
+        self.ui.log(f"[yellow]{i18n.get('msg_web_server_timeout')}[/yellow]")
+
+    def show_queue_status(self, qm):
+        """Display current queue status in TUI log."""
+        import os
+
+        # 清理过期锁定状态
+        if hasattr(qm, 'cleanup_stale_locks'):
+            qm.cleanup_stale_locks()
+
+        self.ui.log(f"[bold cyan]═══ {i18n.get('title_queue_status')} ═══[/bold cyan]")
+
+        for i, task in enumerate(qm.tasks):
+            # 任务状态颜色
+            status_color = "green" if task.status == "completed" else \
+                          "yellow" if task.status in ["translating", "polishing"] else \
+                          "red" if task.status == "error" else "white"
+
+            # 任务类型简写
+            type_str = "T+P" if task.task_type == 4000 else "T" if task.task_type == 1000 else "P"
+
+            # 锁定状态
+            lock_icon = "🔒" if (hasattr(qm, 'is_task_actually_processing') and qm.is_task_actually_processing(i)) or task.locked else ""
+
+            # 文件名
+            file_name = os.path.basename(task.input_path)
+
+            self.ui.log(f"[{status_color}]{i+1:2d}. [{type_str}] {file_name} - {task.status} {lock_icon}[/{status_color}]")
+
+        self.ui.log(f"[dim]ⓘ {i18n.get('msg_queue_tui_help')}[/dim]")
+
+    def open_queue_page(self):
+        """Open the WebUI queue management page in browser."""
+        import webbrowser
+        # Open queue management page directly
+        webbrowser.open("http://127.0.0.1:8000/#/queue")
 
     def _run_queue_editor(self, queue_manager):
         """运行队列编辑器界面"""
@@ -645,6 +841,10 @@ class CLIMenu:
                 # 热重载队列数据
                 queue_manager.hot_reload_queue()
 
+                # 清理过期的锁定状态
+                if hasattr(queue_manager, 'cleanup_stale_locks'):
+                    queue_manager.cleanup_stale_locks()
+
                 # 清屏并显示当前队列状态
                 editor_console.clear()
                 editor_console.print(Panel.fit(f"[bold cyan]{i18n.get('title_queue_editor')}[/bold cyan]\n{i18n.get('msg_queue_editor_help')}", border_style="cyan"))
@@ -666,12 +866,23 @@ class CLIMenu:
                     elif task.status == "error":
                         status_style = "red"
 
-                    locked_symbol = "🔒" if task.locked else ""
+                    # 使用智能锁定状态检测
+                    is_actually_processing = False
+                    if hasattr(queue_manager, 'is_task_actually_processing'):
+                        is_actually_processing = queue_manager.is_task_actually_processing(i)
+                    else:
+                        # 降级到传统检测
+                        is_actually_processing = task.locked
+
+                    locked_symbol = "🔒" if is_actually_processing else ""
+
+                    # 转换任务类型为可读字符串
+                    type_str = "T+P" if task.task_type == 4000 else "T" if task.task_type == 1000 else "P" if task.task_type == 2000 else str(task.task_type)
 
                     table.add_row(
                         str(i + 1),
                         f"[{status_style}]{get_localized_status(task.status)}[/{status_style}]",
-                        task.task_type,
+                        type_str,
                         task.input_path[-35:] + "..." if len(task.input_path) > 35 else task.input_path,
                         locked_symbol
                     )
@@ -693,22 +904,66 @@ class CLIMenu:
                         break
                     elif choice == 1:  # 上移
                         task_idx = IntPrompt.ask(i18n.get('prompt_enter_task_index'), console=editor_console) - 1
-                        if queue_manager.move_task_up(task_idx):
-                            editor_console.print(f"[green]{i18n.get('msg_task_moved_up')}[/green]")
+                        if 0 <= task_idx < len(queue_manager.tasks):
+                            # 检查任务是否真正被锁定
+                            is_locked = False
+                            if hasattr(queue_manager, 'is_task_actually_processing'):
+                                is_locked = queue_manager.is_task_actually_processing(task_idx)
+                            else:
+                                is_locked = queue_manager.tasks[task_idx].locked
+
+                            if is_locked:
+                                editor_console.print(f"[red]{i18n.get('msg_task_locked_cannot_move')}[/red]")
+                            elif queue_manager.move_task_up(task_idx):
+                                editor_console.print(f"[green]{i18n.get('msg_task_moved_up')}[/green]")
+                            else:
+                                editor_console.print(f"[red]{i18n.get('msg_move_failed')}[/red]")
                         else:
-                            editor_console.print(f"[red]{i18n.get('msg_move_failed')}[/red]")
+                            editor_console.print(f"[red]{i18n.get('msg_invalid_index')}[/red]")
                     elif choice == 2:  # 下移
                         task_idx = IntPrompt.ask(i18n.get('prompt_enter_task_index'), console=editor_console) - 1
-                        if queue_manager.move_task_down(task_idx):
-                            editor_console.print(f"[green]{i18n.get('msg_task_moved_down')}[/green]")
+                        if 0 <= task_idx < len(queue_manager.tasks):
+                            # 检查任务是否真正被锁定
+                            is_locked = False
+                            if hasattr(queue_manager, 'is_task_actually_processing'):
+                                is_locked = queue_manager.is_task_actually_processing(task_idx)
+                            else:
+                                is_locked = queue_manager.tasks[task_idx].locked
+
+                            if is_locked:
+                                editor_console.print(f"[red]{i18n.get('msg_task_locked_cannot_move')}[/red]")
+                            elif queue_manager.move_task_down(task_idx):
+                                editor_console.print(f"[green]{i18n.get('msg_task_moved_down')}[/green]")
+                            else:
+                                editor_console.print(f"[red]{i18n.get('msg_move_failed')}[/red]")
                         else:
-                            editor_console.print(f"[red]{i18n.get('msg_move_failed')}[/red]")
+                            editor_console.print(f"[red]{i18n.get('msg_invalid_index')}[/red]")
                     elif choice == 3:  # 删除任务
                         task_idx = IntPrompt.ask(i18n.get('prompt_enter_task_index'), console=editor_console) - 1
                         if 0 <= task_idx < len(queue_manager.tasks):
                             task = queue_manager.tasks[task_idx]
-                            if task.locked:
-                                editor_console.print(f"[red]{i18n.get('msg_task_locked_cannot_remove')}[/red]")
+
+                            # 使用智能锁定状态检测
+                            is_locked = False
+                            if hasattr(queue_manager, 'is_task_actually_processing'):
+                                is_locked = queue_manager.is_task_actually_processing(task_idx)
+                            else:
+                                is_locked = task.locked
+
+                            if is_locked:
+                                # 显示更详细的锁定信息
+                                status_text = ""
+                                if task.status == "translating":
+                                    if hasattr(task, 'task_type') and task.task_type == 4000:
+                                        status_text = i18n.get('task_status_all_in_one_cn')
+                                    else:
+                                        status_text = i18n.get('task_status_translating_cn')
+                                elif task.status == "polishing":
+                                    status_text = i18n.get('task_status_polishing_cn')
+                                else:
+                                    status_text = task.status
+
+                                editor_console.print(f"[red]{i18n.get('msg_task_locked').replace('{}', status_text)}[/red]")
                             else:
                                 if Confirm.ask(i18n.get('confirm_remove_task').format(task.input_path), console=editor_console):
                                     if queue_manager.remove_task(task_idx):
@@ -862,6 +1117,7 @@ class CLIMenu:
                 
                 console.print(f"[bold green]Running Task Queue ({len(qm.tasks)} items)...[/bold green]")
                 self._is_queue_mode = True  # 标记进入队列模式
+                self.start_queue_log_monitor()  # 启动队列日志监控
                 qm.start_queue(self)
                 # We need to wait for queue to finish if in non-interactive mode
                 try:
@@ -870,6 +1126,7 @@ class CLIMenu:
                 except KeyboardInterrupt:
                     Base.work_status = Base.STATUS.STOPING
                 finally:
+                    self.stop_queue_log_monitor()  # 停止队列日志监控
                     self._is_queue_mode = False  # 清除队列模式标记
             elif args.task == 'all_in_one':
                 # 在非交互模式下，如果传入了 input_path，则使用它
@@ -2750,6 +3007,33 @@ class CLIMenu:
                                 if current_file_path:
                                     file_name = os.path.basename(current_file_path)
                                     self.ui.log(i18n.get('msg_skipping_file').format(file_name))
+
+                                    # 在队列模式下处理跳过任务
+                                    if hasattr(self, '_is_queue_mode') and self._is_queue_mode:
+                                        try:
+                                            from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager
+                                            qm = QueueManager()
+
+                                            # 将当前跳过的任务移动到队列末尾
+                                            success, message = qm.skip_task_to_end(current_file_path)
+                                            if success:
+                                                self.ui.log(i18n.get('msg_queue_task_moved_to_end').format(file_name, message.split()[-1]))
+                                            else:
+                                                self.ui.log(f"[yellow]{i18n.get('msg_queue_task_move_failed')}: {message}[/yellow]")
+
+                                            # 显示下一个任务信息
+                                            next_index, next_task = qm.get_next_unlocked_task()
+                                            if next_task:
+                                                next_file_name = os.path.basename(next_task.input_path)
+                                                task_type_name = i18n.get("task_type_translation") if next_task.task_type == TaskType.TRANSLATION else \
+                                                                 i18n.get("task_type_polishing") if next_task.task_type == TaskType.POLISH else \
+                                                                 i18n.get("task_type_all_in_one") if next_task.task_type == TaskType.TRANSLATE_AND_POLISH else "Unknown"
+                                                self.ui.log(i18n.get('msg_queue_next_task').format(next_index + 1, task_type_name, next_file_name))
+                                            else:
+                                                self.ui.log(i18n.get('msg_queue_no_more_tasks'))
+                                        except Exception as e:
+                                            pass  # 静默忽略队列查询错误
+
                                     EventManager.get_singleton().emit("TASK_SKIP_FILE_REQUEST", {"file_path_full": current_file_path})
                             elif key == '-': # 减少线程
                                 old_val = self.task_executor.config.actual_thread_counts
@@ -2766,8 +3050,16 @@ class CLIMenu:
                                 EventManager.get_singleton().emit(Base.EVENT.TASK_API_STATUS_REPORT, {"force_switch": True})
                             elif key == 'm': # Open Web Monitor
                                 self.handle_monitor_shortcut()
-                            elif key == 'e': # Open Queue Editor
-                                self.handle_queue_editor_shortcut()
+                            elif key == 'e': # Open Queue Editor (Queue mode only)
+                                if hasattr(self, '_is_queue_mode') and self._is_queue_mode:
+                                    self.handle_queue_editor_shortcut()
+                                else:
+                                    self.ui.log(f"[yellow]{i18n.get('msg_queue_editor_not_available')}[/yellow]")
+                            elif key == 'h': # Open Web Queue Manager (Queue mode only)
+                                if hasattr(self, '_is_queue_mode') and self._is_queue_mode:
+                                    self.handle_web_queue_shortcut()
+                                else:
+                                    self.ui.log(f"[yellow]{i18n.get('msg_web_queue_not_available')}[/yellow]")
 
                     time.sleep(0.1)
                 
@@ -3357,6 +3649,7 @@ class CLIMenu:
                     continue
                 console.print(f"\n[bold green]Starting Queue Processing...[/bold green]")
                 self._is_queue_mode = True  # 标记进入队列模式
+                self.start_queue_log_monitor()  # 启动队列日志监控
                 qm.start_queue(self)
                 break
 
@@ -3420,6 +3713,7 @@ class CLIMenu:
                 Base.work_status = Base.STATUS.STOPING
                 console.print(f"\n[bold red]Queue stopped by user.[/bold red]")
             finally:
+                self.stop_queue_log_monitor()  # 停止队列日志监控
                 self._is_queue_mode = False  # 清除队列模式标记
 
 def main():

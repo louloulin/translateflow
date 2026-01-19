@@ -2,6 +2,7 @@ import threading
 import time
 import os
 import rapidjson as json
+from datetime import datetime, timedelta
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Infrastructure.TaskConfig.TaskType import TaskType
 
@@ -41,6 +42,11 @@ class QueueTaskItem:
         self.status = "waiting" # waiting, translating, translated, polishing, completed, error, stopped
         self.locked = False  # 是否被锁定（正在执行中不可修改）
 
+        # 新增：准确的处理状态跟踪
+        self.is_processing = False  # 是否真正在处理中
+        self.last_activity_time = None  # 最后活动时间（ISO格式字符串）
+        self.process_start_time = None  # 处理开始时间
+
     def to_dict(self):
         d = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         return d
@@ -51,9 +57,18 @@ class QueueTaskItem:
         params = data.copy()
         status = params.pop("status", "waiting")
         locked = params.pop("locked", False)  # 移除locked字段，它不属于构造函数参数
+
+        # 新增字段的处理（兼容旧数据）
+        is_processing = params.pop("is_processing", False)
+        last_activity_time = params.pop("last_activity_time", None)
+        process_start_time = params.pop("process_start_time", None)
+
         item = cls(**params)
         item.status = status
         item.locked = locked
+        item.is_processing = is_processing
+        item.last_activity_time = last_activity_time
+        item.process_start_time = process_start_time
         return item
 
 class QueueManager(Base):
@@ -76,11 +91,68 @@ class QueueManager(Base):
         project_root = os.path.normpath(project_root)
         self.default_queue_file = os.path.join(project_root, "Resource", "queue_tasks.json")
         self.queue_file = self.default_queue_file
+
+        # 添加队列操作日志文件
+        self.queue_log_file = os.path.join(project_root, "Resource", "queue_operations.log")
+
         self.tasks = []
         self.is_running = False
         self.current_task_index = -1
         self.load_tasks()
         self._initialized = True
+
+    def _log_queue_operation(self, message):
+        """记录队列操作日志到文件，用于跨进程通信"""
+        try:
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            log_entry = f"[{timestamp}] {message}\n"
+
+            # 确保日志目录存在
+            os.makedirs(os.path.dirname(self.queue_log_file), exist_ok=True)
+
+            # 追加写入日志文件
+            with open(self.queue_log_file, 'a', encoding='utf-8') as f:
+                f.write(log_entry)
+
+            # 同时输出到控制台（保留原有行为）
+            print(message)
+
+        except Exception as e:
+            # 如果日志文件写入失败，至少保证控制台输出
+            print(message)
+            print(f"[WARNING] Failed to write queue log: {e}")
+
+    def get_queue_log_path(self):
+        """获取队列日志文件路径"""
+        return self.queue_log_file
+
+    def get_recent_queue_logs(self, lines=10):
+        """获取最近的队列操作日志"""
+        try:
+            if not os.path.exists(self.queue_log_file):
+                return []
+
+            with open(self.queue_log_file, 'r', encoding='utf-8') as f:
+                all_lines = f.readlines()
+
+            # 返回最后几行，去掉换行符
+            recent_lines = all_lines[-lines:] if len(all_lines) >= lines else all_lines
+            return [line.strip() for line in recent_lines if line.strip()]
+
+        except Exception as e:
+            self.warning(f"Failed to read queue log: {e}")
+            return []
+
+    def clear_queue_logs(self):
+        """清空队列操作日志"""
+        try:
+            if os.path.exists(self.queue_log_file):
+                with open(self.queue_log_file, 'w', encoding='utf-8') as f:
+                    f.write('')  # 清空文件内容
+                return True
+        except Exception as e:
+            self.warning(f"Failed to clear queue log: {e}")
+        return False
 
     def load_tasks(self, custom_path=None):
         if custom_path:
@@ -110,15 +182,104 @@ class QueueManager(Base):
 
     def remove_task(self, index):
         if 0 <= index < len(self.tasks):
+            task_name = os.path.basename(self.tasks[index].input_path)
             self.tasks.pop(index)
             self.save_tasks()
+            self.hot_reload_queue(quiet=True)  # 静默热刷新队列
+            self._log_queue_operation(Base.i18n.get('msg_task_removed').format(task_name))
             return True
         return False
 
+    def detect_parameter_changes(self, old_task, new_task):
+        """检测任务参数变更并返回变更详情"""
+        changes = []
+
+        # 定义需要监控的参数及其对应的I18N键
+        params_to_monitor = {
+            'platform': 'param_platform',
+            'api_url': 'param_api_url',
+            'api_key': 'param_api_key',
+            'model': 'param_model',
+            'threads': 'param_threads',
+            'source_lang': 'param_source_lang',
+            'target_lang': 'param_target_lang',
+            'retry': 'param_retry',
+            'timeout': 'param_timeout',
+            'rounds': 'param_rounds',
+            'pre_lines': 'param_pre_lines',
+            'lines_limit': 'param_lines_limit',
+            'tokens_limit': 'param_tokens_limit',
+            'think_depth': 'param_think_depth',
+            'thinking_budget': 'param_thinking_budget',
+            'task_type': 'param_task_type',
+            'profile': 'param_profile',
+            'rules_profile': 'param_rules_profile',
+            'project_type': 'param_project_type'
+        }
+
+        for param, i18n_key in params_to_monitor.items():
+            old_value = getattr(old_task, param, None)
+            new_value = getattr(new_task, param, None)
+
+            # 对于API密钥等敏感信息，只显示部分内容
+            if param == 'api_key':
+                if old_value != new_value:
+                    old_display = self._mask_sensitive_value(old_value)
+                    new_display = self._mask_sensitive_value(new_value)
+                    if old_value is None and new_value is not None:
+                        changes.append(Base.i18n.get('param_added').format(Base.i18n.get(i18n_key), new_display))
+                    elif old_value is not None and new_value is None:
+                        changes.append(Base.i18n.get('param_removed').format(Base.i18n.get(i18n_key)))
+                    elif old_value != new_value:
+                        changes.append(Base.i18n.get('param_changed').format(Base.i18n.get(i18n_key), old_display, new_display))
+            else:
+                # 普通参数的处理
+                if old_value != new_value:
+                    if old_value is None and new_value is not None:
+                        changes.append(Base.i18n.get('param_added').format(Base.i18n.get(i18n_key), new_value))
+                    elif old_value is not None and new_value is None:
+                        changes.append(Base.i18n.get('param_removed').format(Base.i18n.get(i18n_key)))
+                    elif old_value != new_value:
+                        changes.append(Base.i18n.get('param_changed').format(Base.i18n.get(i18n_key), old_value, new_value))
+
+        return changes
+
+    def _mask_sensitive_value(self, value):
+        """遮掩敏感信息"""
+        if value is None:
+            return None
+        if len(str(value)) <= 8:
+            return "****"
+        else:
+            return str(value)[:4] + "****" + str(value)[-4:]
+
     def update_task(self, index, task_item):
         if 0 <= index < len(self.tasks):
-            self.tasks[index] = task_item
-            self.save_tasks()
+            try:
+                old_task = self.tasks[index]
+                task_name = os.path.basename(old_task.input_path)
+
+                # 检测参数变更
+                changes = self.detect_parameter_changes(old_task, task_item)
+
+                # 更新任务
+                self.tasks[index] = task_item
+                self.save_tasks()
+                self.hot_reload_queue(quiet=True)
+
+                # 打印详细的变更日志
+                if changes:
+                    self._log_queue_operation(Base.i18n.get('msg_task_updated').format(task_name))
+                    for change in changes:
+                        self._log_queue_operation(change)
+                else:
+                    # 如果没有参数变更，只是简单的更新
+                    self._log_queue_operation(f"[INFO] {Base.i18n.get('msg_task_updated').format(task_name)} {Base.i18n.get('msg_no_config_changes')}")
+
+            except Exception as e:
+                self._log_queue_operation(f"[ERROR] Failed to update task: {e}")
+                return False
+
             return True
         return False
 
@@ -149,12 +310,146 @@ class QueueManager(Base):
             return not self.tasks[index].locked
         return False
 
+    # ================ 智能处理状态管理 ================
+
+    def update_task_activity(self, index):
+        """更新任务活动时间（心跳机制）"""
+        if 0 <= index < len(self.tasks):
+            self.tasks[index].last_activity_time = datetime.now().isoformat()
+            self.save_tasks()
+            return True
+        return False
+
+    def start_task_processing(self, index):
+        """开始处理任务 - 设置处理状态和时间戳"""
+        if 0 <= index < len(self.tasks):
+            task = self.tasks[index]
+            now = datetime.now().isoformat()
+            task.is_processing = True
+            task.process_start_time = now
+            task.last_activity_time = now
+            task.locked = True
+            self.save_tasks()
+            return True
+        return False
+
+    def stop_task_processing(self, index):
+        """停止处理任务 - 清除处理状态"""
+        if 0 <= index < len(self.tasks):
+            task = self.tasks[index]
+            task.is_processing = False
+            task.process_start_time = None
+            task.last_activity_time = None
+            task.locked = False
+            self.save_tasks()
+            return True
+        return False
+
+    def is_task_actually_processing(self, index, timeout_minutes=5):
+        """
+        检查任务是否真正在处理中
+
+        Args:
+            index: 任务索引
+            timeout_minutes: 超时时间（分钟），超过此时间没有活动则认为不在处理中
+
+        Returns:
+            bool: 是否真正在处理中
+        """
+        if not (0 <= index < len(self.tasks)):
+            return False
+
+        task = self.tasks[index]
+
+        # 如果明确标记为未处理，直接返回False
+        if not task.is_processing:
+            return False
+
+        # 检查最后活动时间
+        if not task.last_activity_time:
+            return False
+
+        try:
+            last_activity = datetime.fromisoformat(task.last_activity_time)
+            now = datetime.now()
+            inactive_time = now - last_activity
+
+            # 如果超过超时时间没有活动，认为不在处理中
+            if inactive_time > timedelta(minutes=timeout_minutes):
+                self.warning(f"Task {index+1} has been inactive for {inactive_time.total_seconds():.1f} seconds, marking as not processing")
+                return False
+
+            return True
+
+        except (ValueError, TypeError) as e:
+            self.warning(f"Invalid activity time format for task {index+1}: {e}")
+            return False
+
+    def cleanup_stale_locks(self, timeout_minutes=5):
+        """
+        清理过期的锁定状态
+
+        Args:
+            timeout_minutes: 超时时间（分钟）
+
+        Returns:
+            int: 清理的任务数量
+        """
+        cleaned_count = 0
+
+        for i, task in enumerate(self.tasks):
+            if task.locked and not self.is_task_actually_processing(i, timeout_minutes):
+                self.info(f"Cleaning stale lock for task {i+1}: {task.input_path}")
+                task.locked = False
+                task.is_processing = False
+                task.process_start_time = None
+                task.last_activity_time = None
+
+                # 重置状态到合适的值
+                if task.status in ["translating", "polishing"]:
+                    task.status = "waiting"
+
+                cleaned_count += 1
+
+        if cleaned_count > 0:
+            self.save_tasks()
+            self.info(f"Cleaned {cleaned_count} stale task locks")
+
+        return cleaned_count
+
+    def get_task_processing_status(self, index):
+        """
+        获取任务的详细处理状态
+
+        Returns:
+            dict: 包含处理状态信息的字典
+        """
+        if not (0 <= index < len(self.tasks)):
+            return None
+
+        task = self.tasks[index]
+        is_actually_processing = self.is_task_actually_processing(index)
+
+        status_info = {
+            "locked": task.locked,
+            "is_processing": task.is_processing,
+            "is_actually_processing": is_actually_processing,
+            "process_start_time": task.process_start_time,
+            "last_activity_time": task.last_activity_time,
+            "status": task.status
+        }
+
+        return status_info
+
     def move_task_up(self, index):
         """将指定索引的任务向上移动一位"""
         if (1 <= index < len(self.tasks) and
             self.can_modify_task(index) and self.can_modify_task(index - 1)):
+            task_name = os.path.basename(self.tasks[index].input_path)
             self.tasks[index], self.tasks[index - 1] = self.tasks[index - 1], self.tasks[index]
             self.save_tasks()
+            self.hot_reload_queue(quiet=True)  # 静默热刷新队列
+            self._log_queue_operation(Base.i18n.get('msg_task_moved_up').format(task_name, index+1, index))
             return True
         return False
 
@@ -162,8 +457,11 @@ class QueueManager(Base):
         """将指定索引的任务向下移动一位"""
         if (0 <= index < len(self.tasks) - 1 and
             self.can_modify_task(index) and self.can_modify_task(index + 1)):
+            task_name = os.path.basename(self.tasks[index].input_path)
             self.tasks[index], self.tasks[index + 1] = self.tasks[index + 1], self.tasks[index]
             self.save_tasks()
+            self.hot_reload_queue(quiet=True)  # 静默热刷新队列
+            self._log_queue_operation(Base.i18n.get('msg_task_moved_down').format(task_name, index+1, index+2))
             return True
         return False
 
@@ -182,9 +480,12 @@ class QueueManager(Base):
 
             # 移除任务
             task = self.tasks.pop(from_index)
+            task_name = os.path.basename(task.input_path)
             # 插入到新位置
             self.tasks.insert(to_index, task)
             self.save_tasks()
+            self.hot_reload_queue(quiet=True)  # 静默热刷新队列
+            self._log_queue_operation(Base.i18n.get('msg_task_moved').format(task_name, from_index+1, to_index+1))
             return True
         return False
 
@@ -203,8 +504,12 @@ class QueueManager(Base):
             return True
         return False
 
-    def hot_reload_queue(self):
-        """热重载队列：在不影响锁定任务的情况下重新加载队列"""
+    def hot_reload_queue(self, quiet=False):
+        """热重载队列：在不影响锁定任务的情况下重新加载队列
+
+        Args:
+            quiet (bool): 如果为True，不打印成功日志。用于操作后的静默刷新。
+        """
         if not os.path.exists(self.queue_file):
             return False
 
@@ -233,7 +538,10 @@ class QueueManager(Base):
                         break
 
             self.tasks = new_tasks
-            self.info("Queue hot reloaded successfully.")
+
+            # 只有在非静默模式下才打印成功日志
+            if not quiet:
+                self.info("Queue hot reloaded successfully.")
             return True
 
         except Exception as e:
@@ -249,28 +557,77 @@ class QueueManager(Base):
         return None, None
 
     def mark_task_executing(self, index):
-        """标记任务为执行中并锁定"""
+        """标记任务为执行中并锁定 - 使用智能处理状态管理"""
         if 0 <= index < len(self.tasks):
             task = self.tasks[index]
-            task.locked = True
+
+            # 使用新的智能处理状态管理
+            self.start_task_processing(index)
+
+            # 设置合适的状态
             if task.status == "waiting":
                 task.status = "translating"
             elif task.status == "translated":
                 task.status = "polishing"
-            self.save_tasks()
+
             self.current_task_index = index
+            self.save_tasks()
             return True
         return False
 
     def mark_task_completed(self, index, final_status="completed"):
-        """标记任务完成并解锁"""
+        """标记任务完成并解锁 - 使用智能处理状态管理"""
         if 0 <= index < len(self.tasks):
             task = self.tasks[index]
-            task.locked = False
+
+            # 使用新的智能处理状态管理
+            self.stop_task_processing(index)
+
             task.status = final_status
             self.save_tasks()
             return True
         return False
+
+    def find_task_by_file_path(self, file_path):
+        """根据文件路径查找任务"""
+        if not file_path:
+            return None
+
+        file_path = os.path.normpath(file_path)
+        for i, task in enumerate(self.tasks):
+            task_input_path = os.path.normpath(task.input_path)
+            if task_input_path == file_path:
+                return i, task
+        return None, None
+
+    def skip_task_to_end(self, file_path):
+        """跳过任务并移动到队列末尾"""
+        try:
+            task_index, task = self.find_task_by_file_path(file_path)
+            if task_index is None:
+                return False, "Task not found in queue"
+
+            if not task.locked:
+                return False, "Task is not currently locked"
+
+            # 解锁任务并重置状态
+            task.locked = False
+            task.status = "waiting"
+
+            # 移动到队列末尾
+            moved_task = self.tasks.pop(task_index)
+            self.tasks.append(moved_task)
+
+            # 保存队列
+            self.save_tasks()
+
+            file_name = os.path.basename(file_path)
+            self.info(f"Task [{file_name}] skipped and moved to end of queue")
+            return True, f"Task moved to position {len(self.tasks)}"
+
+        except Exception as e:
+            self.error(f"Failed to skip task: {e}")
+            return False, str(e)
 
     def start_queue(self, cli_menu):
         if self.is_running: return
@@ -285,7 +642,10 @@ class QueueManager(Base):
             if Base.work_status == Base.STATUS.STOPING: break
 
             # 热重载队列
-            self.hot_reload_queue()
+            self.hot_reload_queue(quiet=True)
+
+            # 清理过期的锁定状态
+            self.cleanup_stale_locks()
 
             # 查找下一个需要翻译的任务
             index, task = self.get_next_unlocked_task()
@@ -319,6 +679,9 @@ class QueueManager(Base):
 
                 # 热重载队列
                 self.hot_reload_queue()
+
+                # 清理过期的锁定状态
+                self.cleanup_stale_locks()
 
                 # 查找下一个需要润色的任务
                 found_task = False
@@ -391,6 +754,10 @@ class QueueManager(Base):
             if task.thinking_budget is not None: cfg["thinking_budget"] = task.thinking_budget
 
             # 3. Execute
+            # 更新活动时间（心跳）
+            if self.current_task_index >= 0:
+                self.update_task_activity(self.current_task_index)
+
             cli_menu.run_task(step_type, target_path=task.input_path, continue_status=resume, non_interactive=True, from_queue=True)
             
             if Base.work_status != Base.STATUS.STOPING:

@@ -1272,9 +1272,14 @@ def get_queue_manager():
 
 @app.get("/api/queue")
 async def get_queue():
-    """Get all tasks in the queue"""
+    """Get all tasks in the queue with accurate processing status"""
     try:
         qm = get_queue_manager()
+
+        # 清理过期的锁定状态
+        if hasattr(qm, 'cleanup_stale_locks'):
+            qm.cleanup_stale_locks()
+
         tasks = []
 
         for idx, task in enumerate(qm.tasks):
@@ -1283,6 +1288,21 @@ async def get_queue():
                 task.locked = False
             if not hasattr(task, 'status'):
                 task.status = "waiting"
+
+            # 获取准确的处理状态
+            is_actually_processing = False
+            processing_info = None
+            if hasattr(qm, 'is_task_actually_processing'):
+                is_actually_processing = qm.is_task_actually_processing(idx)
+
+            if hasattr(qm, 'get_task_processing_status'):
+                processing_info = qm.get_task_processing_status(idx)
+
+            # 如果任务被标记为locked但实际上没有在处理，则解锁
+            if task.locked and not is_actually_processing:
+                if hasattr(qm, 'stop_task_processing'):
+                    qm.stop_task_processing(idx)
+                    task.locked = False
 
             task_dict = {
                 "task_type": task.task_type,
@@ -1307,7 +1327,13 @@ async def get_queue():
                 "think_depth": getattr(task, "think_depth", ""),
                 "thinking_budget": getattr(task, "thinking_budget", None),
                 "status": getattr(task, "status", "waiting"),
-                "locked": getattr(task, "locked", False)
+                "locked": getattr(task, "locked", False),
+
+                # 新增：准确的处理状态信息
+                "is_actually_processing": is_actually_processing,
+                "is_processing": getattr(task, "is_processing", False),
+                "process_start_time": getattr(task, "process_start_time", None),
+                "last_activity_time": getattr(task, "last_activity_time", None)
             }
             tasks.append(task_dict)
         return tasks
