@@ -47,7 +47,6 @@ except Exception: pass
 from ModuleFolders.Base.Base import Base
 from ModuleFolders.Base.PluginManager import PluginManager
 from ModuleFolders.Infrastructure.Cache.CacheItem import TranslationStatus
-from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager, QueueTaskItem
 from ModuleFolders.Infrastructure.Cache.CacheManager import CacheManager
 from ModuleFolders.Domain.FileReader.FileReader import FileReader
 from ModuleFolders.Domain.FileOutputer.FileOutputer import FileOutputer
@@ -530,7 +529,6 @@ class CLIMenu:
         self.task_executor = TaskExecutor(self.plugin_manager, self.cache_manager, self.file_reader, self.file_outputer)
         self.file_selector = FileSelector(i18n)
         self.update_manager = UpdateManager(i18n)
-        self.queue_manager = QueueManager()  # 添加队列管理器
         
         # 输入监听器
         self.input_listener = InputListener()
@@ -592,6 +590,136 @@ class CLIMenu:
         import webbrowser
         # Pass mode=monitor as a query parameter
         webbrowser.open(f"http://127.0.0.1:8000/?mode=monitor#/monitor")
+
+    def handle_queue_editor_shortcut(self):
+        """Handle the 'e' shortcut to open the real-time queue editor."""
+        try:
+            # 检查是否处于队列模式
+            if not hasattr(self, '_is_queue_mode') or not self._is_queue_mode:
+                self.ui.log(f"[yellow]{i18n.get('msg_queue_editor_not_available')}[/yellow]")
+                return
+
+            from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager
+            queue_manager = QueueManager()
+
+            # 暂时停止Live TUI
+            self.ui.log(f"[cyan]{i18n.get('msg_queue_editor_opening')}[/cyan]")
+
+            # 在新线程中运行队列编辑器，避免阻塞主执行
+            import threading
+            editor_thread = threading.Thread(target=self._run_queue_editor, args=(queue_manager,), daemon=True)
+            editor_thread.start()
+
+        except Exception as e:
+            self.ui.log(f"[red]Failed to open queue editor: {e}[/red]")
+
+    def _run_queue_editor(self, queue_manager):
+        """运行队列编辑器界面"""
+        try:
+            # 创建一个简单的队列编辑界面
+            from rich.console import Console
+            from rich.prompt import IntPrompt, Confirm
+            from rich.table import Table
+            from rich.panel import Panel
+
+            editor_console = Console()
+
+            while True:
+                # 热重载队列数据
+                queue_manager.hot_reload_queue()
+
+                # 清屏并显示当前队列状态
+                editor_console.clear()
+                editor_console.print(Panel.fit(f"[bold cyan]{i18n.get('title_queue_editor')}[/bold cyan]\n{i18n.get('msg_queue_editor_help')}", border_style="cyan"))
+
+                # 显示队列表格
+                table = Table(show_header=True, header_style="bold magenta")
+                table.add_column("#", style="dim", width=3)
+                table.add_column(i18n.get('field_status'), width=12)
+                table.add_column(i18n.get('field_type'), width=15)
+                table.add_column(i18n.get('field_input_path'), width=40)
+                table.add_column(i18n.get('field_locked'), width=8, style="red")
+
+                for i, task in enumerate(queue_manager.tasks):
+                    status_style = ""
+                    if task.status == "completed":
+                        status_style = "green"
+                    elif task.status == "translating" or task.status == "polishing":
+                        status_style = "yellow"
+                    elif task.status == "error":
+                        status_style = "red"
+
+                    locked_symbol = "🔒" if task.locked else ""
+
+                    table.add_row(
+                        str(i + 1),
+                        f"[{status_style}]{task.status}[/{status_style}]",
+                        task.task_type,
+                        task.input_path[-35:] + "..." if len(task.input_path) > 35 else task.input_path,
+                        locked_symbol
+                    )
+
+                editor_console.print(table)
+
+                # 显示操作菜单
+                editor_console.print(f"\n[bold yellow]{i18n.get('menu_queue_operations')}:[/bold yellow]")
+                editor_console.print(f"1. {i18n.get('option_move_up')}")
+                editor_console.print(f"2. {i18n.get('option_move_down')}")
+                editor_console.print(f"3. {i18n.get('option_remove_task')}")
+                editor_console.print(f"4. {i18n.get('option_refresh_queue')}")
+                editor_console.print(f"0. {i18n.get('option_return_to_execution')}")
+
+                try:
+                    choice = IntPrompt.ask(f"\n{i18n.get('prompt_select_operation')}", console=editor_console, default=0)
+
+                    if choice == 0:
+                        break
+                    elif choice == 1:  # 上移
+                        task_idx = IntPrompt.ask(i18n.get('prompt_enter_task_index'), console=editor_console) - 1
+                        if queue_manager.move_task_up(task_idx):
+                            editor_console.print(f"[green]{i18n.get('msg_task_moved_up')}[/green]")
+                        else:
+                            editor_console.print(f"[red]{i18n.get('msg_move_failed')}[/red]")
+                    elif choice == 2:  # 下移
+                        task_idx = IntPrompt.ask(i18n.get('prompt_enter_task_index'), console=editor_console) - 1
+                        if queue_manager.move_task_down(task_idx):
+                            editor_console.print(f"[green]{i18n.get('msg_task_moved_down')}[/green]")
+                        else:
+                            editor_console.print(f"[red]{i18n.get('msg_move_failed')}[/red]")
+                    elif choice == 3:  # 删除任务
+                        task_idx = IntPrompt.ask(i18n.get('prompt_enter_task_index'), console=editor_console) - 1
+                        if 0 <= task_idx < len(queue_manager.tasks):
+                            task = queue_manager.tasks[task_idx]
+                            if task.locked:
+                                editor_console.print(f"[red]{i18n.get('msg_task_locked_cannot_remove')}[/red]")
+                            else:
+                                if Confirm.ask(i18n.get('confirm_remove_task').format(task.input_path), console=editor_console):
+                                    if queue_manager.remove_task(task_idx):
+                                        editor_console.print(f"[green]{i18n.get('msg_task_removed')}[/green]")
+                                    else:
+                                        editor_console.print(f"[red]{i18n.get('msg_remove_failed')}[/red]")
+                        else:
+                            editor_console.print(f"[red]{i18n.get('msg_invalid_index')}[/red]")
+                    elif choice == 4:  # 刷新
+                        editor_console.print(f"[cyan]{i18n.get('msg_queue_refreshed')}[/cyan]")
+                        continue
+
+                    if choice != 4:
+                        editor_console.input(f"\n{i18n.get('prompt_press_enter_continue')}")
+
+                except (KeyboardInterrupt, EOFError):
+                    break
+                except Exception as e:
+                    editor_console.print(f"[red]Error: {e}[/red]")
+                    editor_console.input(f"\n{i18n.get('prompt_press_enter_continue')}")
+
+            # 返回提示
+            if hasattr(self, 'ui') and self.ui:
+                self.ui.log(f"[cyan]{i18n.get('msg_queue_editor_closed')}[/cyan]")
+
+        except Exception as e:
+            if hasattr(self, 'ui') and self.ui:
+                self.ui.log(f"[red]Queue editor error: {e}[/red]")
 
     def _host_create_profile(self, new_name, base_name=None):
         # Same robust logic as CLI
@@ -691,23 +819,58 @@ class CLIMenu:
 
         # 覆盖高级参数
         if args.think_depth is not None: self.config["think_depth"] = args.think_depth
+        if args.thinking_budget is not None: self.config["thinking_budget"] = args.thinking_budget
         if args.failover is not None: self.config["enable_api_failover"] = args.failover == "on"
 
         self.save_config()
 
         task_map = {
             'translate': TaskType.TRANSLATION,
-            'polish': TaskType.POLISH
+            'polish': TaskType.POLISH,
+            'all_in_one': TaskType.TRANSLATE_AND_POLISH,
+            'queue': TaskType.QUEUE
         }
 
         if args.task in task_map:
-            self.run_task(
-                task_map[args.task],
-                target_path=args.input_path,
-                continue_status=args.resume,
-                non_interactive=args.non_interactive,
-                web_mode=args.web_mode
-            )
+            if args.task == 'queue':
+                from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager
+                qm = QueueManager()
+                # 检查是否传入了自定义队列文件
+                if args.queue_file:
+                    qm.load_tasks(args.queue_file)
+                
+                if not qm.tasks:
+                     console.print(f"[red]Error: Task queue is empty (File: {qm.queue_file}). Cannot run queue task.[/red]")
+                     return
+                
+                console.print(f"[bold green]Running Task Queue ({len(qm.tasks)} items)...[/bold green]")
+                self._is_queue_mode = True  # 标记进入队列模式
+                qm.start_queue(self)
+                # We need to wait for queue to finish if in non-interactive mode
+                try:
+                    while qm.is_running:
+                        time.sleep(1)
+                except KeyboardInterrupt:
+                    Base.work_status = Base.STATUS.STOPING
+                finally:
+                    self._is_queue_mode = False  # 清除队列模式标记
+            elif args.task == 'all_in_one':
+                # 在非交互模式下，如果传入了 input_path，则使用它
+                if args.input_path:
+                    # 使用 run_task 组合逻辑，因为 run_all_in_one 内部带 path 选择
+                    self.run_task(TaskType.TRANSLATION, target_path=args.input_path, continue_status=args.resume, non_interactive=True, web_mode=args.web_mode, from_queue=True)
+                    if Base.work_status != Base.STATUS.STOPING:
+                        self.run_task(TaskType.POLISH, target_path=args.input_path, continue_status=True, non_interactive=True, web_mode=args.web_mode)
+                else:
+                    self.run_all_in_one()
+            else:
+                self.run_task(
+                    task_map[args.task],
+                    target_path=args.input_path,
+                    continue_status=args.resume,
+                    non_interactive=args.non_interactive,
+                    web_mode=args.web_mode
+                )
         elif args.task == 'export':
             self.run_export_only(
                 target_path=args.input_path,
@@ -1077,15 +1240,17 @@ class CLIMenu:
         while True:
             self.display_banner()
             table = Table(show_header=False, box=None)
-            menus = ["start_translation", "start_polishing", "export_only", "queue_management", "settings", "api_settings", "glossary", "plugin_settings", "profiles", "update", "start_web_server"]
-            colors = ["green", "green", "magenta", "bright_blue", "blue", "blue", "yellow", "cyan", "cyan", "dim", "bold magenta"]
+            menus = ["start_translation", "start_polishing", "start_all_in_one", "export_only", "settings", "api_settings", "glossary", "plugin_settings", "task_queue", "profiles", "update", "start_web_server"]
+            colors = ["green", "green", "bold green", "magenta", "blue", "blue", "yellow", "cyan", "bold blue", "cyan", "dim", "bold magenta"]
             
-            for i, (m, c) in enumerate(zip(menus, colors)):
+            for i, (m, c) in enumerate(zip(menus, colors)): 
                 label = i18n.get(f"menu_{m}")
                 if m == "start_web_server" and label == f"menu_{m}":
                     label = "Start Web Server" # Fallback if not in json
-                elif m == "queue_management" and label == f"menu_{m}":
-                    label = "队列管理 (Queue Management)" # Fallback if not in json
+                if m == "task_queue" and label == f"menu_{m}":
+                    label = "Task Queue Management" # Fallback
+                if m == "start_all_in_one" and label == f"menu_{m}":
+                    label = "Translate & Polish (All-in-One)"
                 table.add_row(f"[{c}]{i+1}.[/]", label)
                 
             table.add_row("[red]0.[/]", i18n.get("menu_exit")); console.print(table)
@@ -1093,290 +1258,21 @@ class CLIMenu:
             console.print("\n")
             
             actions = [
-                sys.exit,
-                lambda: self.run_task(TaskType.TRANSLATION),
-                lambda: self.run_task(TaskType.POLISH),
-                self.run_export_only,
-                self.queue_management_menu,  # 添加队列管理
-                self.settings_menu,
-                self.api_settings_menu,
+                sys.exit, 
+                lambda: self.run_task(TaskType.TRANSLATION), 
+                lambda: self.run_task(TaskType.POLISH), 
+                self.run_all_in_one,
+                self.run_export_only, 
+                self.settings_menu, 
+                self.api_settings_menu, 
                 self.prompt_menu,
                 self.plugin_settings_menu,
+                self.task_queue_menu,
                 self.profiles_menu,
                 self.update_manager.start_update,
                 self.start_web_server
             ]
             actions[choice]()
-
-    def queue_management_menu(self):
-        """队列管理菜单"""
-        while True:
-            self.display_banner()
-            console.print(Panel(f"[bold]队列管理 (Queue Management)[/bold]"))
-
-            # 显示当前队列状态
-            tasks = self.queue_manager.get_all_tasks()
-            if tasks:
-                table = Table(show_header=True)
-                table.add_column("序号", style="dim", width=4)
-                table.add_column("类型", width=8)
-                table.add_column("输入文件", style="cyan")
-                table.add_column("状态", width=12)
-
-                for i, task in enumerate(tasks, 1):
-                    task_type = "翻译" if task.task_type == TaskType.TRANSLATION else "润色"
-                    filename = os.path.basename(task.input_path)
-                    status_color = {
-                        "waiting": "[yellow]等待中[/yellow]",
-                        "translating": "[blue]翻译中[/blue]",
-                        "polishing": "[blue]润色中[/blue]",
-                        "completed": "[green]已完成[/green]",
-                        "error": "[red]错误[/red]",
-                        "stopped": "[red]已停止[/red]"
-                    }.get(task.status, task.status)
-
-                    table.add_row(str(i), task_type, filename, status_color)
-
-                console.print(table)
-                console.print(f"\n[dim]当前队列中有 {len(tasks)} 个任务[/dim]\n")
-            else:
-                console.print("[dim]队列为空[/dim]\n")
-
-            # 菜单选项
-            options_table = Table(show_header=False, box=None)
-            options_table.add_row("[green]1.[/]", "添加新任务到队列")
-            options_table.add_row("[red]2.[/]", "移除指定任务")
-            options_table.add_row("[blue]3.[/]", "精细化修改（自定义每个任务设置）")
-            options_table.add_row("[cyan]4.[/]", "在编辑器中编辑队列文件")
-            options_table.add_row("[red]5.[/]", "清空所有任务")
-            options_table.add_row("[bold green]6.[/]", "开始顺序执行队列")
-            options_table.add_row("[yellow]7.[/]", "调整队列顺序")
-            options_table.add_row("[dim]0.[/]", "返回上一级")
-
-            console.print(options_table)
-
-            choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(8)], show_choices=False)
-            console.print()
-
-            if choice == 0:
-                break
-            elif choice == 1:
-                self._add_task_to_queue()
-            elif choice == 2:
-                self._remove_task_from_queue()
-            elif choice == 3:
-                self._edit_task_settings()
-            elif choice == 4:
-                self._edit_queue_file_in_editor()
-            elif choice == 5:
-                self._clear_all_tasks()
-            elif choice == 6:
-                self._execute_queue()
-            elif choice == 7:
-                self._reorder_queue()
-
-    def _add_task_to_queue(self):
-        """添加新任务到队列"""
-        # 选择任务类型
-        console.print("[bold]选择任务类型:[/bold]")
-        task_type_table = Table(show_header=False, box=None)
-        task_type_table.add_row("[green]1.[/]", "翻译任务")
-        task_type_table.add_row("[blue]2.[/]", "润色任务")
-        console.print(task_type_table)
-
-        task_choice = IntPrompt.ask("选择任务类型", choices=["1", "2"], show_choices=False)
-        task_type = TaskType.TRANSLATION if task_choice == 1 else TaskType.POLISH
-
-        # 选择输入文件
-        input_path = self.file_selector.select_file()
-        if not input_path:
-            console.print("[red]未选择文件，取消添加任务[/red]")
-            return
-
-        # 创建任务项（使用当前配置）
-        task = QueueTaskItem(
-            task_type=task_type,
-            input_path=input_path,
-            output_path=self.config.get("label_output_path"),
-            profile=self.active_profile_name,
-            rules_profile=self.active_rules_profile_name,
-            source_lang=self.config.get("source_language"),
-            target_lang=self.config.get("target_language"),
-            project_type=self.config.get("translation_project"),
-            platform=self.config.get("target_platform"),
-            api_url=self.config.get("base_url"),
-            api_key=self.config.get("api_key"),
-            model=self.config.get("model"),
-            threads=self.config.get("user_thread_counts"),
-            retry=self.config.get("retry_count"),
-            timeout=self.config.get("request_timeout"),
-            rounds=self.config.get("round_limit"),
-            pre_lines=self.config.get("pre_line_counts"),
-            lines_limit=self.config.get("lines_limit"),
-            tokens_limit=self.config.get("tokens_limit"),
-            think_depth=self.config.get("think_depth"),
-            thinking_budget=self.config.get("thinking_budget")
-        )
-
-        self.queue_manager.add_task(task)
-        console.print(f"[green]已添加任务到队列: {os.path.basename(input_path)}[/green]")
-        Prompt.ask("\n按回车键继续...")
-
-    def _remove_task_from_queue(self):
-        """移除指定任务"""
-        tasks = self.queue_manager.get_all_tasks()
-        if not tasks:
-            console.print("[red]队列为空，无任务可移除[/red]")
-            Prompt.ask("\n按回车键继续...")
-            return
-
-        try:
-            index = IntPrompt.ask(f"请输入要移除的任务序号 (1-{len(tasks)})", choices=[str(i) for i in range(1, len(tasks) + 1)])
-            self.queue_manager.remove_task(index - 1)
-            console.print(f"[green]已移除第 {index} 个任务[/green]")
-        except Exception as e:
-            console.print(f"[red]移除任务失败: {e}[/red]")
-
-        Prompt.ask("\n按回车键继续...")
-
-    def _edit_task_settings(self):
-        """精细化修改任务设置"""
-        tasks = self.queue_manager.get_all_tasks()
-        if not tasks:
-            console.print("[red]队列为空，无任务可编辑[/red]")
-            Prompt.ask("\n按回车键继续...")
-            return
-
-        try:
-            index = IntPrompt.ask(f"请输入要编辑的任务序号 (1-{len(tasks)})", choices=[str(i) for i in range(1, len(tasks) + 1)])
-            task = tasks[index - 1]
-
-            if task.locked:
-                console.print("[red]该任务正在执行中，无法编辑[/red]")
-                Prompt.ask("\n按回车键继续...")
-                return
-
-            # 简化编辑界面，只显示主要设置
-            console.print(f"[bold]编辑任务: {os.path.basename(task.input_path)}[/bold]\n")
-
-            # 编辑基础设置
-            if Confirm.ask("是否修改输出路径?", default=False):
-                task.output_path = Prompt.ask("输出路径", default=task.output_path or "")
-
-            if Confirm.ask("是否修改源语言?", default=False):
-                task.source_lang = Prompt.ask("源语言", default=task.source_lang or "")
-
-            if Confirm.ask("是否修改目标语言?", default=False):
-                task.target_lang = Prompt.ask("目标语言", default=task.target_lang or "")
-
-            if Confirm.ask("是否修改API模型?", default=False):
-                task.model = Prompt.ask("API模型", default=task.model or "")
-
-            if Confirm.ask("是否修改线程数?", default=False):
-                task.threads = IntPrompt.ask("线程数", default=task.threads or 0)
-
-            if Confirm.ask("是否修改思考深度?", default=False):
-                task.think_depth = IntPrompt.ask("思考深度", default=task.think_depth or 0)
-
-            if Confirm.ask("是否修改思考预算?", default=False):
-                task.thinking_budget = IntPrompt.ask("思考预算", default=task.thinking_budget or 0)
-
-            self.queue_manager.save_tasks()
-            console.print("[green]任务设置已保存[/green]")
-
-        except Exception as e:
-            console.print(f"[red]编辑任务失败: {e}[/red]")
-
-        Prompt.ask("\n按回车键继续...")
-
-    def _edit_queue_file_in_editor(self):
-        """在编辑器中编辑队列文件"""
-        try:
-            queue_file = self.queue_manager.queue_file
-            if not os.path.exists(queue_file):
-                console.print("[red]队列文件不存在[/red]")
-                Prompt.ask("\n按回车键继续...")
-                return
-
-            # 尝试用系统默认编辑器打开
-            if os.name == 'nt':  # Windows
-                os.startfile(queue_file)
-            else:  # Unix/Linux
-                os.system(f"xdg-open {queue_file}")
-
-            console.print(f"[green]已在编辑器中打开队列文件: {queue_file}[/green]")
-            console.print("[yellow]编辑完成后，队列将自动重新加载[/yellow]")
-
-            Prompt.ask("\n编辑完成后按回车键重新加载...")
-            self.queue_manager.load_tasks()
-            console.print("[green]队列文件已重新加载[/green]")
-
-        except Exception as e:
-            console.print(f"[red]打开编辑器失败: {e}[/red]")
-
-        Prompt.ask("\n按回车键继续...")
-
-    def _clear_all_tasks(self):
-        """清空所有任务"""
-        tasks = self.queue_manager.get_all_tasks()
-        if not tasks:
-            console.print("[red]队列已经为空[/red]")
-            Prompt.ask("\n按回车键继续...")
-            return
-
-        if Confirm.ask(f"确认要清空队列中的所有 {len(tasks)} 个任务吗?", default=False):
-            self.queue_manager.clear_tasks()
-            console.print("[green]所有任务已清空[/green]")
-        else:
-            console.print("[yellow]操作已取消[/yellow]")
-
-        Prompt.ask("\n按回车键继续...")
-
-    def _execute_queue(self):
-        """开始顺序执行队列"""
-        tasks = self.queue_manager.get_all_tasks()
-        if not tasks:
-            console.print("[red]队列为空，无任务可执行[/red]")
-            Prompt.ask("\n按回车键继续...")
-            return
-
-        console.print(f"[bold green]开始执行队列中的 {len(tasks)} 个任务[/bold green]")
-
-        # 这里应该调用队列管理器的执行方法
-        # 但需要与现有的任务执行系统集成
-        try:
-            self.queue_manager.execute_all_tasks(self)
-            console.print("[bold green]队列执行完成[/bold green]")
-        except Exception as e:
-            console.print(f"[red]队列执行失败: {e}[/red]")
-
-        Prompt.ask("\n按回车键继续...")
-
-    def _reorder_queue(self):
-        """调整队列顺序"""
-        tasks = self.queue_manager.get_all_tasks()
-        if len(tasks) < 2:
-            console.print("[red]队列中任务数量不足，无法调整顺序[/red]")
-            Prompt.ask("\n按回车键继续...")
-            return
-
-        console.print("[bold]当前队列顺序:[/bold]")
-        for i, task in enumerate(tasks, 1):
-            console.print(f"{i}. {os.path.basename(task.input_path)}")
-
-        try:
-            from_pos = IntPrompt.ask(f"请输入要移动的任务序号 (1-{len(tasks)})",
-                                   choices=[str(i) for i in range(1, len(tasks) + 1)])
-            to_pos = IntPrompt.ask(f"请输入目标位置 (1-{len(tasks)})",
-                                 choices=[str(i) for i in range(1, len(tasks) + 1)])
-
-            self.queue_manager.reorder_task(from_pos - 1, to_pos - 1)
-            console.print(f"[green]已将第 {from_pos} 个任务移动到第 {to_pos} 位[/green]")
-
-        except Exception as e:
-            console.print(f"[red]调整顺序失败: {e}[/red]")
-
-        Prompt.ask("\n按回车键继续...")
 
     def rules_profiles_menu(self):
         while True:
@@ -1535,7 +1431,13 @@ class CLIMenu:
             
             limit_switch = self.config.get("tokens_limit_switch", False)
             limit_mode_str = "Token" if limit_switch else "Line"; limit_val_key = "tokens_limit" if limit_switch else "lines_limit"
-            
+
+            # Check platform type for warning display
+            current_platform = self.config.get("target_platform", "").lower()
+            is_local_model = current_platform in ["sakura", "localllm"]
+            platform_config = self.config.get("platforms", {}).get(self.config.get("target_platform", ""), {})
+            api_format = platform_config.get("api_format", "")
+
             # --- Section 1: Core & Numerical Settings ---
             table.add_row("1", i18n.get("setting_input_path"), self.config.get("label_input_path", ""))
             table.add_row("2", i18n.get("setting_output_path"), self.config.get("label_output_path", ""))
@@ -1566,21 +1468,45 @@ class CLIMenu:
             table.add_row("20", i18n.get("setting_enable_smart_round_limit"), "[green]ON[/]" if self.config.get("enable_smart_round_limit", False) else "[red]OFF[/]")
             table.add_row("21", i18n.get("setting_response_conversion_toggle"), "[green]ON[/]" if self.config.get("response_conversion_toggle", False) else "[red]OFF[/]")
             table.add_row("22", i18n.get("setting_auto_update"), "[green]ON[/]" if self.config.get("enable_auto_update", False) else "[red]OFF[/]")
-            table.add_row("23", "XLSX自动转换 (XLSX Auto Conversion)", "[green]ON[/]" if self.config.get("enable_xlsx_conversion", True) else "[red]OFF[/]")
-            table.add_row("24", i18n.get("menu_api_think_switch"), "[green]ON[/]" if self.config.get("think_switch", False) else "[red]OFF[/]")
-            table.add_row("25", i18n.get("menu_api_think_depth"), str(self.config.get("think_depth", 0)))
-            table.add_row("26", "思考预算 (Thinking Budget)", str(self.config.get("thinking_budget", 0)))
+
+            # Thinking features (always show)
+            think_switch = self.config.get("think_switch", False)
+            table.add_row("23", i18n.get("menu_api_think_switch"), "[green]ON[/]" if think_switch else "[red]OFF[/]")
 
             table.add_section()
-            # --- Section 3: Sub-menus & Advanced ---
-            table.add_row("27", i18n.get("setting_project_type"), self.config.get("translation_project", "AutoType"))
-            table.add_row("28", i18n.get("setting_trans_mode"), f"{limit_mode_str} ({self.config.get(limit_val_key, 20)})")
-            table.add_row("29", i18n.get("menu_api_pool_settings"), f"[cyan]{len(self.config.get('backup_apis', []))} APIs[/]")
-            table.add_row("30", i18n.get("menu_prompt_features"), "...")
-            table.add_row("31", i18n.get("menu_response_checks"), "...")
+            # --- Section 3: Thinking & Advanced Settings ---
+            next_id = 24
+            # Always show thinking settings
+            think_depth = self.config.get("think_depth", "low")
+            think_budget = self.config.get("thinking_budget", 4096)
+            table.add_row(str(next_id), i18n.get("menu_api_think_depth"), str(think_depth))
+            next_id += 1
+            table.add_row(str(next_id), i18n.get("menu_api_think_budget"), str(think_budget))
+            next_id += 1
 
-            console.print(table); console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
-            choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(32)], show_choices=False)
+            table.add_row(str(next_id), i18n.get("setting_project_type"), self.config.get("translation_project", "AutoType"))
+            next_id += 1
+            table.add_row(str(next_id), i18n.get("setting_trans_mode"), f"{limit_mode_str} ({self.config.get(limit_val_key, 20)})")
+            next_id += 1
+            table.add_row(str(next_id), i18n.get("menu_api_pool_settings"), f"[cyan]{len(self.config.get('backup_apis', []))} APIs[/]")
+            next_id += 1
+            table.add_row(str(next_id), i18n.get("menu_prompt_features"), "...")
+            next_id += 1
+            table.add_row(str(next_id), i18n.get("menu_response_checks"), "...")
+
+            max_choice = next_id
+
+            console.print(table)
+
+            # Show thinking mode warning if enabled
+            if self.config.get("think_switch", False):
+                if is_local_model:
+                    console.print(f"\n[red]⚠️ {i18n.get('warning_thinking_online_only')}[/red]")
+                else:
+                    console.print(f"\n[red]⚠️ {i18n.get('warning_thinking_compatibility')}[/red]")
+
+            console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
+            choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(max_choice + 1)], show_choices=False)
             console.print("\n")
 
             if choice == 0: break
@@ -1610,17 +1536,37 @@ class CLIMenu:
             elif choice == 20: self.config["enable_smart_round_limit"] = not self.config.get("enable_smart_round_limit", False)
             elif choice == 21: self.config["response_conversion_toggle"] = not self.config.get("response_conversion_toggle", False)
             elif choice == 22: self.config["enable_auto_update"] = not self.config.get("enable_auto_update", False)
-            elif choice == 23: self.config["enable_xlsx_conversion"] = not self.config.get("enable_xlsx_conversion", True)
-            elif choice == 24: self.config["think_switch"] = not self.config.get("think_switch", False)
-            elif choice == 25: self.config["think_depth"] = IntPrompt.ask(i18n.get("prompt_think_depth"), default=self.config.get("think_depth", 0))
-            elif choice == 26: self.config["thinking_budget"] = IntPrompt.ask("思考预算 (Thinking Budget, 0-10000)", default=self.config.get("thinking_budget", 0))
 
-            # Section 3
-            elif choice == 27: self.project_type_menu()
-            elif choice == 28: self.trans_mode_menu()
-            elif choice == 29: self.api_pool_menu()
-            elif choice == 30: self.prompt_features_menu()
-            elif choice == 31: self.response_checks_menu()
+            # Thinking features (always enabled)
+            elif choice == 23:
+                new_state = not self.config.get("think_switch", False)
+                self.config["think_switch"] = new_state
+                # Sync to platform config
+                if self.config.get("target_platform") in self.config.get("platforms", {}):
+                    self.config["platforms"][self.config.get("target_platform")]["think_switch"] = new_state
+
+            elif choice == 24:  # Think Depth
+                if api_format == "Anthropic":
+                    val = Prompt.ask(i18n.get("prompt_think_depth_claude"), choices=["low", "medium", "high"], default=str(self.config.get("think_depth", "low")))
+                else:
+                    val = IntPrompt.ask(i18n.get("prompt_think_depth"), default=int(self.config.get("think_depth", 0)) if str(self.config.get("think_depth", "0")).isdigit() else 0)
+                self.config["think_depth"] = val
+                # Sync to platform config
+                if self.config.get("target_platform") in self.config.get("platforms", {}):
+                    self.config["platforms"][self.config.get("target_platform")]["think_depth"] = val
+
+            elif choice == 25:  # Think Budget
+                val = IntPrompt.ask(i18n.get("prompt_think_budget"), default=int(self.config.get("thinking_budget", 4096)))
+                self.config["thinking_budget"] = val
+                # Sync to platform config
+                if self.config.get("target_platform") in self.config.get("platforms", {}):
+                    self.config["platforms"][self.config.get("target_platform")]["thinking_budget"] = val
+
+            elif choice == 26: self.project_type_menu()
+            elif choice == 27: self.trans_mode_menu()
+            elif choice == 28: self.api_pool_menu()
+            elif choice == 29: self.prompt_features_menu()
+            elif choice == 30: self.response_checks_menu()
 
             self.save_config()
 
@@ -1862,17 +1808,36 @@ class CLIMenu:
             
             # Values can be in root config (overrides) or platform config
             think_sw = self.config.get("think_switch", plat_conf.get("think_switch", False))
-            think_dp = self.config.get("think_depth", plat_conf.get("think_depth", 0))
+            think_dp = self.config.get("think_depth", plat_conf.get("think_depth", "low"))
+            think_budget = self.config.get("thinking_budget", plat_conf.get("thinking_budget", 4096))
 
             table.add_row("1", i18n.get("label_platform"), tp)
             table.add_row("2", i18n.get("label_url"), self.config.get("base_url", ""))
             table.add_row("3", i18n.get("label_key"), "****")
             table.add_row("4", i18n.get("label_model"), self.config.get("model", ""))
             table.add_row("5", i18n.get("menu_api_think_switch"), "[green]ON[/]" if think_sw else "[red]OFF[/]")
-            table.add_row("6", i18n.get("menu_api_think_depth"), str(think_dp))
             
-            console.print(table); console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
-            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=list("0123456"), show_choices=False)
+            api_format = plat_conf.get("api_format", "")
+            is_local_platform = tp.lower() in ["sakura", "localllm"]
+
+            # Always show thinking options
+            table.add_row("6", i18n.get("menu_api_think_depth"), str(think_dp))
+            table.add_row("7", i18n.get("menu_api_think_budget"), str(think_budget))
+
+            if api_format == "Anthropic":
+                table.add_row("8", i18n.get("menu_fetch_models"), "...")
+
+            console.print(table)
+
+            # Show thinking mode warning if enabled
+            if think_sw:
+                if is_local_platform:
+                    console.print(f"\n[red]⚠️ {i18n.get('warning_thinking_online_only')}[/red]")
+                else:
+                    console.print(f"\n[red]⚠️ {i18n.get('warning_thinking_compatibility')}[/red]")
+
+            console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
+            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=list("012345678"), show_choices=False)
             console.print()
             
             if choice == 0: break
@@ -1886,11 +1851,57 @@ class CLIMenu:
                 # Sync to platform config
                 if tp in self.config.get("platforms", {}):
                     self.config["platforms"][tp]["think_switch"] = new_state
-            elif choice == 6:
-                val = IntPrompt.ask(i18n.get("prompt_think_depth"), default=think_dp)
+            elif choice == 6:  # Think Depth
+                if api_format == "Anthropic":
+                    val = Prompt.ask(i18n.get("prompt_think_depth_claude"), choices=["low", "medium", "high"], default=str(think_dp))
+                else:
+                    val = IntPrompt.ask(i18n.get("prompt_think_depth"), default=int(think_dp) if str(think_dp).isdigit() else 0)
+
                 self.config["think_depth"] = val
                 if tp in self.config.get("platforms", {}):
                     self.config["platforms"][tp]["think_depth"] = val
+            elif choice == 7:  # Think Budget
+                val = IntPrompt.ask(i18n.get("prompt_think_budget"), default=int(think_budget))
+                self.config["thinking_budget"] = val
+                if tp in self.config.get("platforms", {}):
+                    self.config["platforms"][tp]["thinking_budget"] = val
+            elif choice == 8 and api_format == "Anthropic":
+                from ModuleFolders.Infrastructure.LLMRequester.AnthropicRequester import AnthropicRequester
+                from ModuleFolders.Infrastructure.LLMRequester.LLMRequester import LLMRequester
+                
+                with console.status(f"[cyan]{i18n.get('msg_fetching_models')}...[/cyan]"):
+                    requester = AnthropicRequester()
+                    # 构造临时配置
+                    temp_config = plat_conf.copy()
+                    temp_config["api_url"] = self.config.get("base_url", plat_conf.get("api_url"))
+                    temp_config["api_key"] = self.config.get("api_key", plat_conf.get("api_key"))
+                    temp_config["auto_complete"] = plat_conf.get("auto_complete", False)
+                    
+                    models = requester.get_model_list(temp_config)
+                    
+                    if models:
+                        console.print(f"[green]✓ {i18n.get('msg_fetch_models_ok')}[/green]")
+                        # 让用户选择一个模型
+                        m_table = Table(show_header=True)
+                        m_table.add_column("ID", style="dim")
+                        m_table.add_column("Model ID")
+                        for i, m in enumerate(models):
+                            m_table.add_row(str(i+1), m)
+                        console.print(m_table)
+                        
+                        m_choice = IntPrompt.ask(i18n.get('prompt_select_model'), choices=[str(i+1) for i in range(len(models))] + ["0"], show_choices=False)
+                        if m_choice > 0:
+                            selected_model = models[m_choice-1]
+                            self.config["model"] = selected_model
+                            if tp in self.config.get("platforms", {}):
+                                self.config["platforms"][tp]["model"] = selected_model
+                                # 保存这个列表到 model_datas，方便以后直接在菜单选择
+                                self.config["platforms"][tp]["model_datas"] = models
+                            console.print(f"[green]Selected model: {selected_model}[/green]")
+                        time.sleep(1)
+                    else:
+                        console.print(f"[red]✗ {i18n.get('msg_fetch_models_fail')}[/red]")
+                        time.sleep(1)
 
             self.save_config()
     def prompt_menu(self):
@@ -2236,7 +2247,7 @@ class CLIMenu:
             time.sleep(1)
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]"); time.sleep(2)
-    def run_task(self, task_mode, target_path=None, continue_status=False, non_interactive=False, web_mode=False):
+    def run_task(self, task_mode, target_path=None, continue_status=False, non_interactive=False, web_mode=False, from_queue=False):
         # 如果是非交互模式，直接跳过菜单
         if target_path is None:
             last_path = self.config.get("label_input_path")
@@ -2563,8 +2574,7 @@ class CLIMenu:
 
                 # --- Middleware Conversion Logic (Moved Inside Live) ---
                 middleware_exts = ['.mobi', '.azw3', '.kepub', '.fb2', '.lit', '.lrf', '.pdb', '.pmlz', '.rb', '.rtf', '.tcr', '.txtz', '.htmlz']
-                if self.config.get("enable_xlsx_conversion", True):
-                    middleware_exts.append('.xlsx')
+                xlsx_middleware_exts = ['.xlsx']
                 
                 # We need to access target_path from outer scope. 
                 # Since we modify it, we should be careful. 
@@ -2582,59 +2592,69 @@ class CLIMenu:
                     # 确保输出目录和临时转换文件夹已创建
                     os.makedirs(opath, exist_ok=True)
                     temp_conv_dir = os.path.join(opath, "temp_conv")
-
-                    if original_ext == '.xlsx':
-                        # XLSX转换逻辑
-                        potential_csv_dir = os.path.join(temp_conv_dir, f"{base_name}_csv")
-                        potential_csv_main = os.path.join(potential_csv_dir, f"{base_name}.csv")
-                        if os.path.exists(potential_csv_main) and os.path.getsize(potential_csv_main) > 0:
-                            self.ui.log(f"复用现有CSV文件: {os.path.basename(potential_csv_main)}")
-                            current_target_path = potential_csv_main
-                        else:
-                            self.ui.log(f"开始将XLSX转换为CSV格式...")
-                            os.makedirs(potential_csv_dir, exist_ok=True)
-                            try:
-                                import sys
-                                sys.path.insert(0, PROJECT_ROOT)
-                                from xlsx_converter import XlsxConverter
-                                converter = XlsxConverter(current_target_path, potential_csv_dir, "to_csv")
-                                csv_files = converter.convert()
-                                if csv_files:
-                                    # 使用主CSV文件进行翻译
-                                    main_csv = os.path.join(potential_csv_dir, csv_files[0]["csv_file"])
-                                    self.ui.log(f"XLSX已转换为CSV: {os.path.basename(main_csv)}")
-                                    current_target_path = main_csv
-                                else:
-                                    raise Exception("转换失败：未生成CSV文件")
-                            except Exception as e:
-                                self.ui.log(f"[red]XLSX转换失败: {e}[/red]")
-                                return False
+                    
+                    # 逻辑优化：只要临时 EPUB 存在且有效，就跳过转换
+                    potential_epub = os.path.join(temp_conv_dir, f"{base_name}.epub")
+                    if os.path.exists(potential_epub) and os.path.getsize(potential_epub) > 0:
+                        self.ui.log(i18n.get("msg_epub_reuse").format(os.path.basename(potential_epub)))
+                        current_target_path = potential_epub
                     else:
-                        # 逻辑优化：只要临时 EPUB 存在且有效，就跳过转换
-                        potential_epub = os.path.join(temp_conv_dir, f"{base_name}.epub")
-                        if os.path.exists(potential_epub) and os.path.getsize(potential_epub) > 0:
-                            self.ui.log(i18n.get("msg_epub_reuse").format(os.path.basename(potential_epub)))
-                            current_target_path = potential_epub
-                        else:
-                            self.ui.log(i18n.get("msg_epub_conv_start").format(original_ext))
-                            os.makedirs(temp_conv_dir, exist_ok=True)
-                            conv_script = os.path.join(PROJECT_ROOT, "批量电子书整合.py")
-                            # 增加 --AiNiee 参数以抑制版权信息写入
-                            cmd = f'uv run "{conv_script}" -p "{current_target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name}" --AiNiee'
-                            try:
-                                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-                                if result.returncode == 0:
-                                    epubs = [f for f in os.listdir(temp_conv_dir) if f.endswith(".epub")]
-                                    if epubs:
-                                        new_path = os.path.join(temp_conv_dir, epubs[0])
-                                        self.ui.log(i18n.get("msg_epub_conv_success").format(os.path.basename(new_path)))
-                                        current_target_path = new_path
-                                    else: raise Exception("No EPUB found")
-                                else: raise Exception(f"Conversion failed: {result.stderr}")
-                            except Exception as e:
-                                self.ui.log(i18n.get("msg_epub_conv_fail").format(e))
-                                time.sleep(2); return 
-                
+                        self.ui.log(i18n.get("msg_epub_conv_start").format(original_ext))
+                        os.makedirs(temp_conv_dir, exist_ok=True)
+                        conv_script = os.path.join(PROJECT_ROOT, "批量电子书整合.py")
+                        # 增加 --AiNiee 参数以抑制版权信息写入
+                        cmd = f'uv run "{conv_script}" -p "{current_target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name}" --AiNiee'
+                        try:
+                            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                            if result.returncode == 0:
+                                epubs = [f for f in os.listdir(temp_conv_dir) if f.endswith(".epub")]
+                                if epubs:
+                                    new_path = os.path.join(temp_conv_dir, epubs[0])
+                                    self.ui.log(i18n.get("msg_epub_conv_success").format(os.path.basename(new_path)))
+                                    current_target_path = new_path
+                                else: raise Exception("No EPUB found")
+                            else: raise Exception(f"Conversion failed: {result.stderr}")
+                        except Exception as e:
+                            self.ui.log(i18n.get("msg_epub_conv_fail").format(e))
+                            time.sleep(2); return
+
+                # --- XLSX Middleware Conversion Logic ---
+                is_xlsx_converted = False
+                if original_ext in xlsx_middleware_exts:
+                    is_xlsx_converted = True
+                    base_name = os.path.splitext(os.path.basename(current_target_path))[0]
+                    # 确保输出目录和临时转换文件夹已创建
+                    os.makedirs(opath, exist_ok=True)
+                    temp_conv_dir = os.path.join(opath, "temp_xlsx_conv")
+
+                    # 检查是否已存在转换好的CSV文件
+                    potential_csv = os.path.join(temp_conv_dir, f"{base_name}.csv")
+                    metadata_file = os.path.join(temp_conv_dir, "xlsx_metadata.json")
+
+                    if os.path.exists(potential_csv) and os.path.exists(metadata_file):
+                        self.ui.log(i18n.get("msg_xlsx_reuse").format(os.path.basename(potential_csv)))
+                        current_target_path = temp_conv_dir  # 指向包含CSV文件的目录
+                    else:
+                        self.ui.log(i18n.get("msg_xlsx_conv_start").format(original_ext))
+                        os.makedirs(temp_conv_dir, exist_ok=True)
+                        conv_script = os.path.join(PROJECT_ROOT, "xlsx_converter.py")
+
+                        # 调用XLSX转换器：XLSX -> CSV
+                        cmd = f'uv run "{conv_script}" -i "{current_target_path}" -o "{temp_conv_dir}" -m to_csv --ainiee'
+                        try:
+                            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                            if result.returncode == 0:
+                                # 检查转换结果
+                                csv_files = [f for f in os.listdir(temp_conv_dir) if f.endswith(".csv")]
+                                if csv_files:
+                                    self.ui.log(i18n.get("msg_xlsx_conv_success").format(len(csv_files)))
+                                    current_target_path = temp_conv_dir  # 指向包含CSV文件的目录
+                                else: raise Exception("No CSV files found")
+                            else: raise Exception(f"XLSX conversion failed: {result.stderr}")
+                        except Exception as e:
+                            self.ui.log(i18n.get("msg_xlsx_conv_fail").format(e))
+                            time.sleep(2); return
+
                 # --- 1. 文件与缓存加载 ---
                 try:
                     cache_project = self.file_reader.read_files(self.config.get("translation_project", "AutoType"), current_target_path, self.config.get("exclude_rule_str", ""))
@@ -2729,7 +2749,9 @@ class CLIMenu:
                                 EventManager.get_singleton().emit(Base.EVENT.TASK_API_STATUS_REPORT, {"force_switch": True})
                             elif key == 'm': # Open Web Monitor
                                 self.handle_monitor_shortcut()
-                    
+                            elif key == 'e': # Open Queue Editor
+                                self.handle_queue_editor_shortcut()
+
                     time.sleep(0.1)
                 
                 return is_middleware_converted_local
@@ -2792,39 +2814,45 @@ class CLIMenu:
                     temp_dir = os.path.join(opath, "temp_conv")
                     if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
                 except: pass
+
+            # XLSX restoration and cleanup
+            if success.is_set() and is_xlsx_converted and self.config.get("enable_auto_restore_xlsx", True):
+                try:
+                    temp_xlsx_dir = os.path.join(opath, "temp_xlsx_conv")
+
+                    # First, restore CSV back to XLSX
+                    self.ui.log("[cyan]Restoring XLSX format...[/cyan]")
+                    conv_script = os.path.join(PROJECT_ROOT, "xlsx_converter.py")
+
+                    # Call XLSX converter: CSV -> XLSX
+                    cmd = f'uv run "{conv_script}" -i "{temp_xlsx_dir}" -o "{opath}" -m to_xlsx --ainiee'
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+                    if result.returncode == 0:
+                        self.ui.log(i18n.get("msg_xlsx_restore_success"))
+
+                        # Clean up temporary CSV files
+                        if os.path.exists(temp_xlsx_dir):
+                            shutil.rmtree(temp_xlsx_dir)
+
+                    else:
+                        self.ui.log(i18n.get("msg_xlsx_restore_fail").format(result.stderr))
+
+                except Exception as e:
+                    self.ui.log(f"[yellow]XLSX restoration error: {e}[/yellow]")
             
-            if not web_mode and not non_interactive:
+            if not web_mode and not non_interactive and not from_queue:
                 Prompt.ask(f"\n{i18n.get('msg_task_ended')}")
             
             # --- Post-Task Logic (Reverse Conversion) ---
-            if task_success and is_middleware_converted:
-                output_dir = self.config.get("label_output_path")
-
-                # XLSX 回转逻辑
-                if original_ext == '.xlsx' and self.config.get("enable_xlsx_conversion", True):
-                    self.ui.log(f"[cyan]正在将CSV回转为XLSX格式...[/cyan]")
-                    if output_dir:
-                        try:
-                            import sys
-                            sys.path.insert(0, PROJECT_ROOT)
-                            from xlsx_converter import XlsxConverter
-                            temp_conv_dir = os.path.join(opath, "temp_conv")
-                            csv_dir = os.path.join(temp_conv_dir, f"{base_name}_csv")
-                            if os.path.exists(csv_dir):
-                                converter = XlsxConverter("", csv_dir, "to_xlsx")
-                                restored_xlsx = converter.convert()
-                                self.ui.log(f"[green]XLSX文件已恢复: {restored_xlsx}[/green]")
-                        except Exception as e:
-                            self.ui.log(f"[red]XLSX回转失败: {e}[/red]")
-
-                # 电子书回转逻辑
-                elif original_ext != '.xlsx' and self.config.get("enable_auto_restore_ebook", False):
-                    self.ui.log(f"[cyan]Restoring original format...[/cyan]")
-                    # ... Reuse existing logic or simplified ...
-                    # Since I can't easily reuse the exact block without copying, I'll implement a simple one
-                    if output_dir:
-                        translated_epubs = [f for f in os.listdir(output_dir) if f.endswith(".epub")]
-                        if translated_epubs:
+            if task_success and is_middleware_converted and self.config.get("enable_auto_restore_ebook", False):
+                 self.ui.log(f"[cyan]Restoring original format...[/cyan]")
+                 # ... Reuse existing logic or simplified ...
+                 # Since I can't easily reuse the exact block without copying, I'll implement a simple one
+                 output_dir = self.config.get("label_output_path")
+                 if output_dir:
+                     translated_epubs = [f for f in os.listdir(output_dir) if f.endswith(".epub")]
+                     if translated_epubs:
                          base_name = os.path.splitext(os.path.basename(target_path))[0] # This is the temp epub name
                          # Wait, target_path was swapped to the temp epub. 
                          # We need to map back to original ext.
@@ -2842,9 +2870,35 @@ class CLIMenu:
                     try: winsound.MessageBeep()
                     except: print("\a")
             
-            if not non_interactive and not web_mode:
+            if not non_interactive and not web_mode and not from_queue:
                 Prompt.ask(f"\n{i18n.get('msg_task_ended')}")
 
+
+    def run_all_in_one(self):
+        """Sequential execution of translation and then polishing."""
+        start_path = self.config.get("label_input_path", ".")
+        target_path = self.file_selector.select_path(start_path=start_path)
+        if not target_path: return
+
+        # 1. Run Translation
+        self.run_task(
+            TaskType.TRANSLATION,
+            target_path=target_path,
+            continue_status=False,
+            from_queue=True # Suppress "Press Enter"
+        )
+        
+        # 2. Check stop signal
+        if Base.work_status == Base.STATUS.STOPING:
+             return
+
+        # 3. Run Polishing
+        self.run_task(
+            TaskType.POLISH,
+            target_path=target_path,
+            continue_status=True, # Resume based on translation output
+            from_queue=False # Allow "Press Enter" on final completion
+        )
 
     def run_export_only(self, target_path=None, non_interactive=False):
         # 1. Select Target (if in interactive mode)
@@ -3051,6 +3105,289 @@ class CLIMenu:
                 console.print("\n[yellow]Stopping Web Server...[/yellow]")
                 pass
 
+    def _get_profiles_list(self, profiles_dir):
+        if not os.path.exists(profiles_dir): return []
+        return [f.replace(".json", "") for f in os.listdir(profiles_dir) if f.endswith(".json")]
+
+    def task_queue_menu(self):
+        from ModuleFolders.Service.TaskQueue.QueueManager import QueueManager, QueueTaskItem
+        qm = QueueManager()
+        
+        while True:
+            self.display_banner()
+            console.print(Panel(f"[bold]{i18n.get('menu_task_queue')}[/bold]"))
+            
+            if qm.tasks:
+                table = Table(show_header=True, box=None)
+                table.add_column("ID", style="dim")
+                table.add_column("Task")
+                table.add_column("Details")
+                table.add_column("Status")
+                
+                for i, task in enumerate(qm.tasks):
+                    status_style = "green" if task.status == "completed" else "yellow" if task.status == "running" else "dim"
+                    type_str = "T+P" if task.task_type == TaskType.TRANSLATE_AND_POLISH else "T" if task.task_type == TaskType.TRANSLATION else "P"
+                    details = f"{task.profile or 'def'}/{task.rules_profile or 'def'} | {task.source_lang or 'auto'}->{task.target_lang or 'auto'}"
+                    table.add_row(
+                        str(i+1),
+                        f"[{type_str}] {os.path.basename(task.input_path)}",
+                        details,
+                        f"[{status_style}]{task.status.upper()}[/]"
+                    )
+                console.print(table)
+            else:
+                console.print(f"[dim]{i18n.get('msg_queue_empty')}[/dim]")
+                
+            console.print(f"\n[cyan]1.[/] {i18n.get('menu_queue_add')}")
+            if qm.tasks:
+                console.print(f"[cyan]2.[/] {i18n.get('menu_queue_remove')}")
+                console.print(f"[cyan]3.[/] {i18n.get('menu_queue_edit_fine')}")
+                console.print(f"[cyan]4.[/] {i18n.get('menu_queue_edit_json')}")
+                console.print(f"[cyan]5.[/] {i18n.get('menu_queue_clear')}")
+                console.print(f"[bold green]6.[/] {i18n.get('menu_queue_start')}")
+                if len(qm.tasks) > 1:  # 只有多于1个任务时才显示排序选项
+                    console.print(f"[cyan]7.[/] {i18n.get('menu_queue_reorder')}")
+
+            console.print(f"\n[dim]0. {i18n.get('menu_back')}[/dim]")
+
+            queue_choices = ["0", "1"]
+            if qm.tasks:
+                queue_choices.extend(["2", "3", "4", "5", "6"])
+                if len(qm.tasks) > 1:
+                    queue_choices.append("7")
+
+            choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=queue_choices, show_choices=False)
+            
+            if choice == 0: break
+            elif choice == 1: # Add Task (Basic)
+                # ... (reuse logic)
+                t_choice = IntPrompt.ask(i18n.get('prompt_select'), choices=["1", "2", "3"], default=1)
+                type_map = {1: TaskType.TRANSLATION, 2: TaskType.POLISH, 3: TaskType.TRANSLATE_AND_POLISH}
+                task_type = type_map[t_choice]
+                start_path = self.config.get("label_input_path", ".")
+                input_path = self.file_selector.select_path(start_path=start_path)
+                if input_path:
+                    qm.add_task(QueueTaskItem(task_type, input_path))
+                    console.print("[green]Task added (default config). Use Edit to customize.[/green]")
+                time.sleep(1)
+
+            elif choice == 2: # Remove
+                idx = IntPrompt.ask("Enter ID to remove", default=1) - 1
+                if qm.remove_task(idx):
+                    console.print("[green]Task removed.[/green]")
+                else:
+                    console.print("[red]Invalid ID or task is running.[/red]")
+                time.sleep(1)
+
+            elif choice == 3: # Fine-grained Edit
+                idx = IntPrompt.ask("Enter ID to edit", default=1) - 1
+                if 0 <= idx < len(qm.tasks):
+                    t = qm.tasks[idx]
+                    console.print(Panel(f"[bold]{i18n.get('menu_queue_edit_fine')}[/bold]: #{idx+1} {os.path.basename(t.input_path)}"))
+                    
+                    # 1. Task Type
+                    t_type_map = {TaskType.TRANSLATION: "Translation", TaskType.POLISH: "Polishing", TaskType.TRANSLATE_AND_POLISH: "All-in-One"}
+                    console.print(f"\n[cyan]{i18n.get('ui_recent_type')}:[/] {t_type_map.get(t.task_type, 'Unknown')}")
+                    new_task_type_str = Prompt.ask(f"{i18n.get('prompt_task_type_queue')}{i18n.get('tip_follow_profile')}", 
+                                                   choices=list(t_type_map.values()) + [""], 
+                                                   default=t_type_map.get(t.task_type, ''))
+                    if new_task_type_str:
+                        t.task_type = {v: k for k, v in t_type_map.items()}[new_task_type_str]
+
+                    # 2. Input/Output Paths
+                    t.input_path = Prompt.ask(f"{i18n.get('setting_input_path')}{i18n.get('tip_follow_profile')}", default=t.input_path)
+                    t.output_path = Prompt.ask(f"{i18n.get('setting_output_path')}{i18n.get('tip_follow_profile')}", default=t.output_path or "") or None
+                    
+                    # 3. Project Type & Languages
+                    console.print(f"\n[cyan]{i18n.get('label_current_project_type')}:[/] {t.project_type or self.config.get('translation_project', 'AutoType')}")
+                    t.project_type = Prompt.ask(f"{i18n.get('prompt_project_type_queue')}{i18n.get('tip_follow_profile')}", default=t.project_type or "") or None
+
+                    console.print(f"\n[cyan]{i18n.get('label_current_lang')}:[/] {t.source_lang or self.config.get('source_language')} -> {t.target_lang or self.config.get('target_language')}")
+                    t.source_lang = Prompt.ask(f"{i18n.get('prompt_source_lang_queue')}{i18n.get('tip_follow_profile')}", default=t.source_lang or "") or None
+                    t.target_lang = Prompt.ask(f"{i18n.get('prompt_target_lang_queue')}{i18n.get('tip_follow_profile')}", default=t.target_lang or "") or None
+
+                    # 4. Profiles
+                    profiles = self._get_profiles_list(self.profiles_dir)
+                    rules = self._get_profiles_list(self.rules_profiles_dir)
+                    console.print(f"\n[cyan]{i18n.get('label_profiles')}:[/] {', '.join(profiles)}")
+                    t.profile = Prompt.ask(f"{i18n.get('prompt_profile_queue')}{i18n.get('tip_follow_profile')}", default=t.profile or "") or None
+                    console.print(f"[cyan]{i18n.get('label_rules_profiles')}:[/] {', '.join(rules)}")
+                    t.rules_profile = Prompt.ask(f"{i18n.get('prompt_rules_profile_queue')}{i18n.get('tip_follow_profile')}", default=t.rules_profile or "") or None
+
+                    # 5. API Overrides
+                    current_platform = t.platform or self.config.get("target_platform")
+                    console.print(f"\n[cyan]{i18n.get('label_platform_override')}:[/] {current_platform or 'Default'}")
+                    platforms_list = list(self.config.get("platforms", {}).keys())
+                    t.platform = Prompt.ask(f"{i18n.get('label_platform_override')}{i18n.get('tip_follow_profile')}", 
+                                            choices=platforms_list + [""], 
+                                            default=t.platform or "") or None
+                    
+                    if t.platform:
+                        # Dynamically get models for selected platform (if API key available in current config)
+                        current_api_url = t.api_url or self.config.get("base_url")
+                        current_api_key = t.api_key or self.config.get("api_key")
+                        platform_config_for_fetch = {
+                            "api_url": current_api_url,
+                            "api_key": current_api_key,
+                            "auto_complete": self.config.get("platforms", {}).get(t.platform, {}).get("auto_complete", False)
+                        }
+                        available_models = []
+                        from ModuleFolders.Infrastructure.LLMRequester.AnthropicRequester import AnthropicRequester
+                        from ModuleFolders.Infrastructure.LLMRequester.OpenaiRequester import OpenaiRequester
+                        from ModuleFolders.Infrastructure.LLMRequester.GoogleRequester import GoogleRequester
+
+                        if self.config.get("platforms", {}).get(t.platform, {}).get("api_format") == "Anthropic":
+                            requester = AnthropicRequester()
+                            available_models = requester.get_model_list(platform_config_for_fetch)
+                        elif self.config.get("platforms", {}).get(t.platform, {}).get("api_format") == "OpenAI":
+                            requester = OpenaiRequester()
+                            available_models = requester.get_model_list(platform_config_for_fetch)
+                        elif self.config.get("platforms", {}).get(t.platform, {}).get("api_format") == "Google":
+                            requester = GoogleRequester()
+                            available_models = requester.get_model_list(platform_config_for_fetch)
+
+                        if available_models:
+                            console.print(f"[cyan]  可用模型 ({t.platform}):[/] {', '.join(available_models)}")
+                            t.model = Prompt.ask(f"{i18n.get('label_model_override')}{i18n.get('tip_follow_profile')}", 
+                                                choices=available_models + [""], 
+                                                default=t.model or "") or None
+                        else:
+                            t.model = Prompt.ask(f"{i18n.get('label_model_override')}{i18n.get('tip_follow_profile')}", default=t.model or "") or None
+                    else:
+                        t.model = Prompt.ask(f"{i18n.get('label_model_override')}{i18n.get('tip_follow_profile')}", default=t.model or "") or None
+
+                    t.api_url = Prompt.ask(f"{i18n.get('label_url_override')}{i18n.get('tip_follow_profile')}", default=t.api_url or "") or None
+                    t.api_key = Prompt.ask(f"{i18n.get('label_key_override')}{i18n.get('tip_follow_profile')}", password=True, default=t.api_key or "") or None
+
+                    # 6. Performance Overrides
+                    t.threads = IntPrompt.ask(f"{i18n.get('label_threads_override')}{i18n.get('tip_follow_profile')}", default=t.threads if t.threads is not None else 0) or None
+                    t.retry = IntPrompt.ask(f"{i18n.get('setting_retry_count')}{i18n.get('tip_follow_profile')}", default=t.retry if t.retry is not None else 0) or None
+                    t.timeout = IntPrompt.ask(f"{i18n.get('setting_request_timeout')}{i18n.get('tip_follow_profile')}", default=t.timeout if t.timeout is not None else 0) or None
+                    t.rounds = IntPrompt.ask(f"{i18n.get('setting_round_limit')}{i18n.get('tip_follow_profile')}", default=t.rounds if t.rounds is not None else 0) or None
+                    t.pre_lines = IntPrompt.ask(f"{i18n.get('setting_pre_line_counts')}{i18n.get('tip_follow_profile')}", default=t.pre_lines if t.pre_lines is not None else 0) or None
+
+                    # 7. Segmentation Overrides
+                    current_limit_mode = "lines" if t.lines_limit is not None else "tokens" if t.tokens_limit is not None else ( "lines" if not self.config.get("tokens_limit_switch") else "tokens")
+
+                    limit_choice = Prompt.ask(f"{i18n.get('setting_limit_mode')}{i18n.get('tip_follow_profile')}", 
+                                            choices=["lines", "tokens", ""], 
+                                            default=current_limit_mode)
+                    if limit_choice == "lines":
+                        t.lines_limit = IntPrompt.ask(f"{i18n.get('prompt_limit_val')} (Lines){i18n.get('tip_follow_profile')}", default=t.lines_limit or self.config.get("lines_limit")) or None
+                        t.tokens_limit = None
+                    elif limit_choice == "tokens":
+                        t.tokens_limit = IntPrompt.ask(f"{i18n.get('prompt_limit_val')} (Tokens){i18n.get('tip_follow_profile')}", default=t.tokens_limit or self.config.get("tokens_limit")) or None
+                        t.lines_limit = None
+                    else:
+                        t.lines_limit = None
+                        t.tokens_limit = None
+
+                    # 8. Thinking Overrides
+                    current_think_depth = t.think_depth or self.config.get("think_depth", "low")
+                    if t.platform and self.config.get("platforms", {}).get(t.platform, {}).get("api_format") == "Anthropic":
+                        t.think_depth = Prompt.ask(f"{i18n.get('prompt_think_depth_claude')}{i18n.get('tip_follow_profile')}", 
+                                                choices=["low", "medium", "high", ""], 
+                                                default=current_think_depth) or None
+                    else:
+                        t.think_depth = Prompt.ask(f"{i18n.get('prompt_think_depth')}{i18n.get('tip_follow_profile')}", 
+                                                default=current_think_depth) or None
+                    t.thinking_budget = IntPrompt.ask(f"{i18n.get('menu_api_think_budget')}{i18n.get('tip_follow_profile')}", 
+                                                    default=t.thinking_budget if t.thinking_budget is not None else 0) or None
+
+                    qm.save_tasks()
+                    console.print("[green]Task updated.[/green]")
+                else:
+                    console.print("[red]Invalid ID.[/red]")
+                time.sleep(1)
+
+            elif choice == 4: # Edit JSON
+                # ... (keep existing)
+                if open_in_editor(qm.queue_file):
+                    Prompt.ask(f"\n{i18n.get('msg_press_enter_after_save')}")
+                    qm.load_tasks()
+                    console.print("[green]Queue reloaded from file.[/green]")
+                time.sleep(1)
+            elif choice == 5: # Clear
+                # ... (keep existing)
+                if qm.clear_tasks():
+                    console.print("[green]Queue cleared.[/green]")
+                else:
+                    console.print("[red]Cannot clear while queue is running.[/red]")
+                time.sleep(1)
+            elif choice == 6: # Start
+                # ... (keep existing)
+                if not qm.tasks: continue
+                if qm.is_running:
+                    console.print("[yellow]Queue is already running.[/yellow]")
+                    time.sleep(1)
+                    continue
+                console.print(f"\n[bold green]Starting Queue Processing...[/bold green]")
+                self._is_queue_mode = True  # 标记进入队列模式
+                qm.start_queue(self)
+                break
+
+            elif choice == 7: # Reorder Queue
+                if len(qm.tasks) <= 1:
+                    console.print("[yellow]Need at least 2 tasks to reorder.[/yellow]")
+                    time.sleep(1)
+                    continue
+
+                console.print(Panel(f"[bold]{i18n.get('menu_queue_reorder')}[/bold]"))
+                console.print("\n[cyan]Current Order:[/]")
+
+                # 显示当前队列
+                for i, task in enumerate(qm.tasks):
+                    type_str = "T+P" if task.task_type == TaskType.TRANSLATE_AND_POLISH else "T" if task.task_type == TaskType.TRANSLATION else "P"
+                    console.print(f"  {i+1}. [{type_str}] {os.path.basename(task.input_path)}")
+
+                console.print(f"\n[cyan]Options:[/]")
+                console.print(f"[cyan]1.[/] {i18n.get('menu_queue_move_up')}")
+                console.print(f"[cyan]2.[/] {i18n.get('menu_queue_move_down')}")
+                console.print(f"[cyan]3.[/] {i18n.get('menu_queue_move_to')}")
+                console.print(f"[dim]0. {i18n.get('menu_back')}[/dim]")
+
+                reorder_choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=["0", "1", "2", "3"], show_choices=False)
+
+                if reorder_choice == 0:
+                    continue
+                elif reorder_choice == 1:  # Move Up
+                    task_id = IntPrompt.ask(i18n.get('prompt_task_id'), default=1)
+                    idx = task_id - 1
+                    if qm.move_task_up(idx):
+                        console.print(f"[green]{i18n.get('msg_task_moved_up').format(task_id)}[/green]")
+                    else:
+                        console.print(f"[red]{i18n.get('msg_task_move_failed')}[/red]")
+                    time.sleep(1)
+                elif reorder_choice == 2:  # Move Down
+                    task_id = IntPrompt.ask(i18n.get('prompt_task_id'), default=1)
+                    idx = task_id - 1
+                    if qm.move_task_down(idx):
+                        console.print(f"[green]{i18n.get('msg_task_moved_down').format(task_id)}[/green]")
+                    else:
+                        console.print(f"[red]{i18n.get('msg_task_move_failed')}[/red]")
+                    time.sleep(1)
+                elif reorder_choice == 3:  # Move to specific position
+                    from_id = IntPrompt.ask(i18n.get('prompt_task_id_from'), default=1)
+                    to_id = IntPrompt.ask(i18n.get('prompt_task_id_to'), default=1)
+                    from_idx, to_idx = from_id - 1, to_id - 1
+                    if qm.move_task(from_idx, to_idx):
+                        console.print(f"[green]{i18n.get('msg_task_moved_to').format(from_id, to_id)}[/green]")
+                    else:
+                        console.print(f"[red]{i18n.get('msg_task_move_failed')}[/red]")
+                    time.sleep(1)
+
+        # 如果队列正在运行，等待完成并清除标记
+        if hasattr(self, '_is_queue_mode') and self._is_queue_mode:
+            try:
+                console.print(f"[green]Waiting for queue to complete...[/green]")
+                while qm.is_running:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                Base.work_status = Base.STATUS.STOPING
+                console.print(f"\n[bold red]Queue stopped by user.[/bold red]")
+            finally:
+                self._is_queue_mode = False  # 清除队列模式标记
+
 def main():
     parser = argparse.ArgumentParser(description="AiNiee CLI - A powerful tool for AI-driven translation and polishing.", add_help=False)
     
@@ -3058,13 +3395,14 @@ def main():
     parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS, help='Show this help message and exit.')
 
     # 核心任务参数
-    parser.add_argument('task', nargs='?', choices=['translate', 'polish', 'export'], help=i18n.get('help_task'))
+    parser.add_argument('task', nargs='?', choices=['translate', 'polish', 'export', 'all_in_one', 'queue'], help=i18n.get('help_task'))
     parser.add_argument('input_path', nargs='?', help=i18n.get('help_input'))
     
     # 路径与环境
     parser.add_argument('-o', '--output', dest='output_path', help=i18n.get('help_output'))
     parser.add_argument('-p', '--profile', dest='profile', help=i18n.get('help_profile'))
     parser.add_argument('--rules-profile', dest='rules_profile', help="Rules profile to use (Glossary, Characterization, etc.)")
+    parser.add_argument('--queue-file', dest='queue_file', help="Path to the task queue JSON file")
     parser.add_argument('-s', '--source', dest='source_lang', help=i18n.get('help_source'))
     parser.add_argument('-t', '--target', dest='target_lang', help=i18n.get('help_target'))
     parser.add_argument('--type', dest='project_type', help="Project type (Txt, Epub, MTool, RenPy, etc.)")
@@ -3083,6 +3421,7 @@ def main():
     parser.add_argument('--api-url', help="Base URL for the API")
     parser.add_argument('--api-key', help="API Key")
     parser.add_argument('--think-depth', type=int, help="Reasoning depth (0-10000)")
+    parser.add_argument('--thinking-budget', type=int, help="Thinking budget limit")
     parser.add_argument('--failover', choices=['on', 'off'], help="Enable or disable API failover")
     
     parser.add_argument('--web-mode', action='store_true', help="Enable Web Server compatible output mode")
