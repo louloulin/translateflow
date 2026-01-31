@@ -77,11 +77,13 @@ jobs:
         if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
         run: |
           mkdir -p deploy_package
-          # 复制你想提供给用户的文件
-          cp Dockerfile deploy_package/
+          
+          # 【修改这里】复制构建镜像所必须的所有配置文件
+          # 只有把这些都拷进去，用户拿到包运行 docker build 才不会报错
+          cp Dockerfile pyproject.toml uv.lock README.md deploy_package/
+          
+          # 如果有 docker-compose.yml 也拷进去
           [ -f docker-compose.yml ] && cp docker-compose.yml deploy_package/
-          # 如果你有其他配置文件夹，也可以加上，例如：
-          # cp -r config deploy_package/ 
           
           # 压缩
           zip -r docker-deploy.zip deploy_package/
