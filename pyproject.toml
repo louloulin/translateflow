@@ -32,6 +32,7 @@ dependencies = [
     "python-rapidjson",
     "protobuf==4.25.7",
     "EbookLib",
+    "python-multipart",
     "natsort",
     "Pillow",
     "language-data",

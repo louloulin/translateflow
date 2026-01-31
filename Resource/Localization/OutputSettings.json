@@ -37,6 +37,18 @@
       "English": "Set filename suffix for output files, e.g., _translated",
       "日本語": "出力ファイルの接尾辞を設定（例: _translated）"
     },
+    "是否输出双语文件": {
+      "简中": "是否输出双语文件",
+      "繁中": "是否輸出雙語檔案",
+      "English": "Enable Bilingual Output",
+      "日本語": "バイリンガルファイルを出力"
+    },
+    "启用此功能后，将额外输出一份带原文的双语对照文件（仅支持部分格式，如txt/epub/srt）": {
+      "简中": "启用此功能后，将额外输出一份带原文的双语对照文件（仅支持部分格式，如txt/epub/srt）",
+      "繁中": "啟用此功能後，將額外輸出一份帶原文的雙語對照檔案（僅支援部分格式，如txt/epub/srt）",
+      "English": "When enabled, an additional bilingual file with original text will be exported (Only for some formats like txt/epub/srt).",
+      "日本語": "この機能を有効にすると、原文付きのバイリンガルファイルが別途出力されます（txt/epub/srtなどの一部の形式のみ対応）。"
+    },
     "双语文件文本顺序": {
       "简中": "双语文件文本顺序",
       "繁中": "雙語檔案文字順序",

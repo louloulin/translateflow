@@ -17,7 +17,7 @@ class OpenaiRequester(Base):
             top_p = platform_config.get("top_p", 1.0)
             presence_penalty = platform_config.get("presence_penalty", 0)
             frequency_penalty = platform_config.get("frequency_penalty", 0)
-            extra_body = platform_config.get("extra_body", "{}")
+            extra_body = platform_config.get("extra_body", {})
             think_switch = platform_config.get("think_switch")
             think_depth = platform_config.get("think_depth")
 
@@ -34,7 +34,7 @@ class OpenaiRequester(Base):
             client = LLMClientFactory().get_openai_client(platform_config)
 
             # 针对ds模型的特殊处理，因为该模型不支持模型预输入回复
-            if 'deepseek' in model_name.lower():
+            if model_name and 'deepseek' in model_name.lower():
                 # 检查一下最后的消息是否用户消息，以免误删。(用户使用了推理模型卻不切换为推理模型提示词的情况)
                 if messages and isinstance(messages[-1], dict) and messages[-1].get('role') != 'user':
                     messages = messages[:-1]  # 移除最后一个元素
@@ -79,25 +79,75 @@ class OpenaiRequester(Base):
 
 
             # 发起请求
-            response = client.chat.completions.create(**base_params)
+            try:
+                response = client.chat.completions.create(**base_params)
+                # 提取回复内容
+                message = response.choices[0].message
 
-
-            # 提取回复内容
-            message = response.choices[0].message
-
-            # 自适应提取推理过程
-            if "</think>" in message.content:
-                splited = message.content.split("</think>")
-                response_think = splited[0].removeprefix("<think>").replace("\n\n", "\n")
-                response_content = splited[-1]
-            else:
-                try:
-                    response_think = message.reasoning_content
-                    if not response_think:
+                # 自适应提取推理过程
+                if message.content and "</think>" in message.content:
+                    splited = message.content.split("</think>")
+                    response_think = splited[0].removeprefix("<think>").replace("\n\n", "\n")
+                    response_content = splited[-1]
+                else:
+                    try:
+                        response_think = getattr(message, "reasoning_content", "")
+                        if not response_think:
+                            response_think = ""
+                    except Exception:
                         response_think = ""
-                except Exception:
-                    response_think = ""
-                response_content = message.content
+                    response_content = message.content
+                
+                prompt_tokens = int(response.usage.prompt_tokens) if hasattr(response, "usage") else 0
+                completion_tokens = int(response.usage.completion_tokens) if hasattr(response, "usage") else 0
+
+            except Exception as sdk_err:
+                # 如果 SDK 请求失败，尝试使用 httpx 兼容 SSE 格式 (解决部分中转站强制 SSE 问题)
+                if "expecting value" in str(sdk_err).lower() or "data:" in str(sdk_err).lower():
+                    import httpx
+                    import json
+                    api_url = platform_config.get("api_url").rstrip('/') + "/chat/completions"
+                    api_key = platform_config.get("api_key")
+                    
+                    auth_headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                    }
+                    
+                    with httpx.Client(timeout=request_timeout) as http_client:
+                        resp = http_client.post(api_url, json=base_params, headers=auth_headers)
+                        if resp.status_code == 200:
+                            raw_text = resp.text.strip()
+                            if raw_text.startswith("data:"):
+                                # SSE 解析逻辑：遍历所有行并聚合内容
+                                full_content = ""
+                                full_think = ""
+                                lines = raw_text.split("\n")
+                                for line in lines:
+                                    if line.startswith("data:"):
+                                        json_str = line.replace("data:", "").strip()
+                                        if json_str == "[DONE]": break
+                                        try:
+                                            res_json = json.loads(json_str)
+                                            if "choices" in res_json:
+                                                choice = res_json["choices"][0]
+                                                # 获取正文内容
+                                                c = choice.get("message", {}).get("content", "") or choice.get("delta", {}).get("content", "")
+                                                if c: full_content += c
+                                                # 获取思考内容
+                                                t = choice.get("message", {}).get("reasoning_content", "") or choice.get("delta", {}).get("reasoning_content", "")
+                                                if t: full_think += t
+                                        except: continue
+                                response_content = full_content
+                                response_think = full_think
+                                prompt_tokens, completion_tokens = 0, 0 
+                            else:
+                                raise sdk_err
+                        else:
+                            raise sdk_err
+                else:
+                    raise sdk_err
 
         except Exception as e:
             error_str = str(e).lower()
@@ -114,7 +164,9 @@ class OpenaiRequester(Base):
                 error_type = "API_FAIL"
             
             if Base.work_status != Base.STATUS.STOPING:
-                self.error(f"请求任务错误 ({error_type}) ... {e}", e if self.is_debug() else None)
+                api_url = platform_config.get("api_url", "Unknown URL")
+                model_name = platform_config.get("model_name", "Unknown Model")
+                self.error(f"请求任务错误 ({error_type}) [URL: {api_url}, Model: {model_name}] ... {e}", e if self.is_debug() else None)
             else:
                 self.print(f"[dim]Request aborted due to stop signal: {e}[/dim]")
 

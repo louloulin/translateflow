@@ -244,11 +244,41 @@ class TaskConfig(Base):
         if self.target_platform is None:
             raise ValueError(f"当前配置文件中未设置 {mode} 的目标平台，请重新检查接口管理页面，是否设置了执行任务的接口。")
 
-        # 获取模型类型
-        self.model = self.platforms.get(self.target_platform).get("model")
+        # 获取平台配置引用，方便后续操作
+        platform_conf = self.platforms.get(self.target_platform)
+        if not platform_conf:
+            raise ValueError(f"未找到平台 {self.target_platform} 的具体配置信息。")
+
+        # --- 智能同步逻辑 ---
+        # 优先使用实例属性 (来自 root config)，如果实例属性为空，则从平台配置中加载
+        if not self.model:
+            self.model = platform_conf.get("model")
+        else:
+            # 如果实例属性有值，反向同步到平台配置中，确保一致性
+            platform_conf["model"] = self.model
+
+        # 处理 API URL
+        raw_url = platform_conf.get("api_url", "")
+        auto_complete_setting = platform_conf.get("auto_complete", False)
+        
+        # 如果 self.base_url 已经有值（来自 root config），我们认为它是经过处理的最终地址
+        # 否则，从平台配置中读取 raw_url 并处理
+        if not self.base_url:
+            self.base_url = self.process_api_url(raw_url, self.target_platform, auto_complete_setting)
+        else:
+            # 如果实例属性有值，反向同步原始地址到平台配置中（如果平台配置为空）
+            if not raw_url:
+                platform_conf["api_url"] = self.base_url
 
         # 分割密钥字符串
-        api_key = self.platforms.get(self.target_platform).get("api_key")
+        # 优先使用 root config 的 api_key (如果存在)
+        api_key = getattr(self, "api_key", "")
+        if not api_key:
+            api_key = platform_conf.get("api_key", "")
+        else:
+            # 反向同步
+            platform_conf["api_key"] = api_key
+
         if api_key == "":
             self.apikey_list = ["no_key_required"]
             self.apikey_index = 0
@@ -256,15 +286,9 @@ class TaskConfig(Base):
             self.apikey_list = re.sub(r"\s+","", api_key).split(",")
             self.apikey_index = 0
 
-        # 处理 API URL 和限额
-        raw_url = self.platforms.get(self.target_platform).get("api_url", "")
-        auto_complete_setting = self.platforms.get(self.target_platform).get("auto_complete", False)
-        
-        self.base_url = self.process_api_url(raw_url, self.target_platform, auto_complete_setting)
-
         # 获取接口限额
-        self.rpm_limit = self.platforms.get(self.target_platform).get("rpm_limit", 4096)    # 当取不到账号类型对应的预设值，则使用该值
-        self.tpm_limit = self.platforms.get(self.target_platform).get("tpm_limit", 10000000)    # 当取不到账号类型对应的预设值，则使用该值
+        self.rpm_limit = platform_conf.get("rpm_limit", 4096)
+        self.tpm_limit = platform_conf.get("tpm_limit", 10000000)
 
         # 根据密钥数量给 RPM 和 TPM 限额翻倍
         self.rpm_limit = self.rpm_limit * len(self.apikey_list)

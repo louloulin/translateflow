@@ -290,6 +290,7 @@
         "msg_epub_conv_fail": "[bold red]中间件错误: {}[/bold red]",
         "menu_update": "检查并更新软件",
         "setting_auto_update": "开启启动时自动检查更新",
+        "setting_enable_bilingual_output": "开启双语输出 (译文+原文)",
             "menu_edit_in_editor": "在系统编辑器中打开",
             "menu_edit_content": "编辑内容",
     "menu_enter_manually": "手动输入",

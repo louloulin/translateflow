@@ -260,6 +260,7 @@
         "msg_epub_conv_fail": "[bold red]Middleware Error: {}[/bold red]",
         "menu_update": "Check for Updates",
         "setting_auto_update": "Auto-check for updates on startup",
+        "setting_enable_bilingual_output": "Enable Bilingual Output (Translation + Original)",
             "menu_edit_in_editor": "Open in System Editor",
             "menu_edit_content": "Edit Content",
     "menu_enter_manually": "Enter Manually",

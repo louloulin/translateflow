@@ -226,6 +226,7 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "msg_epub_conv_fail": "[bold red]中间件错误: {}[/bold red]",
     "menu_update": "检查并更新软件",
     "setting_auto_update": "开启启动时自动检查更新",
+    "setting_enable_bilingual_output": "开启双语输出 (译文+原文)",
     
     // UI Specific Extras
     "ui_dashboard_welcome": "欢迎回来，旅行者。",
@@ -541,6 +542,7 @@ export const EN_LOCALE: Record<string, string> = {
     "setting_enable_smart_round_limit": "Smart Round Limit",
     "setting_response_conversion_toggle": "Response Conversion (Sim/Trad)",
     "setting_auto_update": "Auto Update on Startup",
+    "setting_enable_bilingual_output": "Enable Bilingual Output",
     "menu_api_pool_settings": "API Failover Pool",
     "menu_api_think_switch": "Thinking Mode (Reasoning)",
     "menu_api_think_depth": "Thinking Depth",
@@ -949,6 +951,8 @@ export const PLATFORMS = [
   'Sakura',
   'Azure',
   'DeepSeek',
+  'SiliconFlow',
+  'CustomOpenAI',
   'Ollama',
   'VLLM'
 ];

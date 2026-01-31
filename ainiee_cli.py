@@ -15,7 +15,6 @@ import collections
 import glob
 import rapidjson as json
 import shutil
-import winsound
 import subprocess
 import argparse
 import threading
@@ -2213,14 +2212,15 @@ class CLIMenu:
             table.add_row("20", i18n.get("setting_enable_smart_round_limit"), "[green]ON[/]" if self.config.get("enable_smart_round_limit", False) else "[red]OFF[/]")
             table.add_row("21", i18n.get("setting_response_conversion_toggle"), "[green]ON[/]" if self.config.get("response_conversion_toggle", False) else "[red]OFF[/]")
             table.add_row("22", i18n.get("setting_auto_update"), "[green]ON[/]" if self.config.get("enable_auto_update", False) else "[red]OFF[/]")
+            table.add_row("23", i18n.get("setting_enable_bilingual_output"), "[green]ON[/]" if self.config.get("enable_bilingual_output", True) else "[red]OFF[/]")
 
             # Thinking features (always show)
             think_switch = self.config.get("think_switch", False)
-            table.add_row("23", i18n.get("menu_api_think_switch"), "[green]ON[/]" if think_switch else "[red]OFF[/]")
+            table.add_row("24", i18n.get("menu_api_think_switch"), "[green]ON[/]" if think_switch else "[red]OFF[/]")
 
             table.add_section()
             # --- Section 3: Thinking & Advanced Settings ---
-            next_id = 24
+            next_id = 25
             # Always show thinking settings
             think_depth = self.config.get("think_depth", "low")
             think_budget = self.config.get("thinking_budget", 4096)
@@ -2281,16 +2281,17 @@ class CLIMenu:
             elif choice == 20: self.config["enable_smart_round_limit"] = not self.config.get("enable_smart_round_limit", False)
             elif choice == 21: self.config["response_conversion_toggle"] = not self.config.get("response_conversion_toggle", False)
             elif choice == 22: self.config["enable_auto_update"] = not self.config.get("enable_auto_update", False)
+            elif choice == 23: self.config["enable_bilingual_output"] = not self.config.get("enable_bilingual_output", True)
 
             # Thinking features (always enabled)
-            elif choice == 23:
+            elif choice == 24:
                 new_state = not self.config.get("think_switch", False)
                 self.config["think_switch"] = new_state
                 # Sync to platform config
                 if self.config.get("target_platform") in self.config.get("platforms", {}):
                     self.config["platforms"][self.config.get("target_platform")]["think_switch"] = new_state
 
-            elif choice == 24:  # Think Depth
+            elif choice == 25:  # Think Depth
                 if api_format == "Anthropic":
                     val = Prompt.ask(i18n.get("prompt_think_depth_claude"), choices=["low", "medium", "high"], default=str(self.config.get("think_depth", "low")))
                 else:
@@ -2300,18 +2301,18 @@ class CLIMenu:
                 if self.config.get("target_platform") in self.config.get("platforms", {}):
                     self.config["platforms"][self.config.get("target_platform")]["think_depth"] = val
 
-            elif choice == 25:  # Think Budget
+            elif choice == 26:  # Think Budget
                 val = IntPrompt.ask(i18n.get("prompt_think_budget"), default=int(self.config.get("thinking_budget", 4096)))
                 self.config["thinking_budget"] = val
                 # Sync to platform config
                 if self.config.get("target_platform") in self.config.get("platforms", {}):
                     self.config["platforms"][self.config.get("target_platform")]["thinking_budget"] = val
 
-            elif choice == 26: self.project_type_menu()
-            elif choice == 27: self.trans_mode_menu()
-            elif choice == 28: self.api_pool_menu()
-            elif choice == 29: self.prompt_features_menu()
-            elif choice == 30: self.response_checks_menu()
+            elif choice == 27: self.project_type_menu()
+            elif choice == 28: self.trans_mode_menu()
+            elif choice == 29: self.api_pool_menu()
+            elif choice == 30: self.prompt_features_menu()
+            elif choice == 31: self.response_checks_menu()
 
             self.save_config()
 
@@ -2471,12 +2472,15 @@ class CLIMenu:
         self.config.update({
             "target_platform": sel, 
             "base_url": plat_conf.get("api_url"), 
-            "model": plat_conf.get("models", [""])[0],
+            "model": plat_conf.get("models", [""])[0] if plat_conf.get("models") else plat_conf.get("model", ""),
             "api_settings": {"translate": sel, "polish": sel}
         })
         if online:
             key = Prompt.ask(i18n.get("msg_api_key_for").format(sel), password=True)
-            self.config["platforms"][sel]["api_key"] = key; self.config["api_key"] = key
+            if sel not in self.config["platforms"]:
+                self.config["platforms"][sel] = plat_conf.copy()
+            self.config["platforms"][sel]["api_key"] = key
+            self.config["api_key"] = key
         self.save_config(); console.print(f"[green]{i18n.get('msg_active_platform').format(sel)}[/green]"); time.sleep(1)
     def validate_api(self):
         # 使用 TaskExecutor 中已有的 TaskConfig 实例，确保配置一致性
@@ -2520,23 +2524,87 @@ class CLIMenu:
                         response.raise_for_status()
                         content = response.json()["choices"][0]["message"]["content"]
                 else:
-                    # Use standard LLMRequester for online APIs
-                    from ModuleFolders.Infrastructure.LLMRequester.LLMRequester import LLMRequester
-                    platform_config = task_config.get_platform_configuration("translationReq")
-                    requester = LLMRequester()
-                    messages = [{"role": "user", "content": i18n.get("msg_test_msg")}]
-                    # Ensure base_url is present in platform_config for LLMRequester as well
-                    if "base_url" not in platform_config and task_config.base_url:
-                        platform_config["base_url"] = task_config.base_url
+                    # Use raw httpx for online APIs validation to avoid SDK header interference (OpenAI headers often get blocked by WAF)
+                    import httpx
+                    # 使用准备好的 base_url (已处理过 /v1 等后缀)
+                    api_url = task_config.base_url.rstrip('/') + "/chat/completions"
+                    api_key = task_config.get_next_apikey()
+                    model_name = task_config.model
                     
-                    skip, think, content, p_tokens, c_tokens = requester.sent_request(
-                        messages=messages, system_prompt=i18n.get("msg_test_sys"), platform_config=platform_config
-                    )
-                    if skip:
-                        raise Exception("Request failed or was skipped by requester.")
+                    headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                        "Accept": "application/json",
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                    payload = {
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": i18n.get("msg_test_msg")}],
+                        "max_tokens": 100,
+                        "stream": False # 显式要求非流式输出
+                    }
+                    
+                    # 借用工厂的创建逻辑
+                    from ModuleFolders.Infrastructure.LLMRequester.LLMClientFactory import create_httpx_client
+                    with create_httpx_client(timeout=20) as client:
+                        # 确保 headers 干净且包含授权信息
+                        auth_headers = {
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type": "application/json",
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                            "Accept": "application/json"
+                        }
+                        
+                        response = client.post(api_url, json=payload, headers=auth_headers)
+                        
+                        # 详细诊断非 200 情况
+                        if response.status_code != 200:
+                            server_type = response.headers.get('Server', 'Unknown')
+                            error_body = response.text[:500]
+                            debug_info = f"\n  - [Status] {response.status_code}\n  - [Server] {server_type}\n  - [Body] {error_body}"
+                            raise Exception(f"HTTP {response.status_code} Error.{debug_info}")
+                        
+                        raw_content = response.text.strip()
+                        
+                        # 处理有些中转站强制返回 SSE (data: ...) 格式的问题
+                        if raw_content.startswith("data:"):
+                            full_content = ""
+                            lines = raw_content.split("\n")
+                            for line in lines:
+                                if line.startswith("data:"):
+                                    json_str = line.replace("data:", "").strip()
+                                    if json_str == "[DONE]":
+                                        break
+                                    try:
+                                        res_json = json.loads(json_str)
+                                        if "choices" in res_json:
+                                            choice = res_json["choices"][0]
+                                            # 兼容 message 或 delta 格式
+                                            chunk_text = ""
+                                            if "message" in choice:
+                                                chunk_text = choice["message"].get("content", "")
+                                            elif "delta" in choice:
+                                                chunk_text = choice["delta"].get("content", "")
+                                            
+                                            full_content += chunk_text
+                                    except:
+                                        continue
+                            content = full_content
+                        else:
+                            # 标准 JSON 解析
+                            try:
+                                res_json = response.json()
+                                if "choices" in res_json:
+                                    choice = res_json["choices"][0]
+                                    content = choice["message"].get("content", "")
+                                else:
+                                    content = str(res_json)
+                            except Exception:
+                                raise Exception(f"Response is not valid JSON. Status: {response.status_code}, Body: {raw_content[:500]}")
                 
                 console.print(f"[green]✓ {i18n.get('msg_api_ok')}[/green]")
-                console.print(f"[dim]Response: {content[:100]}...[/dim]")
+                console.print(f"[cyan]Response:[/cyan] {content}")
 
             except Exception as e:
                 console.print(f"[red]✗ {i18n.get('msg_api_fail')}:[/red] {e}")
@@ -2587,9 +2655,21 @@ class CLIMenu:
             
             if choice == 0: break
             elif choice == 1: self.config["target_platform"] = Prompt.ask(i18n.get("label_platform"), default=self.config.get("target_platform"))
-            elif choice == 2: self.config["base_url"] = Prompt.ask(i18n.get("label_url"), default=self.config.get("base_url"))
-            elif choice == 3: self.config["api_key"] = Prompt.ask(i18n.get("label_key"), password=True)
-            elif choice == 4: self.config["model"] = Prompt.ask(i18n.get("label_model"), default=self.config.get("model"))
+            elif choice == 2: 
+                new_url = Prompt.ask(i18n.get("label_url"), default=self.config.get("base_url"))
+                self.config["base_url"] = new_url
+                if tp in self.config.get("platforms", {}):
+                    self.config["platforms"][tp]["api_url"] = new_url
+            elif choice == 3: 
+                new_key = Prompt.ask(i18n.get("label_key"), password=True)
+                self.config["api_key"] = new_key
+                if tp in self.config.get("platforms", {}):
+                    self.config["platforms"][tp]["api_key"] = new_key
+            elif choice == 4: 
+                new_model = Prompt.ask(i18n.get("label_model"), default=self.config.get("model"))
+                self.config["model"] = new_model
+                if tp in self.config.get("platforms", {}):
+                    self.config["platforms"][tp]["model"] = new_model
             elif choice == 5:
                 new_state = not think_sw
                 self.config["think_switch"] = new_state
@@ -3209,6 +3289,7 @@ class CLIMenu:
 
         original_ext = os.path.splitext(target_path)[1].lower()
         is_middleware_converted = False
+        is_xlsx_converted = False
 
         # Patch tqdm to avoid conflict with Rich Live
         import ModuleFolders.Service.TaskExecutor.TaskExecutor as TaskExecutorModule
@@ -3315,6 +3396,7 @@ class CLIMenu:
 
         # Wrapper to run task logic (so we can use it with or without Live)
         def run_task_logic():
+                nonlocal is_xlsx_converted
                 self.ui.log(f"{i18n.get('msg_task_started')}")
 
                 # --- Middleware Conversion Logic (Moved Inside Live) ---
@@ -3575,8 +3657,14 @@ class CLIMenu:
             
             if success.is_set():
                 if self.config.get("enable_task_notification", True):
-                    try: winsound.MessageBeep()
-                    except: print("\a")
+                    try:
+                        import winsound
+                        winsound.MessageBeep()
+                    except ImportError:
+                        print("提示：winsound模块在此系统上不可用（Linux/Docker环境）")
+                        pass
+                    except:
+                        print("\a")
                 
                 # Summary Report
                 lines = last_task_data.get("line", 0); tokens = last_task_data.get("token", 0); duration = last_task_data.get("time", 1)
@@ -3647,8 +3735,14 @@ class CLIMenu:
             if task_success:
                 self.ui.log("[bold green]All Done![/bold green]")
                 if self.config.get("enable_task_notification", True):
-                    try: winsound.MessageBeep()
-                    except: print("\a")
+                    try:
+                        import winsound
+                        winsound.MessageBeep()
+                    except ImportError:
+                        print("提示：winsound模块在此系统上不可用（Linux/Docker环境）")
+                        pass
+                    except:
+                        print("\a")
             
             if not non_interactive and not web_mode and not from_queue:
                 Prompt.ask(f"\n{i18n.get('msg_task_ended')}")

@@ -251,6 +251,7 @@
         "msg_epub_conv_fail": "[bold red]ミドルウェアエラー: {}[/bold red]",
         "menu_update": "アップデートを確認",
         "setting_auto_update": "起動時に自動的にアップデートを確認する",
+        "setting_enable_bilingual_output": "バイリンガル出力 (訳文+原文) を有効にする",
     "menu_edit_in_editor": "システムエディタで開く",
     "menu_edit_content": "コンテンツを編集",
     "menu_enter_manually": "手動入力",

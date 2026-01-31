@@ -11,7 +11,7 @@ import json
 
 
 def create_httpx_client(
-        http2=True,
+        http2=False,
         max_connections=256,
         max_keepalive_connections=128,
         keepalive_expiry=30,
@@ -19,19 +19,30 @@ def create_httpx_client(
 ):
     """
     创建配置好的HTTP客户端
-
-    参数:
-        http2: 是否启用HTTP/2
-        max_connections: 最大并发连接数
-        max_keepalive_connections: 最大保持活跃的连接数
-        keepalive_expiry: 连接保持活跃的秒数
-        **kwargs: 传递给httpx.Client的其他参数
-
-    返回:
-        配置好的httpx.Client实例
     """
+    # 提取并处理 headers
+    headers = kwargs.pop("headers", {})
+    
+    # 完善浏览器特征
+    headers.setdefault("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+    headers.setdefault("Accept", "application/json, text/plain, */*")
+    headers.setdefault("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+    
+    # 动态推断 Origin 和 Referer
+    api_url = kwargs.get("base_url") or headers.get("api_url")
+    if api_url:
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(str(api_url))
+            origin = f"{parsed.scheme}://{parsed.netloc}"
+            headers.setdefault("Origin", origin)
+            headers.setdefault("Referer", f"{origin}/")
+        except: pass
+
     return httpx.Client(
         http2=http2,
+        headers=headers,
+        trust_env=True,
         limits=httpx.Limits(
             max_connections=max_connections,
             max_keepalive_connections=max_keepalive_connections,
@@ -53,6 +64,14 @@ class LLMClientFactory:
                 cls._instance = super(LLMClientFactory, cls).__new__(cls)
                 cls._instance._clients = {}
             return cls._instance
+
+    def _get_browser_headers(self) -> Dict[str, str]:
+        """获取用于伪装的通用浏览器头"""
+        return {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+        }
 
     def get_openai_client(self, config: Dict[str, Any]) -> OpenAI:
         """获取OpenAI客户端"""
@@ -132,14 +151,16 @@ class LLMClientFactory:
         return OpenAI(
             base_url=config.get("api_url"),
             api_key=api_key,
-            http_client=create_httpx_client()
+            http_client=create_httpx_client(),
+            default_headers=self._get_browser_headers() # 注入伪装头
         )
 
     def _create_anthropic_client(self, config):
         return anthropic.Anthropic(
             base_url=config.get("api_url"),
             api_key=config.get("api_key"),
-            http_client=create_httpx_client()
+            http_client=create_httpx_client(),
+            default_headers=self._get_browser_headers() # 注入伪装头
         )
 
     def _create_anthropic_bedrock(self, config):

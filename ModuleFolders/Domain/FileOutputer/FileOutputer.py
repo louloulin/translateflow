@@ -141,6 +141,9 @@ class FileOutputer:
             # 如果配置值无效，则回退到默认值
             bilingual_order = BilingualOrder.SOURCE_FIRST
 
+        # 从配置中读取是否启用双语输出
+        enable_bilingual = config.get("enable_bilingual_output", True)
+
         default_translated_config = TranslationOutputConfig(True, translated_suffix, output_path)
 
         # 创建基础的 OutputConfig，包含新的配置项
@@ -152,7 +155,7 @@ class FileOutputer:
         if project_type == SrtWriter.get_project_type():
             return create_output_config(
                 translated_config=TranslationOutputConfig(True, config.get("translated_suffix", ".translated"), output_path),
-                bilingual_config=TranslationOutputConfig(True, config.get("bilingual_suffix", '.bilingual'), output_path / "bilingual_srt"),
+                bilingual_config=TranslationOutputConfig(enable_bilingual, config.get("bilingual_suffix", '.bilingual'), output_path / "bilingual_srt"),
             )
         elif project_type in (TxtWriter.get_project_type(), EpubWriter.get_project_type()) or (BabeldocPdfWriter and project_type == BabeldocPdfWriter.get_project_type()):
             bilingual_dir_map = {
@@ -164,12 +167,12 @@ class FileOutputer:
 
             return create_output_config(
                 translated_config=default_translated_config,
-                bilingual_config=TranslationOutputConfig(True, bilingual_suffix, output_path / bilingual_dir_map[project_type]),
+                bilingual_config=TranslationOutputConfig(enable_bilingual, bilingual_suffix, output_path / bilingual_dir_map[project_type]),
             )
         elif project_type == AutoTypeWriter.get_project_type():
             return create_output_config(
                 translated_config=default_translated_config,
-                bilingual_config=TranslationOutputConfig(True, bilingual_suffix, output_path / "bilingual_auto"),
+                bilingual_config=TranslationOutputConfig(enable_bilingual, bilingual_suffix, output_path / "bilingual_auto"),
                 input_root=None # AutoTypeWriter 的 input_root 是动态的
             )
         elif project_type in (
