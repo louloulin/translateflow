@@ -10,15 +10,15 @@ Resource/profiles/
 Resource/queue_tasks.json
 
 # WebServer
-Tools/WebServer/node_modules/
-Tools/WebServer/components/
-Tools/WebServer/pages/
-Tools/WebServer/contexts/
-Tools/WebServer/services/
-Tools/WebServer/App.tsx
-Tools/WebServer/constants.ts
-Tools/WebServer/types.ts
-!Tools/WebServer/dist/
+!Tools/WebServer/node_modules/
+!Tools/WebServer/components/
+!Tools/WebServer/pages/
+!Tools/WebServer/contexts/
+!Tools/WebServer/services/
+!Tools/WebServer/App.tsx
+!Tools/WebServer/constants.ts
+!Tools/WebServer/types.ts
+Tools/WebServer/dist/
 
 
 
@@ -41,3 +41,4 @@ temp_task_logic.py
 update_i18n.py
 
 .env
+bfg-1.15.0.jar

@@ -1,0 +1,166 @@
+import React, { useEffect, useState, useRef } from 'react';
+import { StatsPanel } from '../components/StatsPanel';
+import { Terminal } from '../components/Terminal';
+import { DataService } from '../services/DataService';
+import { useGlobal } from '../contexts/GlobalContext';
+import { LogEntry } from '../types';
+import { Activity, LayoutDashboard, Loader2 } from 'lucide-react';
+import { useI18n } from '../contexts/I18nContext';
+
+export const Monitor: React.FC = () => {
+  const { t } = useI18n();
+  const { taskState, setTaskState, config } = useGlobal();
+  const intervalRef = useRef<any>(null);
+  const showDetailed = config?.show_detailed_logs || false;
+  const [activeTab, setActiveTab] = useState<'console' | 'comparison'>('console');
+
+  const startPolling = () => {
+    stopPolling();
+    intervalRef.current = setInterval(async () => {
+      try {
+        const data = await DataService.getTaskStatus();
+        
+        setTaskState(prev => {
+          if (!data || !data.stats) return prev;
+          
+          const mappedLogs = (data.logs || []).map((l: any, idx: number) => ({
+            id: l.id || `be-${idx}-${l.timestamp || Date.now()}`,
+            timestamp: typeof l.timestamp === 'number' 
+              ? new Date(l.timestamp * 1000).toLocaleTimeString() 
+              : (l.timestamp || new Date().toLocaleTimeString()),
+            message: String(l.message || ''),
+            type: l.type || 'info'
+          })).filter(Boolean) as LogEntry[];
+
+          return {
+            ...prev,
+            stats: data.stats,
+            logs: mappedLogs.length > 0 ? mappedLogs : prev.logs,
+            chartData: data.chart_data || prev.chartData,
+            isRunning: data.stats.status === 'running',
+            comparison: data.comparison ? { ...data.comparison } : prev.comparison
+          };
+        });
+      } catch (e) {
+        console.error("Polling error", e);
+      }
+    }, 1000);
+  };
+
+  const stopPolling = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  };
+
+  useEffect(() => {
+    startPolling();
+    return () => stopPolling();
+  }, []);
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-950 p-6 space-y-4 overflow-hidden">
+      {/* Header */}
+      <div className="flex justify-between items-center bg-slate-900/50 border border-slate-800 p-4 rounded-xl backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
+            <Activity className="text-white" size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              AiNiee <span className="text-primary">{t('ui_monitor_title') || 'Monitor'}</span>
+            </h1>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">{t('ui_monitor_subtitle') || 'Real-time Performance Metrics'}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {taskState.isRunning ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold animate-pulse">
+              <Loader2 size={14} className="animate-spin" />
+              {t('ui_system_active') || 'SYSTEM ACTIVE'}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-500 text-xs font-bold">
+              <div className="w-2 h-2 rounded-full bg-slate-600" />
+              {t('ui_system_idle') || 'SYSTEM IDLE'}
+            </div>
+          )}
+          
+          <button 
+            onClick={() => window.location.hash = '/'}
+            className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors border border-transparent hover:border-slate-700"
+            title={t('ui_go_to_dashboard') || 'Go to Dashboard'}
+          >
+            <LayoutDashboard size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      {showDetailed && (
+        <div className="flex gap-2 border-b border-slate-800 px-2">
+          <button 
+            onClick={() => setActiveTab('console')}
+            className={`px-6 py-2 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${activeTab === 'console' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+          >
+            <Activity size={14} />
+            {t('ui_tab_console') || 'METRICS & CONSOLE'}
+          </button>
+          <button 
+            onClick={() => setActiveTab('comparison')}
+            className={`px-6 py-2 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${activeTab === 'comparison' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+          >
+            <LayoutDashboard size={14} />
+            {t('ui_tab_comparison') || 'BILINGUAL VIEW'}
+          </button>
+        </div>
+      )}
+
+      {/* Content Section */}
+      <div className="flex-1 min-h-0 flex flex-col space-y-4">
+        {(!showDetailed || activeTab === 'console') ? (
+            <div className="flex-1 flex flex-col space-y-4 min-h-0 overflow-y-auto">
+                <StatsPanel data={taskState.chartData} stats={taskState.stats} />
+                <Terminal logs={taskState.logs} height="flex-1" />
+            </div>
+        ) : (
+            <div className="flex-1 flex flex-col space-y-4 min-h-0 overflow-y-auto">
+                <StatsPanel data={taskState.chartData} stats={taskState.stats} variant="compact" />
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
+                    {/* Source Pane */}
+                    <div className="flex flex-col bg-slate-900/40 border border-magenta/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-magenta/5 min-h-[300px]">
+                        <div className="px-4 py-2 bg-magenta/10 border-b border-magenta/20 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-magenta uppercase tracking-widest">Original Source</span>
+                            <span className="text-[10px] text-slate-500 font-mono">{(taskState.comparison?.source?.split('\n').length || 0)} Lines</span>
+                        </div>
+                        <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-slate-300 leading-relaxed scrollbar-thin scrollbar-thumb-magenta/20 whitespace-pre-wrap">
+                            {taskState.comparison?.source || <span className="text-slate-600 italic">Waiting for text...</span>}
+                        </div>
+                    </div>
+
+                    {/* Translation Pane */}
+                    <div className="flex flex-col bg-slate-900/40 border border-primary/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-primary/5 min-h-[300px]">
+                        <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Translation Output</span>
+                            <span className="text-[10px] text-slate-500 font-mono">{(taskState.comparison?.translation?.split('\n').length || 0)} Lines</span>
+                        </div>
+                        <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-primary-light leading-relaxed scrollbar-thin scrollbar-thumb-primary/20 whitespace-pre-wrap">
+                            {taskState.comparison?.translation || <span className="text-slate-600 italic animate-pulse">Processing batch...</span>}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+      </div>
+
+      {/* Footer info */}
+      <div className="flex justify-between items-center text-[10px] text-slate-600 font-mono px-2 uppercase tracking-tighter">
+        <span>&copy; 2026 AiNiee Project</span>
+        <div className="flex gap-4">
+          <span>{taskState.stats?.currentFile || t('ui_no_file_active') || 'No file active'}</span>
+          <span>RPM: {taskState.stats?.rpm.toFixed(2)}</span>
+          <span>TPM: {taskState.stats?.tpm.toFixed(2)}k</span>
+        </div>
+      </div>
+    </div>
+  );
+};
