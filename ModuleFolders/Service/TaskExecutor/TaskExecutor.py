@@ -232,6 +232,10 @@ class TaskExecutor(Base):
 
     # 任务停止事件
     def task_stop(self, event: int, data: dict) -> None:
+        # 如果已经是停止中或已停止，则跳过
+        if Base.work_status in [Base.STATUS.STOPING, Base.STATUS.TASKSTOPPED]:
+            return
+
         # 设置运行状态为停止中
         Base.work_status = Base.STATUS.STOPING
         

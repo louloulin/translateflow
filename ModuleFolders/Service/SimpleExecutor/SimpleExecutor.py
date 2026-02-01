@@ -54,12 +54,8 @@ class SimpleExecutor(Base):
         secret_key = data.get("secret_key")
 
         # 自动补全API地址
-        if (platform_tag == "sakura" or platform_tag == "LocalLLM") and not api_url.endswith("/v1"):
-            api_url += "/v1"
-        elif auto_complete:
-            version_suffixes = ["/v1", "/v2", "/v3", "/v4"]
-            if not any(api_url.endswith(suffix) for suffix in version_suffixes):
-                api_url += "/v1"
+        # 移除主动补全逻辑，遵循用户配置
+        pass
 
         # 测试结果
         failure = []

@@ -41,122 +41,112 @@ class OpenaiRequester(Base):
 
 
             # 参数基础配置
-            base_params = {
-                "extra_body": extra_body,
+            # 注意：在直接使用 httpx 时，需要将 extra_body 中的参数合并到主请求体中
+            request_body = {
                 "model": model_name,
                 "messages": messages,
-                "timeout": request_timeout,
                 "stream": False
             }
+            
+            # 合并 extra_body
+            if extra_body and isinstance(extra_body, dict):
+                request_body.update(extra_body)
 
             # 按需添加参数
             if temperature != 1:
-                base_params.update({
+                request_body.update({
                     "temperature": temperature,
                 })
 
             if top_p != 1:
-                base_params.update({
+                request_body.update({
                     "top_p": top_p,
                 })
 
             if presence_penalty != 0:
-                base_params.update({
+                request_body.update({
                     "presence_penalty": presence_penalty,
                 })
 
             if frequency_penalty != 0:
-                base_params.update({
+                request_body.update({
                     "frequency_penalty": frequency_penalty
                 })
 
-
             # 开启思考开关时添加参数
             if think_switch:
-                base_params.update({
+                request_body.update({
                     "reasoning_effort": think_depth
                 })
 
-
             # 发起请求
             try:
-                response = client.chat.completions.create(**base_params)
-                # 提取回复内容
-                message = response.choices[0].message
-
-                # 自适应提取推理过程
-                if message.content and "</think>" in message.content:
-                    splited = message.content.split("</think>")
-                    response_think = splited[0].removeprefix("<think>").replace("\n\n", "\n")
-                    response_content = splited[-1]
-                else:
-                    try:
-                        response_think = getattr(message, "reasoning_content", "")
-                        if not response_think:
-                            response_think = ""
-                    except Exception:
-                        response_think = ""
-                    response_content = message.content
+                import httpx
+                import json
                 
-                # 安全获取消耗
-                prompt_tokens = 0
-                completion_tokens = 0
-                if hasattr(response, "usage") and response.usage:
-                    prompt_tokens = getattr(response.usage, "prompt_tokens", 0)
-                    completion_tokens = getattr(response.usage, "completion_tokens", 0)
-
-                return False, response_think, response_content, int(prompt_tokens), int(completion_tokens)
-
-            except Exception as sdk_err:
-                # 如果 SDK 请求失败，尝试使用 httpx 兼容 SSE 格式 (解决部分中转站强制 SSE 问题)
-                if "expecting value" in str(sdk_err).lower() or "data:" in str(sdk_err).lower():
-                    import httpx
-                    import json
-                    api_url = platform_config.get("api_url").rstrip('/') + "/chat/completions"
-                    api_key = platform_config.get("api_key")
+                api_url = platform_config.get("api_url").rstrip('/')
+                api_key = platform_config.get("api_key")
+                
+                auth_headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                }
+                
+                with httpx.Client(timeout=request_timeout) as http_client:
+                    resp = http_client.post(api_url, json=request_body, headers=auth_headers)
                     
-                    auth_headers = {
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-                    }
+                    if resp.status_code != 200:
+                        raise Exception(f"HTTP {resp.status_code}: {resp.text}")
+                        
+                    raw_text = resp.text.strip()
                     
-                    with httpx.Client(timeout=request_timeout) as http_client:
-                        resp = http_client.post(api_url, json=base_params, headers=auth_headers)
-                        if resp.status_code == 200:
-                            raw_text = resp.text.strip()
-                            if raw_text.startswith("data:"):
-                                # SSE 解析逻辑：遍历所有行并聚合内容
-                                full_content = ""
-                                full_think = ""
-                                usage = {"prompt_tokens": 0, "completion_tokens": 0}
-                                lines = raw_text.split("\n")
-                                for line in lines:
-                                    if line.startswith("data:"):
-                                        json_str = line.replace("data:", "").strip()
-                                        if json_str == "[DONE]": break
-                                        try:
-                                            res_json = json.loads(json_str)
-                                            if isinstance(res_json, dict) and "choices" in res_json:
-                                                choice = res_json["choices"][0]
-                                                # 获取内容
-                                                delta = choice.get("delta", {})
-                                                c = delta.get("content", "")
-                                                if c: full_content += c
-                                                t = delta.get("reasoning_content", "")
-                                                if t: full_think += t
-                                            # SSE 模式下尝试在最后一个包获取 usage
-                                            if isinstance(res_json, dict) and "usage" in res_json and res_json["usage"]:
-                                                usage["prompt_tokens"] = res_json["usage"].get("prompt_tokens", 0)
-                                                usage["completion_tokens"] = res_json["usage"].get("completion_tokens", 0)
-                                        except: continue
-                                return False, full_think, full_content, int(usage["prompt_tokens"]), int(usage["completion_tokens"])
-                            else:
-                                raise sdk_err
+                    # 处理 SSE 格式或普通 JSON 格式
+                    if raw_text.startswith("data:"):
+                        full_content = ""
+                        full_think = ""
+                        usage = {"prompt_tokens": 0, "completion_tokens": 0}
+                        lines = raw_text.split("\n")
+                        for line in lines:
+                            if line.startswith("data:"):
+                                json_str = line.replace("data:", "").strip()
+                                if json_str == "[DONE]": break
+                                try:
+                                    res_json = json.loads(json_str)
+                                    if isinstance(res_json, dict) and "choices" in res_json:
+                                        choice = res_json["choices"][0]
+                                        delta = choice.get("delta", {})
+                                        c = delta.get("content", "")
+                                        if c: full_content += c
+                                        t = delta.get("reasoning_content", "")
+                                        if t: full_think += t
+                                    if isinstance(res_json, dict) and "usage" in res_json and res_json["usage"]:
+                                        usage["prompt_tokens"] = res_json["usage"].get("prompt_tokens", 0)
+                                        usage["completion_tokens"] = res_json["usage"].get("completion_tokens", 0)
+                                except: continue
+                        return False, full_think, full_content, int(usage["prompt_tokens"]), int(usage["completion_tokens"])
+                    else:
+                        response_json = resp.json()
+                        message = response_json["choices"][0]["message"]
+                        content = message.get("content", "")
+                        
+                        # 自适应提取推理过程
+                        response_think = ""
+                        response_content = content
+                        if content and "</think>" in content:
+                            splited = content.split("</think>")
+                            response_think = splited[0].removeprefix("<think>").replace("\n\n", "\n")
+                            response_content = splited[-1]
                         else:
-                            raise sdk_err
-                else:
-                    raise sdk_err
+                            response_think = message.get("reasoning_content", "")
+                        
+                        prompt_tokens = response_json.get("usage", {}).get("prompt_tokens", 0)
+                        completion_tokens = response_json.get("usage", {}).get("completion_tokens", 0)
+                        
+                        return False, response_think, response_content, int(prompt_tokens), int(completion_tokens)
+
+            except Exception as e:
+                raise e
 
         except Exception as e:
             error_str = str(e).lower()

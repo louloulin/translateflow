@@ -94,20 +94,6 @@ class PolisherTask(Base):
     # 单请求翻译任务
     def unit_translation_task(self) -> dict:
         
-        # Log source text for UI feedback
-        source_preview = list(self.source_text_dict.values())
-        if source_preview:
-            preview_text = source_preview[0][:50] + "..." if len(source_preview[0]) > 50 else source_preview[0]
-            if len(source_preview) > 1:
-                preview_text += f" (+{len(source_preview)-1} lines)"
-            self.print(f"[dim][{self.task_id}] Polishing: {preview_text}[/dim]")
-            self.print(f"[STATUS] [{self.task_id}] Polishing: {preview_text}")
-
-            # 对照模式下不再单独发送原文，改为在结果返回后打包发送
-            all_source = "\n".join(self.source_text_dict.values())
-        else:
-            all_source = ""
-
         wait_start_time = time.time()
         while True:
             # 检测是否收到停止翻译事件
@@ -128,6 +114,16 @@ class PolisherTask(Base):
 
         # 任务开始的时间 (真正开始处理，通过限流后)
         task_start_time = time.time()
+
+        # Log source text for UI feedback (Moved to after rate limit)
+        if Base.work_status != Base.STATUS.STOPING:
+            source_preview = list(self.source_text_dict.values())
+            if source_preview:
+                preview_text = source_preview[0][:50] + "..." if len(source_preview[0]) > 50 else source_preview[0]
+                if len(source_preview) > 1:
+                    preview_text += f" (+{len(source_preview)-1} lines)"
+                self.print(f"[dim][{self.task_id}] Polishing: {preview_text}[/dim]")
+                self.print(f"[STATUS] [{self.task_id}] Polishing: {preview_text}")
 
         # --- NEW: Dry Run Logic ---
         if self.config.get("enable_dry_run", True) and not getattr(Base, "_dry_run_done", False):

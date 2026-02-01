@@ -210,25 +210,6 @@ class TaskConfig(Base):
         # 1. 基础清洗
         url = raw_url.strip().rstrip('/')
 
-        # 2. 裁剪后缀
-        # 允许输入如: http://127.0.0.1:5000/v1/chat/completions -> 裁剪为 -> http://127.0.0.1:5000/v1
-        redundant_suffixes = ["/chat/completions", "/completions", "/chat"]
-        for suffix in redundant_suffixes:
-            if url.endswith(suffix):
-                url = url[:-len(suffix)]
-                url = url.rstrip('/') # 再次去除可能暴露出来的斜杠
-                break
-
-        # 3. 自动补全 /v1 逻辑
-        # 某些平台强制补全，或者配置开启了 auto_complete
-        should_auto_complete = (target_platform in ["sakura", "LocalLLM"]) or auto_complete
-
-        if should_auto_complete:
-            version_suffixes = ["/v1", "/v2", "/v3", "/v4", "/v5", "/v6"]
-            # 如果当前 URL 不以任何版本号结尾，则添加 /v1
-            if not any(url.endswith(suffix) for suffix in version_suffixes):
-                url += "/v1"
-
         # 4. 返回处理后的 URL
         return url
 

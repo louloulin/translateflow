@@ -2939,9 +2939,9 @@ class CLIMenu:
                     # --- END DEBUG PRINT ---
 
                     if not base_url_for_validation.startswith("http://") and not base_url_for_validation.startswith("https://"):
-                        api_url = "http://" + base_url_for_validation.rstrip('/') + "/chat/completions"
+                        api_url = "http://" + base_url_for_validation.rstrip('/')
                     else:
-                        api_url = base_url_for_validation.rstrip('/') + "/chat/completions"
+                        api_url = base_url_for_validation.rstrip('/')
                     # --- DEBUG PRINT ---
                     console.print(f"[dim]Debug: constructed api_url = {api_url}[/dim]")
                     # --- END DEBUG PRINT ---
@@ -2958,7 +2958,7 @@ class CLIMenu:
                     # Use raw httpx for online APIs validation to avoid SDK header interference (OpenAI headers often get blocked by WAF)
                     import httpx
                     # 使用准备好的 base_url (已处理过 /v1 等后缀)
-                    api_url = task_config.base_url.rstrip('/') + "/chat/completions"
+                    api_url = task_config.base_url.rstrip('/')
                     api_key = task_config.get_next_apikey()
                     model_name = task_config.model
                     
@@ -3868,10 +3868,14 @@ class CLIMenu:
             success.set(); finished.set()
         
         def on_stop(e, d): 
-            self.ui.log(f"[bold yellow]{i18n.get('msg_task_stopped')}[/bold yellow]")
+            # 只有在收到明确的任务停止完成事件时才记录日志
+            if e == Base.EVENT.TASK_STOP_DONE:
+                self.ui.log(f"[bold yellow]{i18n.get('msg_task_stopped')}[/bold yellow]")
+            
             # 记录是否为熔断导致的停止
             if d and d.get("status") == "critical_error":
                 self._is_critical_failure = True
+                self.ui.log(f"[bold red]熔断：因连续错误过多任务已暂停。[/bold red]")
         
         # 订阅事件
         EventManager.get_singleton().subscribe(Base.EVENT.TASK_COMPLETED, on_complete)
