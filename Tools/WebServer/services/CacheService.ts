@@ -75,11 +75,16 @@ export class CacheService {
    */
   async loadProject(projectPath: string): Promise<CacheProject> {
     try {
+      // 清理旧缓存防止混淆
+      this.memoryCache.clear();
+      this.cacheTimestamps.clear();
+      this.modifiedItems.clear();
+
       // 构建缓存文件路径
       const cacheFilePath = `${projectPath}/cache/AinieeCacheData.json`;
 
       // 通过DataService加载缓存数据（需要后端API支持）
-      const response = await fetch(`/api/cache/load?path=${encodeURIComponent(cacheFilePath)}`);
+      const response = await fetch(`/api/cache/load?path=${encodeURIComponent(cacheFilePath)}&_t=${Date.now()}`);
 
       if (!response.ok) {
         throw new Error(`Failed to load cache: ${response.statusText}`);
@@ -137,7 +142,7 @@ export class CacheService {
         items = this.project.files[filePath].items;
       } else {
         // 如果项目未加载或文件不存在，通过API获取
-        const response = await fetch(`/api/cache/file?path=${encodeURIComponent(filePath)}`);
+        const response = await fetch(`/api/cache/file?path=${encodeURIComponent(filePath)}&_t=${Date.now()}`);
         if (response.ok) {
           const fileData = await response.json();
           items = fileData.items || [];

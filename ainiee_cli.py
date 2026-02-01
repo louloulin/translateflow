@@ -140,6 +140,8 @@ class TaskUI:
             TextColumn("[bold blue]{task.fields[action]}", justify="left"),
             BarColumn(bar_width=None),
             "[progress.percentage]{task.percentage:>3.0f}%",
+            TimeElapsedColumn(),
+            TextColumn("/"),
             TimeRemainingColumn(),
             expand=True
         )
@@ -442,7 +444,7 @@ class TaskUI:
                 hotkeys = i18n.get("label_shortcuts")
             
             stats_markup = (
-                f"File: [bold]{current_file}[/] | RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/] | Tokens: [bold]{tokens}[/]\n"
+                f"File: [bold]{current_file}[/] | Progress: [bold]{completed}/{total}[/] | RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/] | Tokens: [bold]{tokens}[/]\n"
                 f"Status: [{self.current_status_color}]{status_text}[/{self.current_status_color}] | {hotkeys}"
             )
             self.stats_text = Text.from_markup(stats_markup, style="cyan")
@@ -3982,11 +3984,22 @@ class CLIMenu:
 
                 # --- 1. 文件与缓存加载 ---
                 try:
-                    cache_project = self.file_reader.read_files(self.config.get("translation_project", "AutoType"), current_target_path, self.config.get("exclude_rule_str", ""))
-                    if not cache_project:
-                        self.ui.log("[red]No files loaded.[/red]")
-                        time.sleep(2); raise Exception("Load failed")
-                    self.cache_manager.load_from_project(cache_project)
+                    # 如果是继续任务，尝试直接加载缓存
+                    cache_loaded = False
+                    if continue_status:
+                        cache_file_path = os.path.join(opath, "cache", "AinieeCacheData.json")
+                        if os.path.exists(cache_file_path):
+                            self.ui.log(f"[cyan]Resuming from cache: {cache_file_path}[/cyan]")
+                            self.cache_manager.load_from_file(opath)
+                            cache_loaded = True
+                    
+                    if not cache_loaded:
+                        cache_project = self.file_reader.read_files(self.config.get("translation_project", "AutoType"), current_target_path, self.config.get("exclude_rule_str", ""))
+                        if not cache_project:
+                            self.ui.log("[red]No files loaded.[/red]")
+                            time.sleep(2); raise Exception("Load failed")
+                        self.cache_manager.load_from_project(cache_project)
+                        
                     total_items = self.cache_manager.get_item_count()
                     translated = self.cache_manager.get_item_count_by_status(TranslationStatus.TRANSLATED)
                     self.ui.update_progress(None, {"line": translated, "total_line": total_items})

@@ -15,6 +15,7 @@ def create_httpx_client(
         max_connections=256,
         max_keepalive_connections=128,
         keepalive_expiry=30,
+        trust_env=True,
         **kwargs
 ):
     """
@@ -42,7 +43,7 @@ def create_httpx_client(
     return httpx.Client(
         http2=http2,
         headers=headers,
-        trust_env=True,
+        trust_env=trust_env,
         limits=httpx.Limits(
             max_connections=max_connections,
             max_keepalive_connections=max_keepalive_connections,
@@ -88,7 +89,7 @@ class LLMClientFactory:
             api_key = "none_api_key"
         api_url = config.get("api_url")
         key = ("openai_local", api_url, api_key)
-        return self._get_cached_client(key, lambda: self._create_openai_client(config, api_key))
+        return self._get_cached_client(key, lambda: self._create_openai_client(config, api_key, trust_env=False))
 
     def get_openai_client_sakura(self, config: Dict[str, Any]) -> OpenAI:
         """获取OpenAI客户端"""
@@ -97,7 +98,7 @@ class LLMClientFactory:
             api_key = "none_api_key"
         api_url = config.get("api_url")
         key = ("openai_sakura", api_url, api_key)
-        return self._get_cached_client(key, lambda: self._create_openai_client(config, api_key))
+        return self._get_cached_client(key, lambda: self._create_openai_client(config, api_key, trust_env=False))
 
     def get_anthropic_client(self, config: Dict[str, Any]) -> anthropic.Anthropic:
         """获取Anthropic客户端"""
@@ -133,7 +134,7 @@ class LLMClientFactory:
         """获取Google AI客户端"""
         api_key = config.get("api_key")
         api_url = config.get("api_url")
-        extra_body = config.get("extra_body", {})
+        extra_body = config.get("extra_body")
         extra_body_serialized = json.dumps(extra_body, sort_keys=True) if extra_body else None
         key = ("google", api_key, api_url, extra_body_serialized)
         return self._get_cached_client(key, lambda: self._create_google_client(config))
@@ -147,11 +148,11 @@ class LLMClientFactory:
         return self._clients[key]
 
     # 各种客户端创建函数
-    def _create_openai_client(self, config, api_key):
+    def _create_openai_client(self, config, api_key, trust_env=True):
         return OpenAI(
             base_url=config.get("api_url"),
             api_key=api_key,
-            http_client=create_httpx_client(),
+            http_client=create_httpx_client(trust_env=trust_env),
             default_headers=self._get_browser_headers() # 注入伪装头
         )
 

@@ -435,7 +435,7 @@ export const DataService = {
      */
     async getTaskStatus(): Promise<TaskStatusResponse> {
         try {
-            const res = await fetch(`${API_BASE}/task/status`);
+            const res = await fetch(`${API_BASE}/task/status?_t=${Date.now()}`);
             if (!res.ok) throw new Error('Failed to get status');
             return await res.json();
         } catch (error) {

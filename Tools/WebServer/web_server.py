@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 
 # --- Pre-emptive Import for FastAPI & Pydantic ---
 try:
-    from fastapi import FastAPI, HTTPException, Body, File, UploadFile
+    from fastapi import FastAPI, HTTPException, Body, File, UploadFile, Response
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
     from pydantic import BaseModel
@@ -123,6 +123,9 @@ class TaskManager:
             
             self.status = "running"
             self.logs.clear()
+            self.chart_data.clear()
+            self.current_source = ""
+            self.current_translation = ""
             self.stats = self._get_initial_stats()
             self.stats["status"] = "running"
             self.logs.append({"timestamp": time.time(), "message": "Task starting with parameters from web UI..."})
@@ -1083,7 +1086,8 @@ async def stop_task():
     return {"message": "Stop signal sent."}
 
 @app.get("/api/task/status")
-async def get_task_status():
+async def get_task_status(response: Response):
+    response.headers["Cache-Control"] = "no-store"
     return {
         "stats": task_manager.stats,
         "logs": list(task_manager.logs),

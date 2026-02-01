@@ -1,5 +1,5 @@
 from ModuleFolders.Infrastructure.Cache.CacheItem import TranslationStatus
-from ModuleFolders.Infrastructure.Cache.CacheProject import CacheProject
+from ModuleFolders.Infrastructure.Cache.CacheProject import CacheProject, ProjectType
 from PluginScripts.PluginBase import PluginBase
 
 
@@ -23,11 +23,23 @@ class BilingualPlugin(PluginBase):
             self.process_dictionary_list(event_data)
 
     def process_dictionary_list(self, event_data: CacheProject):
-        for entry in event_data.items_iter():
+        # List of project types that handle bilingual output natively in FileOutputer
+        native_bilingual_types = {
+            ProjectType.TXT,
+            ProjectType.EPUB,
+            ProjectType.SRT,
+            ProjectType.BABELDOC_PDF, 
+        }
 
-            source_text = entry.source_text
-            translated_text = entry.translated_text
-            translation_status = entry.translation_status
+        for file in event_data.files.values():
+            # Skip modification if the file type supports native bilingual output
+            if file.file_project_type in native_bilingual_types:
+                continue
 
-            if translation_status == TranslationStatus.TRANSLATED:
-                entry.translated_text = translated_text + "\n" + source_text
+            for entry in file.items:
+                source_text = entry.source_text
+                translated_text = entry.translated_text
+                translation_status = entry.translation_status
+
+                if translation_status == TranslationStatus.TRANSLATED:
+                    entry.translated_text = translated_text + "\n" + source_text
