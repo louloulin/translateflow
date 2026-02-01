@@ -350,30 +350,32 @@ class CacheManager(Base):
                 continue
 
             current_chunk, current_length = [], 0
-            # 2. 记录当前 chunk 在 `items` 这个筛选后列表中的起始索引
-            chunk_start_idx_in_filtered_list = 0
+            # 记录当前 chunk 的第一个条目，用于在原始列表中定位上下文
+            first_item_in_chunk = None
 
-            # 3. 使用 enumerate 同时获取筛选后列表的索引 `i` 和条目 `item`
+            # 3. 使用 enumerate 获取条目
             for i, item in enumerate(items):
                 item_length = item.get_token_count(item.source_text) if limit_type == "token" else 1
 
-                # 当一个新 chunk 开始时，记录它的起始索引 `i`
+                # 当一个新 chunk 开始时，记录它的第一个条目
                 if not current_chunk:
-                    chunk_start_idx_in_filtered_list = i
+                    first_item_in_chunk = item
 
                 # 如果当前 chunk 满了，提交它
                 if current_chunk and (current_length + item_length > limit_count):
                     chunks.append(current_chunk)
-                    # 4. 使用记录的、相对于 `items` 列表的正确索引来获取上文
+                    
+                    # 关键修复：从原始完整列表 (file.items) 中获取真实的上文
+                    # 这样即便断点续传，AI 也能看到前一页已经翻译过的内容
+                    real_idx = file.index_of(first_item_in_chunk.text_index)
                     previous_chunks.append(
-                        self.generate_previous_chunks(items, previous_line_count, chunk_start_idx_in_filtered_list)
+                        self.generate_previous_chunks(file.items, previous_line_count, real_idx)
                     )
                     file_paths.append(file.storage_path)
 
                     # 重置，为下一个 chunk 做准备
                     current_chunk, current_length = [], 0
-                    # 再次记录新 chunk 的起始索引
-                    chunk_start_idx_in_filtered_list = i
+                    first_item_in_chunk = item
 
                 # 添加当前条目到 chunk
                 current_chunk.append(item)
@@ -382,9 +384,10 @@ class CacheManager(Base):
             # 处理循环结束后剩余的最后一个 chunk
             if current_chunk:
                 chunks.append(current_chunk)
-                # 同样使用记录的正确索引
+                # 同样从原始列表中获取上下文
+                real_idx = file.index_of(first_item_in_chunk.text_index)
                 previous_chunks.append(
-                    self.generate_previous_chunks(items, previous_line_count, chunk_start_idx_in_filtered_list)
+                    self.generate_previous_chunks(file.items, previous_line_count, real_idx)
                 )
                 file_paths.append(file.storage_path)
 

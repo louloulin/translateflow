@@ -342,7 +342,9 @@ class TaskExecutor(Base):
 
             # 初始同步一次数据到 UI，确保不会显示为 0/0
             self.project_status_data.line = self.cache_manager.get_item_count_by_status(TranslationStatus.TRANSLATED)
-            self.emit(Base.EVENT.TASK_UPDATE, self.project_status_data.to_dict())
+            stats_dict = self.project_status_data.to_dict()
+            stats_dict['is_start'] = True
+            self.emit(Base.EVENT.TASK_UPDATE, stats_dict)
 
             # 触发插件事件
             self.plugin_manager.broadcast_event("text_filter", self.config, self.cache_manager.project)
@@ -589,7 +591,9 @@ class TaskExecutor(Base):
                 self.project_status_data.line = self.cache_manager.get_item_count_by_status(TranslationStatus.POLISHED)
 
             # 更新监控面板信息
-            self.emit(Base.EVENT.TASK_UPDATE, self.project_status_data.to_dict())
+            stats_dict = self.project_status_data.to_dict()
+            stats_dict['is_start'] = True
+            self.emit(Base.EVENT.TASK_UPDATE, stats_dict)
 
             # 触发插件事件
             self.plugin_manager.broadcast_event("text_filter", self.config, self.cache_manager.project)

@@ -453,7 +453,11 @@ class TaskUI:
             )
             self.stats_text = Text.from_markup(stats_markup, style="cyan")
             
-            self.progress.update(self.task_id, total=total, completed=completed, action=i18n.get('label_processing'))
+            if data.get('is_start'):
+                self.progress.reset(self.task_id, total=total, completed=completed, action=i18n.get('label_processing'))
+            else:
+                self.progress.update(self.task_id, total=total, completed=completed, action=i18n.get('label_processing'))
+            
             self.refresh_layout()
 
 class WebLogger:
@@ -2952,6 +2956,11 @@ class CLIMenu:
                         api_url = "http://" + base_url_for_validation.rstrip('/')
                     else:
                         api_url = base_url_for_validation.rstrip('/')
+                    
+                    # 针对本地接口，校验时必须补全路径以命中 completions 终点
+                    if not api_url.endswith('/chat/completions'):
+                        api_url = f"{api_url}/chat/completions"
+                    
                     # --- DEBUG PRINT ---
                     console.print(f"[dim]Debug: constructed api_url = {api_url}[/dim]")
                     # --- END DEBUG PRINT ---
@@ -2969,6 +2978,12 @@ class CLIMenu:
                     import httpx
                     # 使用准备好的 base_url (已处理过 /v1 等后缀)
                     api_url = task_config.base_url.rstrip('/')
+                    
+                    # 针对 OpenAI 格式且开启自动补全时，补全终点
+                    plat_conf = task_config.get_platform_configuration("translationReq")
+                    if plat_conf.get("auto_complete") and not api_url.endswith('/chat/completions'):
+                        api_url = f"{api_url}/chat/completions"
+                    
                     api_key = task_config.get_next_apikey()
                     model_name = task_config.model
                     
@@ -3065,6 +3080,7 @@ class CLIMenu:
             think_dp = self.config.get("think_depth", plat_conf.get("think_depth", "low"))
             think_budget = self.config.get("thinking_budget", plat_conf.get("thinking_budget", 4096))
             structured_mode = plat_conf.get("structured_output_mode", 0)
+            auto_comp = plat_conf.get("auto_complete", False)
 
             # 映射显示名称
             mode_display = ["OFF", "JSON Mode", "Function Call"][structured_mode] if structured_mode < 3 else "Unknown"
@@ -3082,6 +3098,7 @@ class CLIMenu:
             # Always show thinking options
             table.add_row("7", i18n.get("menu_api_think_depth"), str(think_dp))
             table.add_row("8", i18n.get("menu_api_think_budget"), str(think_budget))
+            table.add_row("10", i18n.get("自动补全 OpenAI 规范的 Chat 终点"), "[green]ON[/]" if auto_comp else "[red]OFF[/]")
 
             if api_format == "Anthropic":
                 table.add_row("9", i18n.get("menu_fetch_models"), "...")
@@ -3096,7 +3113,7 @@ class CLIMenu:
                     console.print(f"\n[red]⚠️ {i18n.get('warning_thinking_compatibility')}[/red]")
 
             console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
-            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=list("0123456789"), show_choices=False)
+            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=["0","1","2","3","4","5","6","7","8","9","10"], show_choices=False)
             console.print()
             
             if choice == 0: break
@@ -3141,6 +3158,10 @@ class CLIMenu:
                 self.config["thinking_budget"] = val
                 if tp in self.config.get("platforms", {}):
                     self.config["platforms"][tp]["thinking_budget"] = val
+            elif choice == 10:
+                new_state = not auto_comp
+                if tp in self.config.get("platforms", {}):
+                    self.config["platforms"][tp]["auto_complete"] = new_state
             elif choice == 9 and api_format == "Anthropic":
                 from ModuleFolders.Infrastructure.LLMRequester.AnthropicRequester import AnthropicRequester
                 from ModuleFolders.Infrastructure.LLMRequester.LLMRequester import LLMRequester

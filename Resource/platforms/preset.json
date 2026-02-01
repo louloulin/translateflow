@@ -237,6 +237,7 @@
                 "frequency_penalty",
                 "think_switch",
                 "think_depth",
+                "auto_complete",
                 "structured_output_mode"
             ]
         },
@@ -639,6 +640,7 @@
                 "presence_penalty",
                 "frequency_penalty",
                 "think_switch",
+                "auto_complete",
                 "structured_output_mode"
             ]
         },

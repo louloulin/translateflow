@@ -488,6 +488,18 @@
       "English": "Automatically append /v1 suffix to API URL",
       "日本語": "APIアドレスに /v1 サフィックスを自動追加"
     },
+    "自动补全 OpenAI 规范的 Chat 终点": {
+      "简中": "自动补全 OpenAI 规范的 Chat 终点",
+      "繁中": "自動完成 OpenAI 規範的 Chat 終點",
+      "English": "Auto-complete OpenAI standard Chat endpoint",
+      "日本語": "OpenAI標準のChatエンドポイントを自動補完"
+    },
+    "如果开启，当 URL 不以 /chat/completions 结尾时，程序将自动尝试补全它": {
+      "简中": "如果开启，当 URL 不以 /chat/completions 结尾时，程序将自动尝试补全它",
+      "繁中": "如果開啟，當 URL 不以 /chat/completions 結尾時，程式将自动嘗試補全它",
+      "English": "If enabled, the program will automatically append /chat/completions to the URL if it's missing",
+      "日本語": "有効にすると、URLが /chat/completions で終わっていない場合に自動的に補完します"
+    },
     "本地模型": {
       "简中": "本地模型",
       "繁中": "本地模型",

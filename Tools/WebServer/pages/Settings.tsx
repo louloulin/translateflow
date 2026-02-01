@@ -538,6 +538,30 @@ export const Settings: React.FC = () => {
                         <input type="text" value={config.base_url} onChange={(e) => handleChange('base_url', e.target.value)}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-primary text-sm" />
                     </div>
+
+                    <div className="col-span-1 md:col-span-2">
+                        <div className="flex items-center justify-between p-3 border border-slate-700 rounded-lg bg-slate-900/30">
+                            <div className="mr-4">
+                                <h4 className="text-slate-200 font-medium text-sm">{t('自动补全 OpenAI 规范的 Chat 终点')}</h4>
+                                <p className="text-xs text-slate-500">{t('如果开启，当 URL 不以 /chat/completions 结尾时，程序将自动尝试补全它')}</p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const newVal = !config.platforms[config.target_platform]?.auto_complete;
+                                    setConfig({
+                                        ...config,
+                                        platforms: {
+                                            ...config.platforms,
+                                            [config.target_platform]: { ...config.platforms[config.target_platform], auto_complete: newVal }
+                                        }
+                                    });
+                                }}
+                                className={`transition-all duration-300 ${config.platforms[config.target_platform]?.auto_complete ? getThemeColorClass() : 'text-slate-600'}`}
+                            >
+                                {config.platforms[config.target_platform]?.auto_complete ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Thinking Features - Always show */}

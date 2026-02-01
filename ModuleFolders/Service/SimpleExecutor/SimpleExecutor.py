@@ -54,8 +54,22 @@ class SimpleExecutor(Base):
         secret_key = data.get("secret_key")
 
         # 自动补全API地址
-        # 移除主动补全逻辑，遵循用户配置
-        pass
+        if api_url:
+            api_url = api_url.strip().rstrip('/')
+            
+            # 1. 裁剪后缀
+            redundant_suffixes = ["/chat/completions", "/completions", "/chat"]
+            for suffix in redundant_suffixes:
+                if api_url.endswith(suffix):
+                    api_url = api_url[:-len(suffix)].rstrip('/')
+                    break
+
+            # 2. 自动补全 /v1 逻辑
+            should_auto_complete_v1 = (platform_tag in ["sakura", "LocalLLM"]) or auto_complete
+            if should_auto_complete_v1:
+                version_suffixes = ["/v1", "/v2", "/v3", "/v4", "/v5", "/v6"]
+                if not any(api_url.endswith(suffix) for suffix in version_suffixes):
+                    api_url += "/v1"
 
         # 测试结果
         failure = []
@@ -98,7 +112,8 @@ class SimpleExecutor(Base):
                 "region":  region,
                 "access_key":  access_key,
                 "secret_key": secret_key,
-                "extra_body": extra_body
+                "extra_body": extra_body,
+                "auto_complete": auto_complete # 传递自动补全开关
             }
 
             #尝试请求

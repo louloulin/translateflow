@@ -1077,6 +1077,19 @@ async def run_task(payload: TaskPayload):
     if task_manager.status == "running":
         raise HTTPException(status_code=409, detail="A task is already running.")
     
+    # 强制同步 Web 端缓存到磁盘，确保子进程能读取到编辑器中最新的修改
+    try:
+        cm = get_cache_manager()
+        if hasattr(cm, 'project') and cm.project and getattr(cm, 'save_to_file_require_flag', False):
+            # 获取输出路径（优先使用 payload 里的，如果没有则从当前配置读）
+            output_path = payload.output_path or (await get_config()).get("label_output_path")
+            if output_path:
+                cm.save_to_file_require_path = output_path
+                cm.save_to_file()
+                cm.save_to_file_require_flag = False
+    except Exception as e:
+        print(f"Warning: Failed to flush web cache before task start: {e}")
+
     if not task_manager.start_task(payload.dict()):
         raise HTTPException(status_code=500, detail="Failed to start task process.")
     

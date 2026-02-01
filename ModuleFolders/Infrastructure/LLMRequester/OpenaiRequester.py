@@ -85,6 +85,11 @@ class OpenaiRequester(Base):
                 import json
                 
                 api_url = platform_config.get("api_url").rstrip('/')
+                
+                # 根据开关自选是否自动补全 OpenAI 规范的 Chat 终点
+                if platform_config.get("auto_complete", False) and not api_url.endswith('/chat/completions'):
+                    api_url = f"{api_url}/chat/completions"
+                
                 api_key = platform_config.get("api_key")
                 
                 auth_headers = {
