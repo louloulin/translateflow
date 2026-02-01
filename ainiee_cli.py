@@ -2788,21 +2788,53 @@ class CLIMenu:
         if choice == 0: return
         
         sel = sorted_keys[choice - 1]
-        
         plat_conf = options[sel]
+        
+        # 复制预设配置并合并当前已存在的配置
+        new_plat_conf = plat_conf.copy()
+        if sel in self.config.get("platforms", {}):
+            new_plat_conf.update(self.config["platforms"][sel])
+            
+        # 根据平台的 key_in_settings 询问配置
+        keys_to_prompt = plat_conf.get("key_in_settings", [])
+        
+        console.print(f"\n[bold cyan]--- {i18n.get('menu_api_manual')}: {sel} ---[/bold cyan]")
+        
+        for key in keys_to_prompt:
+            if key == "api_key":
+                val = Prompt.ask(i18n.get("prompt_api_key"), password=True, default=new_plat_conf.get("api_key", ""))
+                new_plat_conf["api_key"] = val.strip()
+            elif key == "api_url":
+                val = Prompt.ask(i18n.get("prompt_api_url"), default=new_plat_conf.get("api_url", ""))
+                new_plat_conf["api_url"] = val.strip()
+            elif key == "model":
+                val = Prompt.ask(i18n.get("prompt_model"), default=new_plat_conf.get("model", ""))
+                new_plat_conf["model"] = val.strip()
+            elif key == "access_key":
+                val = Prompt.ask("Access Key", password=True, default=new_plat_conf.get("access_key", ""))
+                new_plat_conf["access_key"] = val.strip()
+            elif key == "secret_key":
+                val = Prompt.ask("Secret Key", password=True, default=new_plat_conf.get("secret_key", ""))
+                new_plat_conf["secret_key"] = val.strip()
+            elif key == "region":
+                val = Prompt.ask("Region", default=new_plat_conf.get("region", "us-east-1"))
+                new_plat_conf["region"] = val.strip()
+            # 其他参数（如线程限制、参数等）建议到“手动编辑”中微调，此处仅询问核心连接参数以保持流程流畅
+        
+        # 更新全局配置
         self.config.update({
             "target_platform": sel, 
-            "base_url": plat_conf.get("api_url"), 
-            "model": plat_conf.get("models", [""])[0] if plat_conf.get("models") else plat_conf.get("model", ""),
+            "base_url": new_plat_conf.get("api_url", ""), 
+            "api_key": new_plat_conf.get("api_key", ""),
+            "model": new_plat_conf.get("model", ""),
             "api_settings": {"translate": sel, "polish": sel}
         })
-        if online:
-            key = Prompt.ask(i18n.get("msg_api_key_for").format(sel), password=True)
-            if sel not in self.config["platforms"]:
-                self.config["platforms"][sel] = plat_conf.copy()
-            self.config["platforms"][sel]["api_key"] = key
-            self.config["api_key"] = key
-        self.save_config(); console.print(f"[green]{i18n.get('msg_active_platform').format(sel)}[/green]"); time.sleep(1)
+        
+        if "platforms" not in self.config:
+            self.config["platforms"] = {}
+        self.config["platforms"][sel] = new_plat_conf
+        
+        self.save_config(); console.print(f"\n[green]{i18n.get('msg_active_platform').format(sel)}[/green]"); time.sleep(1)
     def validate_api(self):
         # 使用 TaskExecutor 中已有的 TaskConfig 实例，确保配置一致性
         task_config = self.task_executor.config
