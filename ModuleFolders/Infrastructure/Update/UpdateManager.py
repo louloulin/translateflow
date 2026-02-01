@@ -114,7 +114,17 @@ class UpdateManager(Base):
     def get_msg(self, key, **kwargs):
         lang = getattr(self.i18n, 'lang', 'en')
         lang_data = self._msgs.get(lang, self._msgs["en"])
-        text = lang_data.get(key, self._msgs["en"].get(key, key))
+        
+        # 优先从内部消息表查找
+        text = lang_data.get(key)
+        
+        # 如果内部没有，尝试从主 I18N 加载器查找
+        if text is None:
+            text = self.i18n.get(key)
+            # 如果主加载器也返回了原始 Key，说明都没找到，回退到内部英文表或保持原样
+            if text == key:
+                text = self._msgs["en"].get(key, key)
+        
         if kwargs:
             try: return text.format(**kwargs)
             except: return text

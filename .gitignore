@@ -47,3 +47,7 @@ Resource/queue_operations.log
 Resource/queue_operations.log
 Resource/queue_operations.log
 /Tools/WebServer/dist
+*.js
+/Tools/WebServer/dist
+Tools/WebServer/dist/index.html
+Tools/WebServer/dist/assets/index-KrfumMBl.css
