@@ -16,8 +16,12 @@ class UpdateManager(Base):
     UPDATE_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
     DOWNLOAD_MAIN_URL = f"https://github.com/ShadowLoveElysia/AiNiee-CLI/archive/refs/heads/main.zip"
     DOWNLOAD_TAG_URL = f"https://github.com/ShadowLoveElysia/AiNiee-CLI/archive/refs/tags/{{tag}}.zip"
+    # Web Dist 专门下载地址 (假设项目有特定的分发机制或 branch)
+    DOWNLOAD_WEB_STABLE_URL = f"https://github.com/ShadowLoveElysia/AiNiee-CLI/releases/latest/download/web-dist.zip"
+    DOWNLOAD_WEB_PREVIEW_URL = f"https://github.com/ShadowLoveElysia/AiNiee-CLI/archive/refs/heads/web-dist-dev.zip"
     RAW_VERSION_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/Resource/Version/version.json"
     COMMITS_URL = f"https://api.github.com/repos/{GITHUB_REPO}/commits"
+    RELEASES_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases"
     
     # GitHub 代理列表，首位为空表示直接连接
     GITHUB_PROXIES = [
@@ -399,7 +403,163 @@ class UpdateManager(Base):
             else: subprocess.Popen([executable, script_path])
         sys.exit(0)
 
+    def setup_web_server(self, manual=False):
+        """WebServer 独立下载与设置流程"""
+        from rich.prompt import Confirm
+        
+        # 1. 检查运行库环境 (Environment Automatic Preparation)
+        deps_missing = False
+        try:
+            import fastapi
+            import uvicorn
+        except ImportError:
+            deps_missing = True
+        
+        if deps_missing:
+            # 自动检测是否可以使用 uv
+            use_uv = False
+            try:
+                subprocess.run(["uv", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                use_uv = True
+            except: pass
+            
+            tool_name = "uv" if use_uv else "pip"
+            msg = self.get_msg('msg_web_install_deps')
+            
+            # 如果是手动模式，或者检测到缺失，询问是否安装
+            # 这里的 msg_web_install_deps 原文是 "检测到缺失运行环境，是否执行 'uv add...' ..."
+            # 我们直接使用它即可
+            if Confirm.ask(f"[yellow]{msg}[/yellow]"):
+                self.print(f"[cyan]Installing dependencies using {tool_name}...[/cyan]")
+                
+                cmd = ["uv", "add"] if use_uv else [sys.executable, "-m", "pip", "install"]
+                pkgs = ["fastapi", "uvicorn[standard]", "pydantic", "python-multipart"]
+                
+                try:
+                    subprocess.run(cmd + pkgs, check=True)
+                    self.print("[green]Dependencies installed successfully.[/green]")
+                except subprocess.CalledProcessError:
+                    self.error(f"Failed to install dependencies with {tool_name}. Please try manually.")
 
+        # 2. 选择安装方式
+        if not manual:
+            self.print(f"\n[bold yellow]{self.get_msg('msg_web_dist_missing')}[/bold yellow]")
+        
+        table = Table(show_header=False, box=None)
+        table.add_row("[cyan]1.[/]", self.get_msg("menu_web_setup_1"))
+        table.add_row("[cyan]2.[/]", self.get_msg("menu_web_setup_2"))
+        table.add_row("[red]0.[/]", self.get_msg("menu_web_setup_3"))
+        self.print(table)
+        
+        choice = IntPrompt.ask(self.i18n.get('prompt_select'), choices=["0", "1", "2"], show_choices=False)
+        
+        if choice == 1: # GitHub Download
+            self.print(f"\n[cyan]{self.get_msg('menu_web_ver_stable')}[/cyan]")
+            self.print(f"[yellow]{self.get_msg('menu_web_ver_preview')}[/yellow]")
+            ver_choice = IntPrompt.ask(self.i18n.get('prompt_select'), choices=["1", "2"], default=1)
+            
+            url = ""
+            if ver_choice == 1:
+                # Stable: Use Latest Release asset
+                url = self.DOWNLOAD_WEB_STABLE_URL
+            else:
+                # Dev: Use Latest Pre-release asset (web-dist-dev.zip)
+                self.print("[cyan]Fetching latest pre-release info...[/cyan]")
+                try:
+                    # 获取所有 Release
+                    releases = requests.get(self.RELEASES_URL, timeout=10).json()
+                    # 找到第一个 Prerelease
+                    target_release = next((r for r in releases if r.get('prerelease')), None)
+                    
+                    if target_release:
+                        # 找到 web-dist-dev.zip 资源
+                        asset = next((a for a in target_release.get('assets', []) if a['name'] == 'web-dist-dev.zip'), None)
+                        if asset:
+                            url = asset['browser_download_url']
+                            self.print(f"[green]Found Pre-release: {target_release['tag_name']}[/green]")
+                        else:
+                            self.error("Found pre-release but 'web-dist-dev.zip' asset is missing.")
+                    else:
+                        self.error("No pre-release found.")
+                except Exception as e:
+                    self.error(f"Failed to fetch pre-release info: {e}")
+            
+            if not url:
+                self.error("Could not determine download URL.")
+                return
+
+            if ver_choice == 2:
+                self.print(self.get_msg("msg_web_preview_warn"))
+            
+            temp_zip = os.path.join(self.project_root, "web_dist_temp.zip")
+            success = False
+            for proxy in self.GITHUB_PROXIES:
+                try:
+                    # 对于 API 获取的 URL，通常不需要代理前缀（因为是 AWS S3 链接），
+                    # 但如果是 GitHub Release 页面链接，则可能需要。
+                    # 为了兼容性，如果是 S3 链接 (github-releases.githubusercontent.com)，通常直连较快。
+                    # 这里保留原有逻辑，如果 URL 已经是完整链接且不包含 github.com (比如 S3)，可能不需要 proxy
+                    
+                    target_url = url
+                    if proxy and "github.com" in url:
+                        target_url = f"{proxy}{url}"
+                    
+                    self.print(f"[cyan]{self.get_msg('msg_web_downloading')} ({proxy or 'Direct'})...[/cyan]")
+                    r = requests.get(target_url, stream=True, timeout=60)
+                    r.raise_for_status()
+                    with open(temp_zip, 'wb') as f:
+                        for chunk in r.iter_content(8192): f.write(chunk)
+                    success = True; break
+                except: continue
+            
+            if success:
+                self._apply_web_dist(temp_zip)
+            else:
+                self.error(self.get_msg("msg_web_setup_fail"))
+
+        elif choice == 2: # Local Build
+            web_dir = os.path.join(self.project_root, "Tools", "WebServer")
+            if not os.path.exists(os.path.join(web_dir, "package.json")):
+                self.error("WebServer source files not found.")
+                return
+            
+            self.print(f"[cyan]{self.get_msg('msg_web_build_start')}[/cyan]")
+            try:
+                subprocess.run("npm install && npm run build", shell=True, cwd=web_dir, check=True)
+                self.print(f"[bold green]{self.get_msg('msg_web_setup_ok')}[/bold green]")
+            except:
+                self.error(self.get_msg("msg_web_setup_fail"))
+
+    def _apply_web_dist(self, zip_path):
+        """部署 Web 静态资源 (Smart Extraction)"""
+        temp_extract = os.path.join(self.project_root, "web_extract_temp")
+        dist_target = os.path.join(self.project_root, "Tools", "WebServer", "dist")
+        
+        try:
+            self.print(f"[cyan]{self.get_msg('msg_web_extracting')}...[/cyan]")
+            if os.path.exists(temp_extract): shutil.rmtree(temp_extract)
+            with zipfile.ZipFile(zip_path, 'r') as z: z.extractall(temp_extract)
+            
+            # 扫描包含 index.html 的文件夹 (Reinforced Deployment Logic)
+            src_dist = None
+            for root, dirs, files in os.walk(temp_extract):
+                if "index.html" in files:
+                    src_dist = root
+                    break
+            
+            if src_dist:
+                # Force rename/move to dist
+                if os.path.exists(dist_target): shutil.rmtree(dist_target)
+                shutil.copytree(src_dist, dist_target)
+                self.print(f"[bold green]{self.get_msg('msg_web_setup_ok')}[/bold green]")
+            else:
+                raise Exception("index.html not found in package. Invalid distribution.")
+                
+        except Exception as e:
+            self.error(f"Failed to deploy web assets: {e}")
+        finally:
+            if os.path.exists(zip_path): os.remove(zip_path)
+            if os.path.exists(temp_extract): shutil.rmtree(temp_extract)
     def start_manual_update(self):
         """手动更新逻辑"""
         update_dir = os.path.join(self.project_root, "Update")

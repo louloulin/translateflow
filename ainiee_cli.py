@@ -576,9 +576,19 @@ class CLIMenu:
         Base.current_interface_language = "简中" if current_lang == "zh_CN" else "日语" if current_lang == "ja" else "英语"
         Base.multilingual_interface_dict = Base.load_translations(Base, os.path.join(PROJECT_ROOT, "Resource", "Localization"))
         
+        # --- WebServer 独立检测 ---
+        self._check_web_server_dist()
+
         signal.signal(signal.SIGINT, self.signal_handler)
         self.task_running, self.original_print = False, Base.print
         self.web_server_thread = None
+
+    def _check_web_server_dist(self):
+        """检查 WebServer 编译产物是否存在"""
+        dist_path = os.path.join(PROJECT_ROOT, "Tools", "WebServer", "dist", "index.html")
+        if not os.path.exists(dist_path):
+            self.display_banner()
+            self.update_manager.setup_web_server()
 
         # 队列日志监控相关
         self._last_queue_log_size = 0
@@ -1617,8 +1627,8 @@ class CLIMenu:
         while True:
             self.display_banner()
             table = Table(show_header=False, box=None)
-            menus = ["start_translation", "start_polishing", "start_all_in_one", "export_only", "editor", "settings", "api_settings", "glossary", "plugin_settings", "task_queue", "profiles", "qa", "update", "start_web_server"]
-            colors = ["green", "green", "bold green", "magenta", "bold cyan", "blue", "blue", "yellow", "cyan", "bold blue", "cyan", "yellow", "dim", "bold magenta"]
+            menus = ["start_translation", "start_polishing", "start_all_in_one", "export_only", "editor", "settings", "api_settings", "glossary", "plugin_settings", "task_queue", "profiles", "qa", "update", "update_web", "start_web_server"]
+            colors = ["green", "green", "bold green", "magenta", "bold cyan", "blue", "blue", "yellow", "cyan", "bold blue", "cyan", "yellow", "dim", "bold magenta", "magenta"]
             
             for i, (m, c) in enumerate(zip(menus, colors)): 
                 label = i18n.get(f"menu_{m}")
@@ -1649,6 +1659,7 @@ class CLIMenu:
                 self.profiles_menu,
                 self.qa_menu,
                 self.update_manager.start_update,
+                lambda: self.update_manager.setup_web_server(manual=True),
                 self.start_web_server
             ]
             actions[choice]()
@@ -3483,20 +3494,67 @@ class CLIMenu:
         if not files: return
         for i, f in enumerate(files): console.print(f"{i+1}. {f}")
         
-        choice_str = Prompt.ask(f"\n{i18n.get('prompt_template_select')}", choices=[str(i+1) for i in range(len(files))] + ["0"], show_choices=False)
+        # Add "Create New" option
+        console.print(f"[cyan]N.[/] {i18n.get('menu_prompt_create')}")
+        console.print(f"[dim]0. {i18n.get('menu_cancel')}[/dim]")
+
+        choices = [str(i+1) for i in range(len(files))] + ["0", "N", "n"]
+        choice_str = Prompt.ask(f"\n{i18n.get('prompt_template_select')}", choices=choices, show_choices=False)
+        
         if choice_str == "0": return
         
+        if choice_str.lower() == "n":
+            new_name = Prompt.ask(i18n.get('prompt_new_prompt_name')).strip()
+            if not new_name: return
+            if not new_name.endswith(".txt"): new_name += ".txt"
+            new_path = os.path.join(prompt_dir, new_name)
+            if os.path.exists(new_path):
+                console.print(f"[red]{i18n.get('msg_file_exists')}[/red]")
+                time.sleep(1)
+                return
+            
+            # Create empty file
+            try:
+                with open(new_path, 'w', encoding='utf-8') as f: f.write("")
+                console.print(f"[green]{i18n.get('msg_file_created')}[/green]")
+                
+                # Open in editor
+                if open_in_editor(new_path):
+                     Prompt.ask(f"\n{i18n.get('msg_press_enter_after_save')}")
+                
+                # Recursive call to refresh list
+                self.select_prompt_template(folder, key)
+                return
+            except Exception as e:
+                console.print(f"[red]Error creating file: {e}[/red]")
+                time.sleep(2)
+                return
+
         f_name = files[int(choice_str)-1]
+        file_path = os.path.join(prompt_dir, f_name)
+        
         try:
-            with open(os.path.join(prompt_dir, f_name), 'r', encoding='utf-8') as f: content = f.read()
+            with open(file_path, 'r', encoding='utf-8') as f: content = f.read()
             
             # Preview
             console.print(Panel(content, title=f"Preview: {f_name}", border_style="blue", height=15))
             
-            if Confirm.ask(f"Apply '{f_name}'?", default=True):
+            # Action Menu
+            console.print(f"[bold cyan]1.[/] {i18n.get('opt_apply')}")
+            console.print(f"[bold cyan]2.[/] {i18n.get('opt_edit_in_editor')}")
+            console.print(f"[dim]0. {i18n.get('menu_cancel')}[/dim]")
+            
+            action = IntPrompt.ask(i18n.get('prompt_select'), choices=["0", "1", "2"], default=1, show_choices=False)
+            
+            if action == 1:
                 self.config[key] = {"last_selected_id": f_name.replace(".txt", ""), "prompt_content": content}
                 self.save_config()
                 console.print(f"[green]{i18n.get('msg_prompt_updated')}[/green]")
+            elif action == 2:
+                if open_in_editor(file_path):
+                    Prompt.ask(f"\n{i18n.get('msg_press_enter_after_save')}")
+                    self.select_prompt_template(folder, key)
+                    return
             else:
                 console.print("[yellow]Cancelled.[/yellow]")
             time.sleep(1)
