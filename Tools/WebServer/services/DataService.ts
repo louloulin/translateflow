@@ -135,6 +135,23 @@ export const DataService = {
         }
     },
 
+    async createPlatform(name: string, baseConfig?: any): Promise<void> {
+        try {
+            const res = await fetch(`${API_BASE}/platforms/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, base_config: baseConfig })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || 'Failed to create platform');
+            }
+        } catch (error) {
+            console.error("API Error: createPlatform", error);
+            throw error;
+        }
+    },
+
     // --- Rules Profiles ---
 
     async getRulesProfiles(): Promise<string[]> {

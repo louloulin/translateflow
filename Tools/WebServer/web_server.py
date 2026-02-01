@@ -612,20 +612,21 @@ async def get_config():
         except: pass
 
     # 2. Load Rules Config
-    rules_path = get_active_rules_profile_path()
     rules_config = {}
-    if os.path.exists(rules_path):
-        try:
-            with open(rules_path, 'r', encoding='utf-8-sig') as f:
-                rules_config = json.load(f)
-        except: pass
+    if current_rules_name and current_rules_name != "None":
+        rules_path = get_active_rules_profile_path()
+        if os.path.exists(rules_path):
+            try:
+                with open(rules_path, 'r', encoding='utf-8-sig') as f:
+                    rules_config = json.load(f)
+            except: pass
 
-    # 3. Merge (Rules override Profile if keys overlap, though they shouldn't in the new architecture)
-    # Fields to pull from rules:
+    # 3. Merge (Rules override Profile if keys overlap)
     rule_keys = [
         "prompt_dictionary_data", "exclusion_list_data", "characterization_data",
         "world_building_content", "writing_style_content", "translation_example_data"
     ]
+    
     for k in rule_keys:
         if k in rules_config:
             loaded_config[k] = rules_config[k]
@@ -810,19 +811,19 @@ async def get_profiles():
 async def get_rules_profiles():
     if not os.path.isdir(RULES_PROFILES_PATH):
         os.makedirs(RULES_PROFILES_PATH, exist_ok=True)
-        return ["default"]
+        return ["None", "default"]
     profiles = [f.replace(".json", "") for f in os.listdir(RULES_PROFILES_PATH) if f.endswith(".json")]
-    return profiles or ["default"]
+    return ["None"] + (profiles or ["default"])
 
 @app.post("/api/rules_profiles/switch")
 async def switch_rules_profile(request: RulesProfileSwitchRequest):
     global _config_cache
     profile_name = request.profile
-    profile_path = os.path.join(RULES_PROFILES_PATH, f"{profile_name}.json")
     
-    if not os.path.exists(profile_path):
-        # Create default if switching to something that doesn't exist? No, error.
-        raise HTTPException(status_code=404, detail="Rules profile not found")
+    if profile_name != "None":
+        profile_path = os.path.join(RULES_PROFILES_PATH, f"{profile_name}.json")
+        if not os.path.exists(profile_path):
+            raise HTTPException(status_code=404, detail="Rules profile not found")
     
     try:
         root_config = {}
@@ -1020,6 +1021,51 @@ async def delete_profile(request: ProfileDeleteRequest):
         raise HTTPException(status_code=500, detail=f"Failed to delete profile: {e}")
 
 # --- Task API Endpoints ---
+
+class PlatformCreateRequest(BaseModel):
+    name: str
+    base_config: Optional[Dict[str, Any]] = None
+
+@app.post("/api/platforms/create")
+async def create_platform(request: PlatformCreateRequest):
+    global _config_cache
+    new_name = request.name.strip()
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Platform name cannot be empty")
+    
+    # Load current platforms from active profile
+    profile_path = get_active_profile_path()
+    try:
+        with open(profile_path, 'r', encoding='utf-8-sig') as f:
+            config = json.load(f)
+        
+        if "platforms" not in config: config["platforms"] = {}
+        if new_name in config["platforms"]:
+            raise HTTPException(status_code=409, detail="Platform already exists")
+        
+        # Use template from custom or a default
+        template = config["platforms"].get("custom", {
+            "tag": "custom", "group": "custom", "name": "Custom API",
+            "api_url": "", "api_key": "", "api_format": "OpenAI",
+            "model": "gpt-4o", "key_in_settings": ["api_url", "api_key", "model"]
+        }).copy()
+        
+        template["tag"] = new_name
+        template["name"] = new_name
+        
+        if request.base_config:
+            template.update(request.base_config)
+            
+        config["platforms"][new_name] = template
+        
+        with open(profile_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
+            
+        _config_cache.clear()
+        return {"message": f"Platform '{new_name}' created", "config": template}
+    except Exception as e:
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/task/run")
 async def run_task(payload: TaskPayload):

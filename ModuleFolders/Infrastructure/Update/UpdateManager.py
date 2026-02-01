@@ -212,7 +212,7 @@ class UpdateManager(Base):
         self.print(Panel(info_panel_text, title=f"[bold cyan]{self.get_msg('menu_title')}[/bold cyan]", expand=False))
         self.print(table)
         
-        choice = IntPrompt.ask(self.i18n.get('prompt_select'), choices=[0, 1, 2], show_choices=False)
+        choice = IntPrompt.ask(self.i18n.get('prompt_select'), choices=["0", "1", "2"], show_choices=False)
         
         download_url = ""
         target_v = ""

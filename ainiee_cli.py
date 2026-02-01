@@ -1304,30 +1304,32 @@ class CLIMenu:
                     self.config[k] = v
 
         # 4. Load independent Rules Profile
-        rules_path = os.path.join(self.rules_profiles_dir, f"{self.active_rules_profile_name}.json")
-        if not os.path.exists(rules_path):
-            # Create default rules profile if missing
-            default_rules = {
-                "prompt_dictionary_data": [], "exclusion_list_data": [], "characterization_data": [],
-                "world_building_content": "", "writing_style_content": "", "translation_example_data": []
-            }
-            try:
-                with open(rules_path, 'w', encoding='utf-8') as f:
-                    json.dump(default_rules, f, indent=4, ensure_ascii=False)
-            except: pass
-        else:
-            try:
-                with open(rules_path, 'r', encoding='utf-8-sig') as f:
-                    rules_data = json.load(f)
-                # Apply rules to current config
-                rule_keys = [
-                    "prompt_dictionary_data", "exclusion_list_data", "characterization_data",
-                    "world_building_content", "writing_style_content", "translation_example_data"
-                ]
-                for rk in rule_keys:
-                    if rk in rules_data:
-                        self.config[rk] = rules_data[rk]
-            except: pass
+        rule_keys = [
+            "prompt_dictionary_data", "exclusion_list_data", "characterization_data",
+            "world_building_content", "writing_style_content", "translation_example_data"
+        ]
+        
+        if self.active_rules_profile_name and self.active_rules_profile_name != "None":
+            rules_path = os.path.join(self.rules_profiles_dir, f"{self.active_rules_profile_name}.json")
+            if not os.path.exists(rules_path):
+                # Create default rules profile if missing
+                default_rules = {
+                    "prompt_dictionary_data": [], "exclusion_list_data": [], "characterization_data": [],
+                    "world_building_content": "", "writing_style_content": "", "translation_example_data": []
+                }
+                try:
+                    with open(rules_path, 'w', encoding='utf-8') as f:
+                        json.dump(default_rules, f, indent=4, ensure_ascii=False)
+                except: pass
+            else:
+                try:
+                    with open(rules_path, 'r', encoding='utf-8-sig') as f:
+                        rules_data = json.load(f)
+                    # Apply rules to current config
+                    for rk in rule_keys:
+                        if rk in rules_data:
+                            self.config[rk] = rules_data[rk]
+                except: pass
 
         # 5. If profile was missing or merged, ensure it's saved to disk
         if not profile_exists or not user_config:
@@ -1373,10 +1375,11 @@ class CLIMenu:
             json.dump(settings_to_save, f, indent=4, ensure_ascii=False)
 
         # 2. Save Rules
-        active_rules_path = os.path.join(self.rules_profiles_dir, f"{self.active_rules_profile_name}.json")
-        rules_to_save = {k: v for k, v in self.config.items() if k in rule_keys}
-        with open(active_rules_path, 'w', encoding='utf-8') as f:
-            json.dump(rules_to_save, f, indent=4, ensure_ascii=False)
+        if self.active_rules_profile_name != "None":
+            active_rules_path = os.path.join(self.rules_profiles_dir, f"{self.active_rules_profile_name}.json")
+            rules_to_save = {k: v for k, v in self.config.items() if k in rule_keys}
+            with open(active_rules_path, 'w', encoding='utf-8') as f:
+                json.dump(rules_to_save, f, indent=4, ensure_ascii=False)
 
         # Optionally save the root config (active profile pointers)
         if save_root:
@@ -1657,10 +1660,15 @@ class CLIMenu:
             
             profiles = [f.replace(".json", "") for f in os.listdir(self.rules_profiles_dir) if f.endswith(".json")]
             if not profiles: profiles = ["default"]
+            
+            # 始终包含 "None" 选项
+            all_options = ["None"] + profiles
 
             p_table = Table(show_header=False, box=None)
-            for i, p in enumerate(profiles):
-                p_table.add_row(f"[cyan]{i+1}.[/]", p + (" [green](Active)[/]" if p == self.active_rules_profile_name else ""))
+            for i, p in enumerate(all_options):
+                display_name = i18n.get("opt_none") if p == "None" else p
+                is_active = p == self.active_rules_profile_name
+                p_table.add_row(f"[cyan]{i+1}.[/]", display_name + (" [green](Active)[/]" if is_active else ""))
             console.print(p_table)
             
             console.print(f"\n[cyan]A.[/] {i18n.get('menu_profile_create')}")
@@ -1672,6 +1680,10 @@ class CLIMenu:
             elif choice_str == 'A':
                 new_name = Prompt.ask(i18n.get("prompt_profile_name")).strip()
                 if new_name:
+                    if new_name.lower() == "none":
+                        console.print("[red]Reserved name 'None' cannot be used.[/red]")
+                        time.sleep(1)
+                        continue
                     path = os.path.join(self.rules_profiles_dir, f"{new_name}.json")
                     with open(path, 'w', encoding='utf-8') as f:
                         json.dump({}, f)
@@ -1679,8 +1691,8 @@ class CLIMenu:
                     time.sleep(1)
             elif choice_str.isdigit():
                 sel_idx = int(choice_str)
-                if 1 <= sel_idx <= len(profiles):
-                    sel = profiles[sel_idx - 1]
+                if 1 <= sel_idx <= len(all_options):
+                    sel = all_options[sel_idx - 1]
                     self.active_rules_profile_name = sel
                     self.root_config["active_rules_profile"] = sel
                     self.save_config(save_root=True)
@@ -2815,10 +2827,38 @@ class CLIMenu:
                 all_keys.append(k)
             console.print(table_cust)
 
+        # 3. 新增自定义选项
+        console.print(f"\n[cyan]A.[/] [bold]{i18n.get('menu_api_add_custom')}[/bold]")
         console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
         
-        choice = IntPrompt.ask(i18n.get('prompt_select'), choices=[str(i) for i in range(len(all_keys)+1)], show_choices=False)
-        if choice == 0: return
+        choice_str = Prompt.ask(i18n.get('prompt_select')).upper()
+        if choice_str == '0': return
+        
+        if choice_str == 'A':
+            new_tag = Prompt.ask(i18n.get("prompt_custom_api_name")).strip()
+            if not new_tag: return
+            
+            # 使用 custom 模板创建
+            custom_template = platforms.get("custom", {
+                "tag": "custom", "group": "custom", "name": "Custom API",
+                "api_url": "", "api_key": "", "api_format": "OpenAI",
+                "model": "gpt-4o", "key_in_settings": ["api_url", "api_key", "model"]
+            }).copy()
+            
+            custom_template["tag"] = new_tag
+            custom_template["name"] = new_tag
+            
+            if "platforms" not in self.config: self.config["platforms"] = {}
+            self.config["platforms"][new_tag] = custom_template
+            self.save_config()
+            console.print(f"[green]{i18n.get('msg_custom_api_created').format(new_tag)}[/green]")
+            time.sleep(1)
+            # 递归重新打开菜单以显示新平台
+            return self.select_api_menu(online)
+
+        if not choice_str.isdigit(): return
+        choice = int(choice_str)
+        if not (1 <= choice <= len(all_keys)): return
         
         sel = all_keys[choice - 1]
         plat_conf = target_options[sel]
@@ -4511,11 +4551,13 @@ class CLIMenu:
 
                     # 4. Profiles
                     profiles = self._get_profiles_list(self.profiles_dir)
-                    rules = self._get_profiles_list(self.rules_profiles_dir)
+                    rules = ["None"] + self._get_profiles_list(self.rules_profiles_dir)
                     console.print(f"\n[cyan]{i18n.get('label_profiles')}:[/] {', '.join(profiles)}")
                     t.profile = Prompt.ask(f"{i18n.get('prompt_profile_queue')}{i18n.get('tip_follow_profile')}", default=t.profile or "") or None
                     console.print(f"[cyan]{i18n.get('label_rules_profiles')}:[/] {', '.join(rules)}")
-                    t.rules_profile = Prompt.ask(f"{i18n.get('prompt_rules_profile_queue')}{i18n.get('tip_follow_profile')}", default=t.rules_profile or "") or None
+                    t.rules_profile = Prompt.ask(f"{i18n.get('prompt_rules_profile_queue')}{i18n.get('tip_follow_profile')}", 
+                                                choices=rules + [""], 
+                                                default=t.rules_profile or "") or None
 
                     # 5. API Overrides
                     current_platform = t.platform or self.config.get("target_platform")

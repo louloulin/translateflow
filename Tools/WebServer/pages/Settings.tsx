@@ -90,6 +90,7 @@ export const Settings: React.FC = () => {
   
   // CRUD State
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingPlatform, setIsCreatingPlatform] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
@@ -197,6 +198,17 @@ export const Settings: React.FC = () => {
           model: p.model || config.model,
           api_settings: { translate: tag, polish: tag }
       });
+  };
+
+  const handleCreatePlatform = async () => {
+      if (!tempName.trim()) { setActionError("Name cannot be empty"); return; }
+      try {
+          await DataService.createPlatform(tempName);
+          const newConfig = await DataService.getConfig();
+          setConfig(newConfig);
+          setIsCreatingPlatform(false);
+          setTempName('');
+      } catch (e: any) { setActionError(e.message); }
   };
 
   const handlePoolAdd = () => {
@@ -461,18 +473,43 @@ export const Settings: React.FC = () => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div className="space-y-2">
-                        <label className="text-xs font-semibold text-slate-400 uppercase">{t('label_platform')}</label>
-                        <select 
-                            value={config.target_platform} 
-                            onChange={(e) => handlePlatformChange(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-primary text-sm"
-                        >
-                            {Object.values(config.platforms).map((p: PlatformConfig) => (
-                                <option key={p.tag} value={p.tag}>
-                                    {p.name}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-semibold text-slate-400 uppercase">{t('label_platform')}</label>
+                            <button 
+                                onClick={() => setIsCreatingPlatform(true)}
+                                className="text-[10px] font-bold text-primary flex items-center gap-1 hover:text-cyan-300 transition-colors"
+                            >
+                                <Plus size={12} /> {t('menu_api_add_custom') || 'Add New'}
+                            </button>
+                        </div>
+                        
+                        {isCreatingPlatform ? (
+                            <div className="flex gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <input 
+                                    autoFocus
+                                    className="flex-1 bg-slate-950 border border-slate-600 rounded px-3 py-1 text-white text-xs"
+                                    placeholder="Platform name..."
+                                    value={tempName}
+                                    onChange={(e) => setTempName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleCreatePlatform()}
+                                />
+                                <button onClick={() => setIsCreatingPlatform(false)} className="p-1 rounded bg-slate-800 text-slate-400"><X size={14}/></button>
+                                <button onClick={handleCreatePlatform} className="p-1 rounded bg-primary text-slate-900"><Check size={14}/></button>
+                            </div>
+                        ) : (
+                            <select 
+                                value={config.target_platform} 
+                                onChange={(e) => handlePlatformChange(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-primary text-sm"
+                            >
+                                {Object.values(config.platforms).map((p: PlatformConfig) => (
+                                    <option key={p.tag} value={p.tag}>
+                                        {p.name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                        {actionError && isCreatingPlatform && <p className="text-red-400 text-[10px]">{actionError}</p>}
                     </div>
                     <div className="space-y-2">
                         <label className="text-xs font-semibold text-slate-400 uppercase">{t('label_model')}</label>
