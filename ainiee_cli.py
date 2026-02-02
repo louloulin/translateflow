@@ -2979,9 +2979,14 @@ class CLIMenu:
                     # 使用准备好的 base_url (已处理过 /v1 等后缀)
                     api_url = task_config.base_url.rstrip('/')
                     
-                    # 针对 OpenAI 格式且开启自动补全时，补全终点
+                    # 获取平台配置信息
                     plat_conf = task_config.get_platform_configuration("translationReq")
-                    if plat_conf.get("auto_complete") and not api_url.endswith('/chat/completions'):
+                    api_format = plat_conf.get("api_format", "OpenAI")
+                    auto_complete = plat_conf.get("auto_complete", False)
+
+                    # 针对 OpenAI 格式，只有在开启自动补全时才尝试追加终点后缀
+                    # 如果用户关闭了自动补全，我们认为用户提供的就是一个可以直接 POST 的完整地址
+                    if api_format == "OpenAI" and auto_complete and not any(api_url.endswith(s) for s in ["/chat/completions", "/completions"]):
                         api_url = f"{api_url}/chat/completions"
                     
                     api_key = task_config.get_next_apikey()
@@ -3117,19 +3122,25 @@ class CLIMenu:
             console.print()
             
             if choice == 0: break
-            elif choice == 1: self.config["target_platform"] = Prompt.ask(i18n.get("label_platform"), default=self.config.get("target_platform"))
+            elif choice == 1: 
+                new_plat = Prompt.ask(i18n.get("label_platform"), default=self.config.get("target_platform")).strip()
+                self.config["target_platform"] = new_plat
+                # 同步更新 api_settings 以确保 TaskConfig 能正确识别
+                self.config["api_settings"] = {"translate": new_plat, "polish": new_plat}
             elif choice == 2: 
-                new_url = Prompt.ask(i18n.get("label_url"), default=self.config.get("base_url"))
+                new_url = Prompt.ask(i18n.get("label_url"), default=self.config.get("base_url")).strip()
                 self.config["base_url"] = new_url
                 if tp in self.config.get("platforms", {}):
                     self.config["platforms"][tp]["api_url"] = new_url
             elif choice == 3: 
-                new_key = Prompt.ask(i18n.get("label_key"), password=True)
-                self.config["api_key"] = new_key
-                if tp in self.config.get("platforms", {}):
-                    self.config["platforms"][tp]["api_key"] = new_key
+                new_key = Prompt.ask(i18n.get("label_key"), password=True, default=self.config.get("api_key", ""))
+                if new_key:
+                    new_key = new_key.strip()
+                    self.config["api_key"] = new_key
+                    if tp in self.config.get("platforms", {}):
+                        self.config["platforms"][tp]["api_key"] = new_key
             elif choice == 4: 
-                new_model = Prompt.ask(i18n.get("label_model"), default=self.config.get("model"))
+                new_model = Prompt.ask(i18n.get("label_model"), default=self.config.get("model")).strip()
                 self.config["model"] = new_model
                 if tp in self.config.get("platforms", {}):
                     self.config["platforms"][tp]["model"] = new_model

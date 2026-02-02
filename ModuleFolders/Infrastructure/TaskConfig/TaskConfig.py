@@ -210,6 +210,13 @@ class TaskConfig(Base):
         # 1. 基础清洗
         url = raw_url.strip().rstrip('/')
 
+        # 只有在开启自动补全或者特定本地平台时，才进行规范化裁剪
+        # 否则尊重原始输入，防止用户手动填写的完整地址被破坏
+        should_auto_process = (target_platform in ["sakura", "LocalLLM"]) or auto_complete
+
+        if not should_auto_process:
+            return url
+
         # 2. 裁剪后缀
         # 允许输入如: http://127.0.0.1:5000/v1/chat/completions -> 裁剪为 -> http://127.0.0.1:5000/v1
         redundant_suffixes = ["/chat/completions", "/completions", "/chat"]
@@ -263,14 +270,16 @@ class TaskConfig(Base):
         raw_url = platform_conf.get("api_url", "")
         auto_complete_setting = platform_conf.get("auto_complete", False)
         
-        # 如果 self.base_url 已经有值（来自 root config），我们认为它是经过处理的最终地址
-        # 否则，从平台配置中读取 raw_url 并处理
-        if not self.base_url:
-            self.base_url = self.process_api_url(raw_url, self.target_platform, auto_complete_setting)
-        else:
-            # 如果实例属性有值，反向同步原始地址到平台配置中（如果平台配置为空）
-            if not raw_url:
-                platform_conf["api_url"] = self.base_url
+        # 优先使用实例属性 (来自 root config)，如果实例属性为空，则从平台配置中加载
+        target_url = self.base_url if self.base_url else raw_url
+        
+        # 无论如何都通过 process_api_url 处理一次，以确保 /v1 等后缀的一致性
+        # 特别是当用户在菜单修改了 base_url 后，这里如果不处理会导致丢失自动补全逻辑
+        self.base_url = self.process_api_url(target_url, self.target_platform, auto_complete_setting)
+        
+        # 同步回平台配置
+        if self.base_url and not raw_url:
+            platform_conf["api_url"] = target_url
 
         # 分割密钥字符串
         # 优先使用 root config 的 api_key (如果存在)
