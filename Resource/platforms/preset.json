@@ -698,7 +698,7 @@
     "enable_cache_backup": true,
     "enable_auto_restore_ebook": true,
     "enable_dry_run": false,
-    "source_language": "Japanese",
+    "source_language": "auto",
     "target_language": "Chinese",
     "target_platform": "sakura",
     "base_url": "http://127.0.0.1:8080",

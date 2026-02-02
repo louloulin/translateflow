@@ -75,7 +75,7 @@ class TaskConfig(Base):
         self.keep_original_encoding = True
 
         # 翻译和润色相关设置
-        self.source_language = "ja"
+        self.source_language = "auto"
         self.target_language = "zh"
         self.label_input_path = ""
         self.label_output_path = ""
@@ -309,13 +309,16 @@ class TaskConfig(Base):
         if self.auto_set_output_path == True:
             abs_input_path = os.path.abspath(self.label_input_path)
             parent_dir = os.path.dirname(abs_input_path)
-            output_folder_name = "AiNieeOutput"
+            base_name = os.path.basename(abs_input_path)
+            # 如果是文件，去除后缀
+            if os.path.isfile(abs_input_path):
+                base_name = os.path.splitext(base_name)[0]
+            
+            output_folder_name = f"{base_name}_AiNiee_Output"
             self.label_output_path = os.path.join(parent_dir, output_folder_name)
 
             # 润色文本输出路径
-            abs_input_path = os.path.abspath(self.label_input_path)
-            parent_dir = os.path.dirname(abs_input_path)
-            output_folder_name = "PolishingOutput"
+            output_folder_name = f"{base_name}_Polishing_Output"
             self.polishing_output_path = os.path.join(parent_dir, output_folder_name)
 
         # 保存新配置

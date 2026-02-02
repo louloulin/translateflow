@@ -368,6 +368,23 @@ class TaskUI:
         
         with self._lock:
             self.logs.append(new_log)
+            
+            # --- 自动错误监测补丁 (Timely Intervention) ---
+            if self._is_error_log(new_log) and self.parent_cli:
+                lower_msg = clean_msg.lower()
+                # 1. 提升 UI 警告级别 (变红)
+                if any(w in lower_msg for w in ['traceback', 'panic', 'exception', 'fatal']):
+                    if self.current_status_color != 'red':
+                        self.current_status_color = 'red'
+                        self.current_border_color = 'red'
+                
+                # 2. 标记任务为潜在失败，确保退出时触发 LLM 分析菜单
+                if "traceback" in lower_msg or "panic" in lower_msg:
+                    self.parent_cli._is_critical_failure = True
+                    # 如果还没有更严重的错误信息，记录这条 Traceback 供 LLM 分析
+                    if not getattr(self.parent_cli, "_last_crash_msg", None):
+                        self.parent_cli._last_crash_msg = clean_msg
+
             self.refresh_layout()
 
     def update_progress(self, event, data):
@@ -1552,12 +1569,29 @@ class CLIMenu:
         if conv_on and is_tgt_simplified and is_preset_s2t:
             conv_warning = f" [bold red]{i18n.get('warn_conv_direction')}[/bold red]"
 
-        # 判断双语是否真正开启
+        # 判断双语与对照状态
         plugin_enables = self.root_config.get("plugin_enables", {})
         is_plugin_bilingual = plugin_enables.get("BilingualPlugin", False)
+        
+        # 1. 内容双语 (Bilingual Content via Plugin)
+        bilingual_content_status = f"[green]{i18n.get('banner_on')}[/green]" if is_plugin_bilingual else f"[red]{i18n.get('banner_off')}[/red]"
+        
+        # 2. 对照文件 (Bilingual File Generation)
+        bilingual_file_on = self.config.get("enable_bilingual_output", True)
         proj_type = self.config.get("translation_project", "AutoType")
-        is_type_bilingual = proj_type in ["Txt", "Epub", "Srt"]
-        bilingual_active = is_plugin_bilingual or is_type_bilingual
+        # 只有特定格式支持双语输出
+        is_type_support_bilingual = proj_type in ["Txt", "Epub", "Srt"]
+        if bilingual_file_on:
+            if is_type_support_bilingual:
+                bilingual_file_status = f"[green]{i18n.get('banner_on')}[/green] ([cyan]{bilingual_order.replace('_', ' ')}[/cyan])"
+            else:
+                bilingual_file_status = f"[yellow]{i18n.get('banner_on')} ({i18n.get('banner_unsupported')})[/yellow]"
+        else:
+            bilingual_file_status = f"[red]{i18n.get('banner_off')}[/red]"
+        
+        # 3. 对照显示模式 (TUI Detailed View)
+        detailed_on = self.config.get("show_detailed_logs", False)
+        detailed_status = f"[green]{i18n.get('banner_on')}[/green]" if detailed_on else f"[red]{i18n.get('banner_off')}[/red]"
 
         # 获取第二行参数
         target_platform = self.config.get("target_platform", "Unknown")
@@ -1570,13 +1604,8 @@ class CLIMenu:
         # 使用 I18N 获取文字
         conv_on_text = i18n.get("banner_on")
         conv_off_text = i18n.get("banner_off")
-        trans_first_text = i18n.get("banner_trans_first")
-        source_first_text = i18n.get("banner_source_first")
-        not_enabled_text = i18n.get("banner_not_enabled")
         
         conv_status = f"[green]{conv_on_text} ({conv_preset})[/green]" if conv_on else f"[red]{conv_off_text}[/red]"
-        order_text = trans_first_text if bilingual_order == "translation_first" else source_first_text
-        order_status = f"[cyan]{order_text}[/cyan]" if bilingual_active else f"[red]{not_enabled_text}[/red] ([dim]{order_text}[/dim])"
         
         # 第二行状态构建
         threads_display = f"Auto" if user_threads == 0 else str(user_threads)
@@ -1585,8 +1614,8 @@ class CLIMenu:
             think_text = f"[green]{conv_on_text}[/green]" if think_on else f"[red]{conv_off_text}[/red]"
             think_status = f" | [bold]{i18n.get('banner_think')}:[/bold] {think_text}"
 
-        settings_line_1 = f"| [bold]{i18n.get('banner_langs')}:[/bold] {src} -> {tgt} | [bold]{i18n.get('banner_conv')}:[/bold] {conv_status}{conv_warning} | [bold]{i18n.get('banner_bilingual')}:[/bold] {order_status} |"
-        settings_line_2 = f"| [bold]{i18n.get('banner_api')}:[/bold] {target_platform} | [bold]{i18n.get('banner_model')}:[/bold] {model_name} | [bold]{i18n.get('banner_threads')}:[/bold] {threads_display} | [bold]{i18n.get('banner_context')}:[/bold] {context_lines}{think_status} |"
+        settings_line_1 = f"| [bold]{i18n.get('banner_langs')}:[/bold] {src}->{tgt} | [bold]{i18n.get('banner_conv')}:[/bold] {conv_status}{conv_warning} | [bold]{i18n.get('banner_bilingual_file')}:[/bold] {bilingual_file_status} | [bold]{i18n.get('banner_bilingual')}:[/bold] {bilingual_content_status} |"
+        settings_line_2 = f"| [bold]{i18n.get('banner_api')}:[/bold] {target_platform} | [bold]{i18n.get('banner_threads')}:[/bold] {threads_display} | [bold]{i18n.get('banner_detailed')}:[/bold] {detailed_status}{think_status} |"
 
         profile_display = f"[bold yellow]({self.active_profile_name})[/bold yellow]"
         console.clear()
@@ -1609,7 +1638,7 @@ class CLIMenu:
         
         # 2. Translation Languages
         console.print(f"\n[bold]1. {i18n.get('setting_src_lang')}/{i18n.get('setting_tgt_lang')}[/bold]")
-        self.config["source_language"] = Prompt.ask(i18n.get('prompt_source_lang'), default="Japanese")
+        self.config["source_language"] = Prompt.ask(i18n.get('prompt_source_lang'), default="auto")
         self.config["target_language"] = Prompt.ask(i18n.get('prompt_target_lang'), default="Chinese")
         
         # 3. API Platform
@@ -2556,7 +2585,7 @@ class CLIMenu:
             table.add_row("9", i18n.get("setting_round_limit"), str(self.config.get("round_limit", 3)))
             table.add_row("10", i18n.get("setting_cache_backup_limit"), str(self.config.get("cache_backup_limit", 10)))
             table.add_row("11", i18n.get("setting_failover_threshold"), str(self.config.get("critical_error_threshold", 5)))
-            table.add_row("12", i18n.get("setting_auto_set_output_path"), "[green]ON[/]" if self.config.get("auto_set_output_path", True) else "[red]OFF[/]")
+            table.add_row("12", i18n.get("setting_auto_set_output_path"), "[green]ON[/]" if self.config.get("auto_set_output_path", False) else "[red]OFF[/]")
 
             table.add_section()
             # --- Section 2: Feature Toggles ---
@@ -2628,7 +2657,7 @@ class CLIMenu:
             elif choice == 9: self.config["round_limit"] = IntPrompt.ask(i18n.get('setting_round_limit'), default=self.config.get("round_limit", 3))
             elif choice == 10: self.config["cache_backup_limit"] = IntPrompt.ask(i18n.get('setting_cache_backup_limit'), default=self.config.get("cache_backup_limit", 10))
             elif choice == 11: self.config["critical_error_threshold"] = IntPrompt.ask(i18n.get('setting_failover_threshold'), default=self.config.get("critical_error_threshold", 5))
-            elif choice == 12: self.config["auto_set_output_path"] = not self.config.get("auto_set_output_path", True)
+            elif choice == 12: self.config["auto_set_output_path"] = not self.config.get("auto_set_output_path", False)
             elif choice == 13: self.config["show_detailed_logs"] = not self.config.get("show_detailed_logs", False)
             elif choice == 14: self.config["enable_cache_backup"] = not self.config.get("enable_cache_backup", True)
             elif choice == 15: self.config["enable_auto_restore_ebook"] = not self.config.get("enable_auto_restore_ebook", True)
@@ -3715,8 +3744,9 @@ class CLIMenu:
         self._update_recent_projects(target_path)
         self.config["label_input_path"] = target_path
         
-        # 自动设置输出路径 (如果用户未通过 -o 指定)
-        if self.config.get("label_output_path") is None or self.config.get("label_output_path") == "":
+        # 自动设置输出路径 (如果开启了自动跟随，或者用户未设置输出路径)
+        is_auto_output = self.config.get("auto_set_output_path", False)
+        if is_auto_output or self.config.get("label_output_path") is None or self.config.get("label_output_path") == "":
             abs_input = os.path.abspath(target_path)
             parent_dir = os.path.dirname(abs_input)
             base_name = os.path.basename(abs_input)
@@ -3831,13 +3861,33 @@ class CLIMenu:
         TiktokenLoaderModule._SUPPRESS_OUTPUT = True
         ReaderUtilModule._SUPPRESS_OUTPUT = True
         
-        # --- NEW: Session Logger ---
+        # --- NEW: Session Logger & Resume Log Recovery ---
+        log_file = None
         if self.config.get("enable_session_logging", True):
             try:
                 log_dir = os.path.join(opath, "logs")
                 os.makedirs(log_dir, exist_ok=True)
-                log_path = os.path.join(log_dir, f"session_{time.strftime('%Y%m%d_%H%M%S')}.log")
-                log_file = open(log_path, "w", encoding="utf-8")
+                
+                # 生成基于路径的稳定 Hash 标识，用于断点续传时的日志识别
+                import hashlib
+                file_id = hashlib.md5(os.path.abspath(target_path).encode('utf-8')).hexdigest()[:8]
+                log_name = f"session_{file_id}_{time.strftime('%Y%m%d')}.log"
+                log_path = os.path.join(log_dir, log_name)
+                
+                # 如果是断点续传且日志已存在，先读取历史日志到 TUI
+                if continue_status and os.path.exists(log_path) and not web_mode:
+                    try:
+                        with open(log_path, 'r', encoding='utf-8') as f:
+                            # 读取最后 50 行
+                            history = f.readlines()[-50:]
+                            for line in history:
+                                if line.strip():
+                                    # 剥离历史时间戳后载入 UI
+                                    clean_line = re.sub(r'^\[\d{2}:\d{2}:\d{2}\]\s+', '', line.strip())
+                                    self.ui.logs.append(Text(f"[RESUME] {clean_line}", style="dim"))
+                    except: pass
+
+                log_file = open(log_path, "a", encoding="utf-8") # 使用追加模式
                 # 绑定到 UI 实例以实现实时写入
                 if hasattr(self.ui, "log_file"):
                     self.ui.log_file = log_file
@@ -4061,6 +4111,12 @@ class CLIMenu:
                 # --- 4. 主循环与输入监听 ---
                 is_paused = False
                 while not finished.is_set():
+                    # 及时介入：如果监测到致命错误（如 Traceback），主动中断循环并进入分析菜单
+                    if self._is_critical_failure and not web_mode:
+                        self.ui.log(f"[bold red]Detection: Critical error found in logs. Intervening for analysis...[/bold red]")
+                        time.sleep(2)
+                        break
+
                     if not web_mode:
                         key = self.input_listener.get_key()
                         if key:
@@ -4420,7 +4476,7 @@ class CLIMenu:
             with console.status(f"[cyan]{i18n.get('msg_export_started')}[/cyan]"):
                 project = CacheManager.read_from_file(cache_path)
                 
-                self.task_executor.config.initialize()
+                self.task_executor.config.initialize(self.config)
                 cfg = self.task_executor.config
                 output_config = {
                     "translated_suffix": cfg.output_filename_suffix,

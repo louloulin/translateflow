@@ -441,35 +441,40 @@ class TaskExecutor(Base):
 
                 # 输出开始翻译的日志
                 self.print("")
-                self.info(f"当前轮次 - {current_round + 1}")
-                self.info(f"最大轮次 - {self.config.round_limit}")
-                self.info(f"项目类型 - {self.config.translation_project}")
-                self.info(f"原文语言 - {self.config.source_language}")
-                self.info(f"译文语言 - {self.config.target_language}")
-                self.print("")
-                self.info(f"接口名称 - {self.config.platforms.get(self.config.target_platform, {}).get('name', '未知')}")
-                self.info(f"接口地址 - {self.config.base_url}")
-                self.info(f"模型名称 - {self.config.model}")
-                self.print("")
-                self.info(f"RPM 限额 - {self.config.rpm_limit}")
-                self.info(f"TPM 限额 - {self.config.tpm_limit}")
 
-                # 根据提示词规则打印基础指令
-                system = ""
-                s_lang = self.config.source_language
-                if self.config.target_platform == "LocalLLM":  # 需要放在前面，以免提示词预设的分支覆盖
-                    system = PromptBuilderLocal.build_system(self.config, s_lang)
-                elif self.config.target_platform == "sakura":  # 需要放在前面，以免提示词预设的分支覆盖
-                    system = PromptBuilderSakura.build_system(self.config, s_lang)
-                elif self.config.translation_prompt_selection["last_selected_id"] in (PromptBuilderEnum.COMMON, PromptBuilderEnum.COT, PromptBuilderEnum.THINK):
-                    system = PromptBuilder.build_system(self.config, s_lang)
+                # 如果是断点续传，抑制重复的基础环境信息输出
+                if not continue_status:
+                    self.info(f"最大轮次 - {self.config.round_limit}")
+                    self.info(f"项目类型 - {self.config.translation_project}")
+                    self.info(f"原文语言 - {self.config.source_language}")
+                    self.info(f"译文语言 - {self.config.target_language}")
+                    
+                    platform_name = self.config.platforms.get(self.config.target_platform, {}).get('name', '未知')
+                    self.info(f"接口名称 - {platform_name}")
+                    self.info(f"接口地址 - {self.config.base_url}")
+                    self.info(f"模型名称 - {self.config.model}")
+                    
+                    self.info(f"RPM 限额 - {self.config.rpm_limit}")
+                    self.info(f"TPM 限额 - {self.config.tpm_limit}")
+
+                    # 打印提示词模式信息
+                    s_lang = self.config.source_language
+                    if self.config.target_platform == "LocalLLM":
+                        system = PromptBuilderLocal.build_system(self.config, s_lang)
+                    elif self.config.target_platform == "sakura":
+                        system = PromptBuilderSakura.build_system(self.config, s_lang)
+                    elif self.config.translation_prompt_selection["last_selected_id"] in (PromptBuilderEnum.COMMON, PromptBuilderEnum.COT, PromptBuilderEnum.THINK):
+                        system = PromptBuilder.build_system(self.config, s_lang)
+                    else:
+                        system = self.config.translation_prompt_selection["prompt_content"]
+                    
+                    self.info(f"并发请求 - {self.config.actual_thread_counts} 线程")
                 else:
-                    system = self.config.translation_prompt_selection["prompt_content"]
-                self.print("")
-                if system:
-                    self.info(f"本次任务使用以下基础提示词：\n{system}\n") 
+                    # 仅在第一轮显示恢复提示
+                    if current_round == 0:
+                        self.info(f"[bold yellow]检测到断点续传：正在恢复 {os.path.basename(self.config.label_input_path)} 的任务状态...[/bold yellow]")
 
-                self.info(f"即将开始执行翻译任务，预计任务总数为 {len(tasks_list)}, 同时执行的任务数量为 {self.config.actual_thread_counts}，请注意保持网络通畅 ...")
+                self.info(f"即将开始执行任务，预计任务总数为 {len(tasks_list)}，请注意保持网络通畅 ...")
                 time.sleep(3)
                 self.print("")
 
