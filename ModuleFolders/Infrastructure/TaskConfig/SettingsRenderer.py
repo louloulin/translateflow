@@ -106,6 +106,7 @@ class SettingsMenuBuilder:
             ("language", "label_category_language"),
             ("translation", "label_category_translation"),
             ("output", "label_category_output"),
+            ("format_conversion", "label_category_format_conversion"),
             ("feature", "label_category_feature"),
             ("prompt_feature", "label_category_prompt_feature"),
             ("api", "label_category_api"),

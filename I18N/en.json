@@ -527,5 +527,21 @@
         "warning_advanced_setting": "This is an advanced setting. Modifying it may affect performance and stability.",
         "confirm_modify_advanced": "Are you sure you want to modify this setting?",
         "warning_dependency_not_met": "Please enable '{}' first before modifying this setting.",
-        "prompt_toggle_or_back": "Enter ID to toggle, or q/b/0/Enter to go back"
+        "prompt_toggle_or_back": "Enter ID to toggle, or q/b/0/Enter to go back",
+        "label_category_format_conversion": "Format Conversion",
+        "setting_enable_post_conversion": "Auto-convert output format after translation (E-book only)",
+        "setting_fixed_output_format_switch": "Fixed output format (skip asking each time)",
+        "setting_fixed_output_format": "Output Format",
+        "prompt_select_output_format": "Select final output format",
+        "msg_format_conversion_hint": "E-book detected. Will convert to your selected format after translation",
+        "msg_calibre_not_found": "Calibre not detected. This tool is required for format conversion",
+        "msg_calibre_downloading": "Downloading Calibre Portable...",
+        "msg_calibre_installing": "Installing Calibre...",
+        "msg_calibre_ready": "Calibre is ready",
+        "msg_calibre_install_failed": "Calibre installation failed",
+        "msg_calibre_download_failed": "Calibre download failed",
+        "msg_calibre_manual_hint": "Please install and re-run the task",
+        "opt_calibre_download": "Auto download and install (Recommended, Windows only)",
+        "opt_calibre_skip": "Skip format conversion",
+        "opt_calibre_manual": "Open official website to download"
     }

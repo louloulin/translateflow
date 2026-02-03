@@ -118,6 +118,94 @@ def open_in_editor(file_path):
         console.print(f"[red]Failed to open editor: {e}[/red]")
         return False
 
+
+# ============================================================
+# Calibre 辅助函数 (复用批量电子书整合.py的逻辑风格)
+# ============================================================
+
+def get_calibre_tool_path(tool_name="ebook-convert.exe"):
+    """检测Calibre工具路径"""
+    if platform.system() == "Windows":
+        portable_base = os.path.join(PROJECT_ROOT, 'lib', 'Calibre Portable')
+        possible_paths = [
+            os.path.join(portable_base, 'Calibre Portable', 'app', tool_name),
+            os.path.join(portable_base, 'app', tool_name),
+            os.path.join(portable_base, 'Calibre Portable', tool_name),
+            os.path.join(portable_base, tool_name)
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+        system_paths = [
+            os.path.join("C:\\Program Files\\Calibre2", tool_name),
+            os.path.join("C:\\Program Files\\Calibre", tool_name)
+        ]
+        for path in system_paths:
+            if os.path.exists(path):
+                return path
+    else:
+        result = shutil.which(tool_name.replace('.exe', ''))
+        if result:
+            return result
+    return None
+
+
+def download_calibre_portable():
+    """下载Calibre便携版 (仅Windows)"""
+    if platform.system() != "Windows":
+        console.print("[yellow]Auto-download only supports Windows.[/yellow]")
+        return False
+    import requests
+    from tqdm import tqdm
+    download_url = "https://download.calibre-ebook.com/8.9.0/calibre-portable-installer-8.9.0.exe"
+    installer_path = os.path.join(PROJECT_ROOT, "calibre_portable_installer.exe")
+    install_dir = os.path.join(PROJECT_ROOT, 'lib', 'Calibre Portable')
+    try:
+        console.print(f"[cyan]{i18n.get('msg_calibre_downloading')}[/cyan]")
+        response = requests.get(download_url, stream=True)
+        response.raise_for_status()
+        total_size = int(response.headers.get('content-length', 0))
+        with open(installer_path, 'wb') as f, tqdm(total=total_size, unit='iB', unit_scale=True) as pbar:
+            for chunk in response.iter_content(chunk_size=1024):
+                pbar.update(f.write(chunk))
+        console.print(f"[cyan]{i18n.get('msg_calibre_installing')}[/cyan]")
+        os.makedirs(install_dir, exist_ok=True)
+        subprocess.run([installer_path, '/S', f'/D={install_dir}'], check=True, capture_output=True)
+        if get_calibre_tool_path():
+            console.print(f"[green]{i18n.get('msg_calibre_ready')}[/green]")
+            return True
+        else:
+            console.print(f"[red]{i18n.get('msg_calibre_install_failed')}[/red]")
+            return False
+    except Exception as e:
+        console.print(f"[red]{i18n.get('msg_calibre_download_failed')}: {e}[/red]")
+        return False
+    finally:
+        if os.path.exists(installer_path):
+            try: os.remove(installer_path)
+            except: pass
+
+
+def ensure_calibre_available():
+    """确保Calibre可用，如果不可用则询问用户是否下载"""
+    tool_path = get_calibre_tool_path()
+    if tool_path:
+        return tool_path
+    console.print(f"\n[yellow]{i18n.get('msg_calibre_not_found')}[/yellow]")
+    console.print(f"1. {i18n.get('opt_calibre_download')}")
+    console.print(f"2. {i18n.get('opt_calibre_skip')}")
+    console.print(f"3. {i18n.get('opt_calibre_manual')}")
+    choice = Prompt.ask(i18n.get('prompt_select'), choices=["1", "2", "3"], default="2")
+    if choice == "1":
+        if download_calibre_portable():
+            return get_calibre_tool_path()
+    elif choice == "3":
+        import webbrowser
+        webbrowser.open("https://calibre-ebook.com/download")
+        console.print(f"[dim]{i18n.get('msg_calibre_manual_hint')}[/dim]")
+    return None
+
+
 class TaskUI:
     def __init__(self, parent_cli=None):
         self._lock = threading.RLock()
@@ -3637,7 +3725,40 @@ class CLIMenu:
                  continue_status = True
              elif Confirm.ask(f"\n[yellow]Detected existing cache for this file. Resume?[/yellow]", default=True):
                  continue_status = True
-        
+
+        # --- 格式转换询问逻辑 ---
+        self.target_output_format = None
+        if self.config.get("enable_post_conversion", False) and not non_interactive:
+            # 检查是否是电子书格式
+            input_ext = os.path.splitext(target_path)[1].lower()
+            ebook_exts = [".epub", ".mobi", ".azw3", ".fb2", ".txt", ".docx", ".pdf", ".htmlz", ".kepub"]
+
+            if input_ext in ebook_exts or (os.path.isdir(target_path) and any(
+                f.lower().endswith(tuple(ebook_exts)) for f in os.listdir(target_path) if os.path.isfile(os.path.join(target_path, f))
+            )):
+                if self.config.get("fixed_output_format_switch", False):
+                    # 使用固定格式
+                    self.target_output_format = self.config.get("fixed_output_format", "epub")
+                else:
+                    # 询问用户选择格式
+                    console.print(f"\n[cyan]{i18n.get('msg_format_conversion_hint')}[/cyan]")
+                    format_choices = ["epub", "mobi", "azw3", "fb2", "pdf", "txt", "docx", "htmlz"]
+
+                    table = Table(show_header=False, box=None)
+                    for idx, fmt in enumerate(format_choices, 1):
+                        table.add_row(f"[cyan]{idx}.[/]", fmt.upper())
+                    table.add_row(f"[dim]0.[/dim]", f"[dim]{i18n.get('opt_none')}[/dim]")
+                    console.print(table)
+
+                    fmt_choice = IntPrompt.ask(
+                        i18n.get('prompt_select_output_format'),
+                        choices=[str(i) for i in range(len(format_choices) + 1)],
+                        show_choices=False,
+                        default=0
+                    )
+                    if fmt_choice > 0:
+                        self.target_output_format = format_choices[fmt_choice - 1]
+
         console.print(f"[dim]{i18n.get('label_input')}: {target_path}[/dim]")
         console.print(f"[dim]{i18n.get('label_output')}: {opath}[/dim]")
 
@@ -3827,20 +3948,23 @@ class CLIMenu:
                 if original_ext in middleware_exts:
                     is_middleware_converted_local = True
                     base_name = os.path.splitext(os.path.basename(current_target_path))[0]
-                    # 确保输出目录和临时转换文件夹已创建
                     os.makedirs(opath, exist_ok=True)
                     temp_conv_dir = os.path.join(opath, "temp_conv")
-                    
-                    # 逻辑优化：只要临时 EPUB 存在且有效，就跳过转换
+
                     potential_epub = os.path.join(temp_conv_dir, f"{base_name}.epub")
                     if os.path.exists(potential_epub) and os.path.getsize(potential_epub) > 0:
                         self.ui.log(i18n.get("msg_epub_reuse").format(os.path.basename(potential_epub)))
                         current_target_path = potential_epub
                     else:
+                        # 先检查Calibre是否可用
+                        calibre_path = ensure_calibre_available()
+                        if not calibre_path:
+                            self.ui.log("[red]Calibre is required for this format. Task cancelled.[/red]")
+                            time.sleep(2); return
+
                         self.ui.log(i18n.get("msg_epub_conv_start").format(original_ext))
                         os.makedirs(temp_conv_dir, exist_ok=True)
                         conv_script = os.path.join(PROJECT_ROOT, "批量电子书整合.py")
-                        # 增加 --AiNiee 参数以抑制版权信息写入
                         cmd = f'uv run "{conv_script}" -p "{current_target_path}" -f 1 -m novel -op "{temp_conv_dir}" -o "{base_name}" --AiNiee'
                         try:
                             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -4178,6 +4302,34 @@ class CLIMenu:
                          # Actually the restore logic in original code was complex mapping.
                          # For now, let's skip complex restoration to keep it safe or just log.
                          self.ui.log("[dim]Auto-restore skipped in new architecture (manual restore recommended if needed).[/dim]")
+
+            # --- Post-Task: Format Conversion ---
+            if task_success and self.target_output_format:
+                output_dir = self.config.get("label_output_path")
+                if output_dir:
+                    output_files = [f for f in os.listdir(output_dir) if f.endswith(".epub")]
+                    if output_files:
+                        # 使用新的Calibre检测和下载逻辑
+                        calibre_path = ensure_calibre_available()
+                        if calibre_path:
+                            self.ui.log(f"[cyan]Converting to {self.target_output_format.upper()} format...[/cyan]")
+                            for epub_file in output_files:
+                                src_path = os.path.join(output_dir, epub_file)
+                                dst_name = os.path.splitext(epub_file)[0] + f".{self.target_output_format}"
+                                dst_path = os.path.join(output_dir, dst_name)
+                                try:
+                                    result = subprocess.run(
+                                        [calibre_path, src_path, dst_path],
+                                        capture_output=True, text=True, timeout=300
+                                    )
+                                    if result.returncode == 0:
+                                        self.ui.log(f"[green]✓ Converted: {dst_name}[/green]")
+                                    else:
+                                        self.ui.log(f"[yellow]Conversion warning: {result.stderr[:200]}[/yellow]")
+                                except Exception as e:
+                                    self.ui.log(f"[yellow]Conversion error: {e}[/yellow]")
+                        else:
+                            self.ui.log("[dim]Format conversion skipped.[/dim]")
 
             # Summary
             if task_success:

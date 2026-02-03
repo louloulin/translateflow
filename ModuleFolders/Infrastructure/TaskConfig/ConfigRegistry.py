@@ -713,14 +713,44 @@ register_config(ConfigItem(
     category="translation"
 ))
 
-# 中间件转换开关
+# --- 格式转换配置 (USER) ---
 register_config(ConfigItem(
     key="enable_calibre_middleware",
     default=True,
     level=ConfigLevel.USER,
     config_type=ConfigType.BOOL,
     i18n_key="setting_enable_calibre_middleware",
-    category="feature"
+    category="format_conversion"
+))
+
+register_config(ConfigItem(
+    key="enable_post_conversion",
+    default=False,
+    level=ConfigLevel.USER,
+    config_type=ConfigType.BOOL,
+    i18n_key="setting_enable_post_conversion",
+    category="format_conversion"
+))
+
+register_config(ConfigItem(
+    key="fixed_output_format_switch",
+    default=False,
+    level=ConfigLevel.USER,
+    config_type=ConfigType.BOOL,
+    i18n_key="setting_fixed_output_format_switch",
+    depends_on="enable_post_conversion",
+    category="format_conversion"
+))
+
+register_config(ConfigItem(
+    key="fixed_output_format",
+    default="epub",
+    level=ConfigLevel.USER,
+    config_type=ConfigType.CHOICE,
+    i18n_key="setting_fixed_output_format",
+    choices=["epub", "mobi", "azw3", "fb2", "pdf", "txt", "docx", "htmlz"],
+    depends_on="fixed_output_format_switch",
+    category="format_conversion"
 ))
 
 # Calibre中间件支持的格式列表 (SYSTEM级别，用户不可见)

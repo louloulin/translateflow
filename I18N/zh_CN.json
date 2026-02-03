@@ -549,5 +549,21 @@
         "banner_trans": "翻译",
         "banner_polish": "润色",
         "label_none": "无",
-        "msg_confirm_clear_file": "内容为空，是否确认清空该文件内容？"
+        "msg_confirm_clear_file": "内容为空，是否确认清空该文件内容？",
+        "label_category_format_conversion": "格式转换",
+        "setting_enable_post_conversion": "翻译后自动转换输出格式 (仅电子书)",
+        "setting_fixed_output_format_switch": "固定输出格式 (避免每次询问)",
+        "setting_fixed_output_format": "输出格式",
+        "prompt_select_output_format": "请选择最终输出格式",
+        "msg_format_conversion_hint": "检测到电子书格式，翻译完成后将转换为您选择的格式",
+        "msg_calibre_not_found": "未检测到Calibre，格式转换需要此工具",
+        "msg_calibre_downloading": "正在下载Calibre便携版...",
+        "msg_calibre_installing": "正在安装Calibre...",
+        "msg_calibre_ready": "Calibre已准备就绪",
+        "msg_calibre_install_failed": "Calibre安装失败",
+        "msg_calibre_download_failed": "Calibre下载失败",
+        "msg_calibre_manual_hint": "请安装后重新运行任务",
+        "opt_calibre_download": "自动下载并安装 (推荐, 仅Windows)",
+        "opt_calibre_skip": "跳过格式转换",
+        "opt_calibre_manual": "打开官网手动下载"
     }

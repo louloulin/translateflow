@@ -506,5 +506,21 @@
         "warning_advanced_setting": "これは高度な設定です。変更するとパフォーマンスや安定性に影響する可能性があります。",
         "confirm_modify_advanced": "この設定を変更してもよろしいですか？",
         "warning_dependency_not_met": "この設定を変更するには、まず「{}」を有効にしてください。",
-        "prompt_toggle_or_back": "IDを入力して切り替え、q/b/0/Enterで戻る"
+        "prompt_toggle_or_back": "IDを入力して切り替え、q/b/0/Enterで戻る",
+        "label_category_format_conversion": "フォーマット変換",
+        "setting_enable_post_conversion": "翻訳後に出力形式を自動変換 (電子書籍のみ)",
+        "setting_fixed_output_format_switch": "固定出力形式 (毎回の確認をスキップ)",
+        "setting_fixed_output_format": "出力形式",
+        "prompt_select_output_format": "最終出力形式を選択してください",
+        "msg_format_conversion_hint": "電子書籍を検出しました。翻訳後に選択した形式に変換されます",
+        "msg_calibre_not_found": "Calibreが検出されませんでした。フォーマット変換にはこのツールが必要です",
+        "msg_calibre_downloading": "Calibreポータブル版をダウンロード中...",
+        "msg_calibre_installing": "Calibreをインストール中...",
+        "msg_calibre_ready": "Calibreの準備ができました",
+        "msg_calibre_install_failed": "Calibreのインストールに失敗しました",
+        "msg_calibre_download_failed": "Calibreのダウンロードに失敗しました",
+        "msg_calibre_manual_hint": "インストール後にタスクを再実行してください",
+        "opt_calibre_download": "自動ダウンロードしてインストール (推奨, Windowsのみ)",
+        "opt_calibre_skip": "フォーマット変換をスキップ",
+        "opt_calibre_manual": "公式サイトを開いて手動ダウンロード"
     }
