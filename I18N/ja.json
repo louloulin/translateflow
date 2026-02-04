@@ -79,6 +79,8 @@
     "setting_project_type": "プロジェクトタイプ",
     "setting_cache_backup_limit": "キャッシュバックアップ上限",
     "setting_enable_api_failover": "API自動フェイルオーバーを有効にする",
+    "setting_enable_stream_api": "ストリーミングAPIを有効にする",
+    "setting_enable_stream_api_desc": "APIのストリーミングサポートを自動検出し、初回リクエスト時に判定して結果をキャッシュ",
     "setting_api_failover_threshold": "APIフェイルオーバー閾値",
     "setting_backup_apis": "バックアップAPIリスト (カンマ区切り)",
     "menu_project_type": "プロジェクトタイプを選択",

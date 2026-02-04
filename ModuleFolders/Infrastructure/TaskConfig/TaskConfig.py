@@ -121,6 +121,7 @@ class TaskConfig(Base):
         self.think_depth = 0
         self.thinking_budget = 4096
         self.structured_output_mode = 0
+        self.enable_stream_api = True  # 流式API开关，默认启用
         self.show_detailed_logs = False # Fix: Initialize show_detailed_logs
 
     def __repr__(self) -> str:
@@ -424,6 +425,7 @@ class TaskConfig(Base):
         thinking_budget = self.platforms.get(target_platform).get("thinking_budget", -1)
         structured_output_mode = self.platforms.get(target_platform).get("structured_output_mode", 0)
         auto_complete = self.platforms.get(target_platform).get("auto_complete", False)
+        enable_stream_api = getattr(self, "enable_stream_api", True)
 
         params = {
             "target_platform": target_platform,
@@ -444,7 +446,8 @@ class TaskConfig(Base):
             "think_depth": think_depth,
             "thinking_budget": thinking_budget,
             "structured_output_mode": structured_output_mode,
-            "auto_complete": auto_complete
+            "auto_complete": auto_complete,
+            "enable_stream_api": enable_stream_api
         }
 
         return params

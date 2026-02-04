@@ -79,6 +79,8 @@
     "setting_project_type": "Project Type",
     "setting_cache_backup_limit": "Cache Backup Limit",
     "setting_enable_api_failover": "Enable API Auto-Failover",
+    "setting_enable_stream_api": "Enable Streaming API",
+    "setting_enable_stream_api_desc": "Smart detection of API streaming support, auto-detect on first request and cache result",
     "setting_api_failover_threshold": "API Failover Threshold",
     "setting_backup_apis": "Backup APIs (comma-separated)",
     "menu_project_type": "Select Project Type",

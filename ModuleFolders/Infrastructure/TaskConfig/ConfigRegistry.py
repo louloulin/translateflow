@@ -624,6 +624,27 @@ register_config(ConfigItem(
     category="feature"
 ))
 
+# --- 流式API配置 (USER) ---
+register_config(ConfigItem(
+    key="enable_stream_api",
+    default=True,
+    level=ConfigLevel.USER,
+    config_type=ConfigType.BOOL,
+    i18n_key="setting_enable_stream_api",
+    i18n_desc_key="setting_enable_stream_api_desc",
+    category="api"
+))
+
+# 流式API支持状态缓存 (SYSTEM级别，用于存储各API的流式支持状态)
+# 格式: {"api_url_hash": True/False}
+register_config(ConfigItem(
+    key="stream_api_cache",
+    default={},
+    level=ConfigLevel.SYSTEM,
+    config_type=ConfigType.DICT,
+    category="system"
+))
+
 # --- Thinking 配置 (ADVANCED) ---
 register_config(ConfigItem(
     key="think_switch",
