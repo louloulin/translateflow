@@ -156,7 +156,9 @@ export const Monitor: React.FC = () => {
       <div className="flex justify-between items-center text-[10px] text-slate-600 font-mono px-2 uppercase tracking-tighter">
         <span>&copy; 2026 AiNiee Project</span>
         <div className="flex gap-4">
-          <span>{taskState.stats?.currentFile || t('ui_no_file_active') || 'No file active'}</span>
+          <span className="truncate max-w-[200px]">{taskState.stats?.currentFile || t('ui_no_file_active') || 'No file active'}</span>
+          <span>S-Rate: <span className="text-green-500/80">{(taskState.stats?.successRate || 0).toFixed(1)}%</span></span>
+          <span>E-Rate: <span className="text-red-500/80">{(taskState.stats?.errorRate || 0).toFixed(1)}%</span></span>
           <span>RPM: {taskState.stats?.rpm.toFixed(2)}</span>
           <span>TPM: {taskState.stats?.tpm.toFixed(2)}k</span>
         </div>

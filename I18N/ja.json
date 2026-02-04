@@ -522,5 +522,11 @@
         "msg_calibre_manual_hint": "インストール後にタスクを再実行してください",
         "opt_calibre_download": "自動ダウンロードしてインストール (推奨, Windowsのみ)",
         "opt_calibre_skip": "フォーマット変換をスキップ",
-        "opt_calibre_manual": "公式サイトを開いて手動ダウンロード"
+        "opt_calibre_manual": "公式サイトを開いて手動ダウンロード",
+        "setting_operation_logging": "操作記録を有効にする (LLM分析用)",
+        "setting_operation_logging_desc": "ユーザー操作を記録し、エラー時にLLMに送信してより正確な分析を行う",
+        "banner_op_log": "操作記録",
+        "banner_op_log_hint_on": "機密情報は削除済み、エラー時のLLM分析がより正確に",
+        "banner_op_log_hint_off": "より正確なLLM分析のために有効にすることをお勧めします",
+        "label_operation_flow": "操作フロー"
     }

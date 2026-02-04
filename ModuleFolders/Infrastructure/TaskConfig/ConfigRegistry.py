@@ -614,6 +614,16 @@ register_config(ConfigItem(
     category="feature"
 ))
 
+register_config(ConfigItem(
+    key="enable_operation_logging",
+    default=True,
+    level=ConfigLevel.USER,
+    config_type=ConfigType.BOOL,
+    i18n_key="setting_operation_logging",
+    i18n_desc_key="setting_operation_logging_desc",
+    category="feature"
+))
+
 # --- Thinking 配置 (ADVANCED) ---
 register_config(ConfigItem(
     key="think_switch",

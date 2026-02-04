@@ -565,5 +565,11 @@
         "msg_calibre_manual_hint": "请安装后重新运行任务",
         "opt_calibre_download": "自动下载并安装 (推荐, 仅Windows)",
         "opt_calibre_skip": "跳过格式转换",
-        "opt_calibre_manual": "打开官网手动下载"
+        "opt_calibre_manual": "打开官网手动下载",
+        "setting_operation_logging": "启用操作记录 (用于LLM分析)",
+        "setting_operation_logging_desc": "记录用户操作流程，在报错时发送给LLM以获得更准确的分析",
+        "banner_op_log": "操作记录",
+        "banner_op_log_hint_on": "敏感信息已抹除，报错时LLM可更准确分析",
+        "banner_op_log_hint_off": "建议开启以获得更准确的LLM分析",
+        "label_operation_flow": "操作流程"
     }

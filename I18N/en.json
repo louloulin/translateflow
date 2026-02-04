@@ -543,5 +543,11 @@
         "msg_calibre_manual_hint": "Please install and re-run the task",
         "opt_calibre_download": "Auto download and install (Recommended, Windows only)",
         "opt_calibre_skip": "Skip format conversion",
-        "opt_calibre_manual": "Open official website to download"
+        "opt_calibre_manual": "Open official website to download",
+        "setting_operation_logging": "Enable Operation Logging (for LLM Analysis)",
+        "setting_operation_logging_desc": "Record user operations to send to LLM for more accurate error analysis",
+        "banner_op_log": "Op Log",
+        "banner_op_log_hint_on": "Sensitive info redacted, better LLM analysis on errors",
+        "banner_op_log_hint_off": "Enable for more accurate LLM analysis",
+        "label_operation_flow": "Operation Flow"
     }

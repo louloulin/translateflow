@@ -763,7 +763,7 @@ class TaskExecutor(Base):
 
 
 
-    # 单个翻译任务完成时,更新项目进度状态   
+    # 单个翻译任务完成时,更新项目进度状态
     def task_done_callback(self, future: concurrent.futures.Future) -> None:
         try:
             result = future.result()
@@ -771,9 +771,15 @@ class TaskExecutor(Base):
             if result is None or len(result) == 0:
                 return
 
+            # 确保 result 是字典类型
+            if not isinstance(result, dict):
+                return
+
             with self.project_status_data.atomic_scope():
                 self.project_status_data.total_requests += 1
-                self.project_status_data.error_requests += 0 if result.get("check_result") else 1
+                is_error = not result.get("check_result")
+                self.project_status_data.error_requests += 1 if is_error else 0
+                self.project_status_data.success_requests += 0 if is_error else 1
                 self.project_status_data.line += result.get("row_count", 0)
                 self.project_status_data.token += result.get("prompt_tokens", 0) + result.get("completion_tokens", 0)
                 self.project_status_data.total_completion_tokens += result.get("completion_tokens", 0)

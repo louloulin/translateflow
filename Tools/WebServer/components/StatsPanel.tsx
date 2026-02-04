@@ -1,7 +1,7 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ChartDataPoint, TaskStats } from '../types';
-import { Activity, Zap, FileText, Clock } from 'lucide-react';
+import { Activity, Zap, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
 
 interface StatsPanelProps {
@@ -11,14 +11,14 @@ interface StatsPanelProps {
 }
 
 const StatCard = ({ icon: Icon, label, value, subtext, color, compact }: any) => (
-  <div className={`${compact ? 'p-2' : 'p-4'} bg-surface/50 border border-slate-700/50 rounded-xl flex items-center gap-4 backdrop-blur-sm`}>
-    <div className={`${compact ? 'p-2' : 'p-3'} rounded-lg bg-${color}-500/10 text-${color}-400`}>
-      <Icon size={compact ? 16 : 24} />
+  <div className={`${compact ? 'p-2' : 'p-3'} bg-surface/50 border border-slate-700/50 rounded-xl flex items-center gap-3 backdrop-blur-sm`}>
+    <div className={`${compact ? 'p-1.5' : 'p-2.5'} rounded-lg bg-${color}-500/10 text-${color}-400`}>
+      <Icon size={compact ? 14 : 20} />
     </div>
-    <div>
-      <p className="text-slate-400 text-[10px] uppercase tracking-wider font-semibold">{label}</p>
-      <p className={`${compact ? 'text-lg' : 'text-2xl'} font-bold text-slate-100`}>{value}</p>
-      {subtext && !compact && <p className="text-slate-500 text-xs">{subtext}</p>}
+    <div className="overflow-hidden">
+      <p className="text-slate-400 text-[9px] uppercase tracking-wider font-semibold truncate">{label}</p>
+      <p className={`${compact ? 'text-base' : 'text-xl'} font-bold text-slate-100`}>{value}</p>
+      {subtext && !compact && <p className="text-slate-500 text-[10px] truncate">{subtext}</p>}
     </div>
   </div>
 );
@@ -32,10 +32,12 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ data, stats, variant = '
   const completed = stats?.completedProgress || 0;
   const total = Math.max(stats?.totalProgress || 0, 1);
   const elapsed = stats?.elapsedTime || 0;
+  const sRate = stats?.successRate || 0;
+  const eRate = stats?.errorRate || 0;
 
   return (
-    <div className={isCompact ? 'space-y-3' : 'space-y-6'}>
-      <div className={`grid grid-cols-2 ${isCompact ? 'lg:grid-cols-4' : 'md:grid-cols-2 lg:grid-cols-4'} gap-3`}>
+    <div className={isCompact ? 'space-y-2' : 'space-y-4'}>
+      <div className={`grid grid-cols-2 ${isCompact ? 'lg:grid-cols-4' : 'md:grid-cols-2 lg:grid-cols-4'} gap-2`}>
         <StatCard 
           icon={Zap} 
           label="RPM" 
@@ -50,6 +52,22 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ data, stats, variant = '
           value={`${tpm.toFixed(1)}k`} 
           subtext="Tokens per min"
           color="primary" 
+          compact={isCompact}
+        />
+        <StatCard 
+          icon={CheckCircle} 
+          label="S-Rate" 
+          value={`${sRate.toFixed(1)}%`} 
+          subtext="Success Rate"
+          color="green" 
+          compact={isCompact}
+        />
+        <StatCard 
+          icon={AlertCircle} 
+          label="E-Rate" 
+          value={`${eRate.toFixed(1)}%`} 
+          subtext="Error Rate"
+          color="red" 
           compact={isCompact}
         />
         <StatCard 

@@ -35,6 +35,7 @@ class ProjectType:
 @dataclass(repr=False)
 class CacheProjectStatistics(ThreadSafeCache):
     total_requests: int = 0
+    success_requests: int = 0
     error_requests: int = 0
     start_time: float = field(default_factory=time.time)
     total_line: int = 0

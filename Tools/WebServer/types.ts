@@ -16,6 +16,8 @@ export interface TaskStats {
   elapsedTime: number;
   status: 'idle' | 'running' | 'paused' | 'completed' | 'error' | 'stopping';
   currentFile: string;
+  successRate?: number;
+  errorRate?: number;
 }
 
 export interface ChartDataPoint {

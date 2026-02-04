@@ -60,7 +60,7 @@ class TaskManager:
         return {
             "rpm": 0, "tpm": 0, "totalProgress": 0, "completedProgress": 0,
             "totalTokens": 0, "elapsedTime": 0, "status": "idle",
-            "currentFile": "N/A"
+            "currentFile": "N/A", "successRate": 0, "errorRate": 0
         }
 
     def push_log(self, message: str, type: str = "info"):
@@ -262,6 +262,13 @@ class TaskManager:
                             # Tokens
                             tokens_match = re.search(r"Tokens:\s*(\d+)", line)
                             if tokens_match: self.stats["totalTokens"] = int(tokens_match.group(1))
+
+                            # Success/Error Rate
+                            s_rate_match = re.search(r"S-Rate:\s*([\d\.]+)%", line)
+                            if s_rate_match: self.stats["successRate"] = float(s_rate_match.group(1))
+                            
+                            e_rate_match = re.search(r"E-Rate:\s*([\d\.]+)%", line)
+                            if e_rate_match: self.stats["errorRate"] = float(e_rate_match.group(1))
                             
                             # Append to Chart Data
                             self.chart_data.append({

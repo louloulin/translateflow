@@ -206,6 +206,68 @@ def ensure_calibre_available():
     return None
 
 
+class OperationLogger:
+    """用户操作记录器 - 记录用户在程序中的操作流程，用于LLM分析"""
+
+    def __init__(self, max_records=50):
+        self._lock = threading.RLock()
+        self._records = collections.deque(maxlen=max_records)
+        self._enabled = False
+        self._start_time = None
+
+    def enable(self):
+        """启用操作记录"""
+        with self._lock:
+            self._enabled = True
+            self._start_time = datetime.now()
+            self._records.clear()
+            self.log("程序启动", "APP_START")
+
+    def disable(self):
+        """禁用操作记录"""
+        with self._lock:
+            self._enabled = False
+            self._records.clear()
+            self._start_time = None
+
+    def is_enabled(self):
+        """检查是否启用"""
+        return self._enabled
+
+    def log(self, action: str, category: str = "MENU"):
+        """记录一条操作"""
+        if not self._enabled:
+            return
+        with self._lock:
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            self._records.append({
+                "time": timestamp,
+                "category": category,
+                "action": action
+            })
+
+    def get_records(self) -> list:
+        """获取所有记录"""
+        with self._lock:
+            return list(self._records)
+
+    def get_formatted_log(self) -> str:
+        """获取格式化的操作日志，用于发送给LLM"""
+        with self._lock:
+            if not self._records:
+                return "无操作记录"
+
+            lines = ["用户操作流程:"]
+            for i, rec in enumerate(self._records, 1):
+                lines.append(f"  {i}. [{rec['time']}] [{rec['category']}] {rec['action']}")
+            return "\n".join(lines)
+
+    def clear(self):
+        """清空记录"""
+        with self._lock:
+            self._records.clear()
+
+
 class TaskUI:
     def __init__(self, parent_cli=None):
         self._lock = threading.RLock()
@@ -303,7 +365,7 @@ class TaskUI:
 
     def update_status(self, event, data):
         with self._lock:
-            status = data.get("status", "normal")
+            status = data.get("status", "normal") if isinstance(data, dict) else "normal"
             color_map = {"normal": "green", "fixing": "yellow", "warning": "yellow", "error": "red", "paused": "yellow", "critical_error": "red"}
             status_key_map = {
                 "normal": "label_status_normal",
@@ -360,6 +422,7 @@ class TaskUI:
     def on_result_data(self, event, data):
         """接收译文数据的事件回调"""
         if not self.show_detailed: return
+        if not isinstance(data, dict): return
         raw_content = str(data.get("data", ""))
         source_content = data.get("source") # 获取绑定的原文内容
         if not raw_content and not source_content: return
@@ -479,9 +542,10 @@ class TaskUI:
     def update_progress(self, event, data):
         with self._lock:
             if not hasattr(self, "_last_progress_data"):
-                self._last_progress_data = {"line": 0, "total_line": 1, "token": 0, "time": 0, "file_name": "...", "total_requests": 0}
-            
-            if data: self._last_progress_data.update(data)
+                self._last_progress_data = {"line": 0, "total_line": 1, "token": 0, "time": 0, "file_name": "...", "total_requests": 0, "error_requests": 0}
+
+            if data and isinstance(data, dict):
+                self._last_progress_data.update(data)
             d = self._last_progress_data
             completed, total = d["line"], d["total_line"]
             tokens, elapsed = d["token"], d["time"]
@@ -496,6 +560,17 @@ class TaskUI:
                 tpm_k = (calc_tokens / (elapsed / 60) / 1000)
             else: rpm, tpm_k = 0, 0
             
+            # 计算成功率和失败率
+            total_req = d.get("total_requests", 0)
+            success_req = d.get("success_requests", 0)
+            error_req = d.get("error_requests", 0)
+            
+            if total_req > 0:
+                s_rate = (success_req / total_req) * 100
+                e_rate = (error_req / total_req) * 100
+            else:
+                s_rate, e_rate = 0, 0
+
             # 更新 Header (详细模式专用)
             if self.show_detailed and self.parent_cli:
                 cfg = self.parent_cli.config
@@ -540,7 +615,9 @@ class TaskUI:
                     "completedProgress": completed,
                     "totalTokens": tokens,
                     "currentFile": current_file,
-                    "status": "running"
+                    "status": "running",
+                    "successRate": s_rate,
+                    "errorRate": e_rate
                 })
 
             rpm_str = f"{rpm:.2f}"
@@ -559,16 +636,17 @@ class TaskUI:
                 current_threads = self.parent_cli.task_executor.config.actual_thread_counts
 
             stats_markup = (
-                f"File: [bold]{current_file}[/] | Progress: [bold]{completed}/{total}[/] | Threads: [bold]{current_threads}[/] | RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/] | Tokens: [bold]{tokens}[/]\n"
-                f"Status: [{self.current_status_color}]{status_text}[/{self.current_status_color}] | {hotkeys}"
+                f"File: [bold]{current_file}[/] | Progress: [bold]{completed}/{total}[/] | Threads: [bold]{current_threads}[/] | RPM: [bold]{rpm_str}[/] | TPM: [bold]{tpm_str}[/]\n"
+                f"S-Rate: [bold green]{s_rate:.1f}%[/] | E-Rate: [bold red]{e_rate:.1f}%[/] | Tokens: [bold]{tokens}[/] | Status: [{self.current_status_color}]{status_text}[/{self.current_status_color}] | {hotkeys}"
             )
             self.stats_text = Text.from_markup(stats_markup, style="cyan")
-            
-            if data.get('is_start'):
+
+            is_start = data.get('is_start') if isinstance(data, dict) else False
+            if is_start:
                 self.progress.reset(self.task_id, total=total, completed=completed, action=i18n.get('label_processing'))
             else:
                 self.progress.update(self.task_id, total=total, completed=completed, action=i18n.get('label_processing'))
-            
+
             self.refresh_layout()
 
 class WebLogger:
@@ -624,11 +702,13 @@ class WebLogger:
     def on_source_data(self, event, data):
         """Web 模式下同步原文，用于后续对照发送"""
         if not self.show_detailed: return
+        if not isinstance(data, dict): return
         self.current_source = str(data.get("data", ""))
 
     def on_result_data(self, event, data):
         """Web 模式下接收到译文数据包，推送至 WebServer"""
         if not self.show_detailed: return
+        if not isinstance(data, dict): return
         raw_content = str(data.get("data", ""))
         source_content = data.get("source")
         if not raw_content and not source_content: return
@@ -641,8 +721,8 @@ class WebLogger:
             self._last_result_time = time.time()
 
     def update_progress(self, event, data):
-        if not data: return
-        
+        if not data or not isinstance(data, dict): return
+
         if time.time() - self.last_stats_time < 0.5:
             return
         self.last_stats_time = time.time()
@@ -653,6 +733,14 @@ class WebLogger:
         tokens = d.get("token", 0)
         elapsed = d.get("time", 0)
         
+        # Success/Error Rate
+        total_req = d.get("total_requests", 0)
+        success_req = d.get("success_requests", 0)
+        error_req = d.get("error_requests", 0)
+        
+        s_rate = (success_req / total_req * 100) if total_req > 0 else 0
+        e_rate = (error_req / total_req * 100) if total_req > 0 else 0
+        
         # Use session tokens for TPM calculation if available (Resume Fix)
         calc_tokens = d.get("session_token", tokens)
         calc_requests = d.get("session_requests", d.get("total_requests", 0))
@@ -661,7 +749,7 @@ class WebLogger:
         tpm_k = (calc_tokens / (elapsed / 60) / 1000) if elapsed > 0 else 0
         
         try:
-            self.stream.write(f"[STATS] RPM: {rpm:.2f} | TPM: {tpm_k:.2f}k | Progress: {completed}/{total} | Tokens: {tokens}\n")
+            self.stream.write(f"[STATS] RPM: {rpm:.2f} | TPM: {tpm_k:.2f}k | Progress: {completed}/{total} | Tokens: {tokens} | S-Rate: {s_rate:.1f}% | E-Rate: {e_rate:.1f}%\n")
             self.stream.flush()
         except: pass
 
@@ -707,6 +795,11 @@ class CLIMenu:
         signal.signal(signal.SIGINT, self.signal_handler)
         self.task_running, self.original_print = False, Base.print
         self.web_server_thread = None
+
+        # 操作记录器
+        self.operation_logger = OperationLogger()
+        if self.config.get("enable_operation_logging", False):
+            self.operation_logger.enable()
 
     def _check_web_server_dist(self):
         """检查 WebServer 编译产物是否存在"""
@@ -881,6 +974,15 @@ class CLIMenu:
             tokens_match = re.search(r"Tokens:\s*(\d+)", stats_line)
             if tokens_match:
                 stats_data["totalTokens"] = int(tokens_match.group(1))
+            
+            # 解析成功率和错误率
+            s_rate_match = re.search(r"S-Rate:\s*([\d\.]+)%", stats_line)
+            if s_rate_match:
+                stats_data["successRate"] = float(s_rate_match.group(1))
+            
+            e_rate_match = re.search(r"E-Rate:\s*([\d\.]+)%", stats_line)
+            if e_rate_match:
+                stats_data["errorRate"] = float(e_rate_match.group(1))
 
             # 推送统计数据
             if stats_data:
@@ -1642,6 +1744,15 @@ class CLIMenu:
         if polish_p == "command": polish_p = i18n.get("label_none") or "None"
         settings_line_3 = f"| [bold]{i18n.get('banner_prompts') or 'Prompts'}:[/bold] {i18n.get('banner_trans') or 'Trans'}:[green]{trans_p}[/green] | {i18n.get('banner_polish') or 'Polish'}:[green]{polish_p}[/green] |"
 
+        # 操作记录状态 - 开启时显示详细说明
+        op_log_on = self.operation_logger.is_enabled()
+        op_log_status = f"[green]{conv_on_text}[/green]" if op_log_on else f"[red]{conv_off_text}[/red]"
+        if op_log_on:
+            op_log_hint = f" [dim]({i18n.get('banner_op_log_hint_on') or '敏感信息已抹除'})[/dim]"
+        else:
+            op_log_hint = f" [dim]({i18n.get('banner_op_log_hint_off') or '建议开启以获得更准确的LLM分析'})[/dim]"
+        settings_line_4 = f"| [bold]{i18n.get('banner_op_log') or '操作记录'}:[/bold] {op_log_status}{op_log_hint} |"
+
         profile_display = f"[bold yellow]({self.active_profile_name})[/bold yellow]"
         console.clear()
         
@@ -1650,7 +1761,8 @@ class CLIMenu:
             f"[dim]GUI Original: By NEKOparapa | CLI Version: By ShadowLoveElysia[/dim]\n"
             f"{settings_line_1}\n"
             f"{settings_line_2}\n"
-            f"{settings_line_3}"
+            f"{settings_line_3}\n"
+            f"{settings_line_4}"
         )
         
         console.print(Panel.fit(banner_content, title="Status", border_style="cyan"))
@@ -1712,7 +1824,12 @@ class CLIMenu:
             table.add_row("[red]0.[/]", i18n.get("menu_exit")); console.print(table)
             choice = IntPrompt.ask(f"\n{i18n.get('prompt_select')}", choices=[str(i) for i in range(len(menus) + 1)], show_choices=False)
             console.print("\n")
-            
+
+            # 记录用户操作
+            menu_names = ["退出", "开始翻译", "开始润色", "翻译&润色", "仅导出", "编辑器", "项目设置", "API设置", "提示词", "插件设置", "任务队列", "配置管理", "帮助QA", "更新", "更新Web", "Web服务器"]
+            if choice < len(menu_names):
+                self.operation_logger.log(f"主菜单 -> {menu_names[choice]}", "MENU")
+
             actions = [
                 sys.exit,
                 lambda: self.run_task(TaskType.TRANSLATION),
@@ -1904,9 +2021,13 @@ class CLIMenu:
     def handle_crash(self, error_msg, temp_config=None):
         """Elegant error handling menu for crashes."""
         self.task_running = False
+
+        # 记录错误发生
+        self.operation_logger.log(f"出现报错: {error_msg[:100]}...", "ERROR")
+
         console.print("\n")
         console.print(Panel(f"[bold yellow]{i18n.get('msg_program_error')}[/bold yellow]", border_style="yellow"))
-        
+
         # 1. 针对性引导 (API/网络)
         transient_keywords = ["401", "403", "429", "500", "Timeout", "Connection", "SSL", "rate_limit", "bad request"]
         if any(k.lower() in error_msg.lower() for k in transient_keywords):
@@ -1938,6 +2059,13 @@ class CLIMenu:
 
         # 显示报错内容
         console.print(f"[dim]{i18n.get('label_error_content')}: {error_msg}[/dim]\n")
+
+        # 显示用户操作流（如果启用了操作记录）
+        if self.operation_logger.is_enabled():
+            records = self.operation_logger.get_records()
+            if records:
+                op_flow = " -> ".join([rec['action'] for rec in records[-10:]])  # 最近10条操作
+                console.print(f"[dim]{i18n.get('label_operation_flow') or '操作流程'}: {op_flow}[/dim]\n")
 
         # 4. 功能选项
         table = Table(show_header=False, box=None)
@@ -2120,20 +2248,69 @@ class CLIMenu:
                         system_prompt = prompts.get("system_prompt", {}).get(current_lang, prompts.get("system_prompt", {}).get("en", system_prompt))
             except Exception: pass
             
-            user_content = (
-                f"The program crashed. \n"
-                f"Environment: OS={sys.platform}, Python={sys.version.split()[0]}, "
-                f"App Version={self.update_manager.get_local_version_full()}\n\n"
-                f"Project File Structure Context:\n"
-                f"- Core Logic: ainiee_cli.py, ModuleFolders/*\n"
-                f"- User Extensions: PluginScripts/*\n"
-                f"- Resources: Resource/*\n\n"
-                f"Traceback:\n{error_msg}\n\n"
-                f"Strict Analysis Request:\n"
-                f"Analyze if the crash is due to external factors (Network, API Key, Environment, SSL) or internal software defects (Bugs in AiNiee-CLI code).\n"
-                f"Note: Network/SSL/429/401 errors are NEVER code bugs unless the code is fundamentally misusing the library.\n"
-                f"If the error occurs in a third-party library (like requests, urllib3, ssl) due to network conditions, it is NOT a code bug."
-            )
+            # 根据用户语言构建user_content
+            env_info = f"OS={sys.platform}, Python={sys.version.split()[0]}, App Version={self.update_manager.get_local_version_full()}"
+
+            if current_lang == "zh_CN":
+                user_content = (
+                    f"程序发生崩溃。\n"
+                    f"环境信息: {env_info}\n\n"
+                    f"项目文件结构:\n"
+                    f"- 核心逻辑: ainiee_cli.py, ModuleFolders/*\n"
+                    f"- 用户扩展: PluginScripts/*\n"
+                    f"- 资源文件: Resource/*\n\n"
+                )
+            elif current_lang == "ja":
+                user_content = (
+                    f"プログラムがクラッシュしました。\n"
+                    f"環境情報: {env_info}\n\n"
+                    f"プロジェクトファイル構造:\n"
+                    f"- コアロジック: ainiee_cli.py, ModuleFolders/*\n"
+                    f"- ユーザー拡張: PluginScripts/*\n"
+                    f"- リソース: Resource/*\n\n"
+                )
+            else:
+                user_content = (
+                    f"The program crashed.\n"
+                    f"Environment: {env_info}\n\n"
+                    f"Project File Structure:\n"
+                    f"- Core Logic: ainiee_cli.py, ModuleFolders/*\n"
+                    f"- User Extensions: PluginScripts/*\n"
+                    f"- Resources: Resource/*\n\n"
+                )
+
+            # 添加用户操作记录（如果启用）
+            if self.operation_logger.is_enabled():
+                user_content += f"{self.operation_logger.get_formatted_log()}\n\n"
+
+            # 添加Traceback和分析请求
+            if current_lang == "zh_CN":
+                user_content += (
+                    f"错误堆栈:\n{error_msg}\n\n"
+                    f"分析要求:\n"
+                    f"请分析此崩溃是由外部因素（网络、API Key、环境、SSL）还是内部软件缺陷（AiNiee-CLI代码Bug）导致的。\n"
+                    f"注意: 网络/SSL/429/401错误通常不是代码Bug，除非代码从根本上误用了库。\n"
+                    f"如果错误发生在第三方库（如requests、urllib3、ssl）中且由网络条件引起，则不是代码Bug。\n\n"
+                    f"【重要】如果你确定这是AiNiee-CLI的代码Bug，必须在回复中包含这句话：「此为代码问题」"
+                )
+            elif current_lang == "ja":
+                user_content += (
+                    f"トレースバック:\n{error_msg}\n\n"
+                    f"分析要求:\n"
+                    f"このクラッシュが外部要因（ネットワーク、APIキー、環境、SSL）によるものか、内部ソフトウェアの欠陥（AiNiee-CLIコードのバグ）によるものかを分析してください。\n"
+                    f"注意: ネットワーク/SSL/429/401エラーは、コードがライブラリを根本的に誤用していない限り、コードのバグではありません。\n"
+                    f"サードパーティライブラリ（requests、urllib3、sslなど）でネットワーク条件によりエラーが発生した場合、コードのバグではありません。\n\n"
+                    f"【重要】これがAiNiee-CLIのコードバグであると確信した場合、回答に必ずこの文を含めてください：「これはコードの問題です」"
+                )
+            else:
+                user_content += (
+                    f"Traceback:\n{error_msg}\n\n"
+                    f"Strict Analysis Request:\n"
+                    f"Analyze if the crash is due to external factors (Network, API Key, Environment, SSL) or internal software defects (Bugs in AiNiee-CLI code).\n"
+                    f"Note: Network/SSL/429/401 errors are NEVER code bugs unless the code is fundamentally misusing the library.\n"
+                    f"If the error occurs in a third-party library (like requests, urllib3, ssl) due to network conditions, it is NOT a code bug.\n\n"
+                    f"[IMPORTANT] If you are certain this is a code bug in AiNiee-CLI, you MUST include this exact phrase in your response: \"This is a code issue\""
+                )
             
             console.print(f"[cyan]{i18n.get('msg_llm_analyzing')}[/cyan]")
             
@@ -2624,6 +2801,13 @@ class CLIMenu:
                 if new_value is not None:
                     self.config[key] = new_value
                     self.save_config()
+
+                    # 特殊处理：操作记录开关
+                    if key == "enable_operation_logging":
+                        if new_value:
+                            self.operation_logger.enable()
+                        else:
+                            self.operation_logger.disable()
 
     def api_pool_menu(self):
         while True:
@@ -3762,6 +3946,11 @@ class CLIMenu:
         console.print(f"[dim]{i18n.get('label_input')}: {target_path}[/dim]")
         console.print(f"[dim]{i18n.get('label_output')}: {opath}[/dim]")
 
+        # 记录任务开始操作
+        task_type_name = "翻译" if task_mode == TaskType.TRANSLATION else "润色" if task_mode == TaskType.POLISH else "翻译&润色"
+        file_ext = os.path.splitext(target_path)[1].upper() if os.path.isfile(target_path) else "文件夹"
+        self.operation_logger.log(f"开始{task_type_name}任务 -> 文件类型:{file_ext}", "TASK")
+
         # Initialize variables for finally block safety
         current_listener = None
         log_file = None
@@ -3900,13 +4089,13 @@ class CLIMenu:
             self.ui.log(f"[bold green]✓ {i18n.get('msg_task_completed')}[/bold green]")
             success.set(); finished.set()
         
-        def on_stop(e, d): 
+        def on_stop(e, d):
             # 只有在收到明确的任务停止完成事件时才记录日志
             if e == Base.EVENT.TASK_STOP_DONE:
                 self.ui.log(f"[bold yellow]{i18n.get('msg_task_stopped')}[/bold yellow]")
-            
+
             # 记录是否为熔断导致的停止
-            if d and d.get("status") == "critical_error":
+            if d and isinstance(d, dict) and d.get("status") == "critical_error":
                 self._is_critical_failure = True
                 self.ui.log(f"[bold red]熔断：因连续错误过多任务已暂停。[/bold red]")
         
@@ -3922,7 +4111,8 @@ class CLIMenu:
         last_task_data = {"line": 0, "token": 0, "time": 0}
         def track_last_data(e, d):
             nonlocal last_task_data
-            last_task_data = d
+            if d and isinstance(d, dict):
+                last_task_data = d
         EventManager.get_singleton().subscribe(Base.EVENT.TASK_UPDATE, track_last_data)
 
         # Wrapper to run task logic (so we can use it with or without Live)

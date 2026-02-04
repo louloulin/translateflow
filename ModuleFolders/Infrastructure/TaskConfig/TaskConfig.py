@@ -142,35 +142,43 @@ class TaskConfig(Base):
     # 从字典加载配置 (用于从外部传入配置)
     def load_config_from_dict(self, config_dict: dict) -> None:
         for key, value in config_dict.items():
-            if key == "response_check_switch" and isinstance(value, dict):
-                current_value = getattr(self, key, {})
-                if isinstance(current_value, dict):
-                    new_value = current_value.copy()
-                    new_value.update(value)
-                    setattr(self, key, new_value)
-                else:
-                    setattr(self, key, value)
-            elif key == "platforms" and isinstance(value, dict):
-                # 对于 platforms 字典，进行深度合并而不是完全覆盖
-                current_platforms = getattr(self, key, {})
-                if isinstance(current_platforms, dict):
-                    for platform_key, platform_value in value.items():
-                        if platform_key in current_platforms and isinstance(current_platforms[platform_key], dict) and isinstance(platform_value, dict):
-                            current_platforms[platform_key].update(platform_value)
-                        else:
-                            current_platforms[platform_key] = platform_value
-                    setattr(self, key, current_platforms)
-                else:
-                    setattr(self, key, value)
-            elif key == "api_settings" and isinstance(value, dict):
-                current_api_settings = getattr(self, key, {})
-                if isinstance(current_api_settings, dict):
-                    current_api_settings.update(value)
-                    setattr(self, key, current_api_settings)
-                else:
-                    setattr(self, key, value)
-            else:
-                setattr(self, key, value)
+            if key == "response_check_switch":
+                if isinstance(value, dict):
+                    current_value = getattr(self, key, {})
+                    if isinstance(current_value, dict):
+                        new_value = current_value.copy()
+                        new_value.update(value)
+                        setattr(self, key, new_value)
+                    else:
+                        setattr(self, key, value)
+                continue
+
+            if key == "platforms":
+                if isinstance(value, dict):
+                    # 对于 platforms 字典，进行深度合并而不是完全覆盖
+                    current_platforms = getattr(self, key, {})
+                    if isinstance(current_platforms, dict):
+                        for platform_key, platform_value in value.items():
+                            if platform_key in current_platforms and isinstance(current_platforms[platform_key], dict) and isinstance(platform_value, dict):
+                                current_platforms[platform_key].update(platform_value)
+                            else:
+                                current_platforms[platform_key] = platform_value
+                        setattr(self, key, current_platforms)
+                    else:
+                        setattr(self, key, value)
+                continue
+
+            if key == "api_settings":
+                if isinstance(value, dict):
+                    current_api_settings = getattr(self, key, {})
+                    if isinstance(current_api_settings, dict):
+                        current_api_settings.update(value)
+                        setattr(self, key, current_api_settings)
+                    else:
+                        setattr(self, key, value)
+                continue
+
+            setattr(self, key, value)
 
     def get_next_apikey(self) -> str:
         """
