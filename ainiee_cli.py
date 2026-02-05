@@ -46,7 +46,7 @@ ReaderUtilModule._SUPPRESS_OUTPUT = True
 try: initialize_tiktoken()
 except Exception: pass
 
-from ModuleFolders.Base.Base import Base
+from ModuleFolders.Base.Base import Base, TUIHandler
 from ModuleFolders.Base.PluginManager import PluginManager
 from ModuleFolders.Infrastructure.Cache.CacheItem import TranslationStatus
 from ModuleFolders.Infrastructure.Cache.CacheManager import CacheManager
@@ -4116,7 +4116,9 @@ class CLIMenu:
             self.ui = WebLogger(stream=original_stdout, show_detailed=self.config.get("show_detailed_logs", False))
         else:
             self.ui = TaskUI(parent_cli=self)
-            
+            # 设置 TUIHandler 的 UI 实例
+            TUIHandler.set_ui(self.ui)
+
         Base.print = self.ui.log
         self.stop_requested = False
         self.live_state = [True] # 必须在这里初始化，防止 LogStream 报错
@@ -4566,6 +4568,7 @@ class CLIMenu:
 
             sys.stdout, sys.stderr = original_stdout, original_stderr
             self.task_running = False; Base.print = self.original_print
+            TUIHandler.clear()  # 清理 TUIHandler 的 UI 引用
             EventManager.get_singleton().unsubscribe(Base.EVENT.TASK_COMPLETED, on_complete)
             EventManager.get_singleton().unsubscribe(Base.EVENT.TASK_STOP_DONE, on_stop)
             EventManager.get_singleton().unsubscribe(Base.EVENT.SYSTEM_STATUS_UPDATE, on_stop)

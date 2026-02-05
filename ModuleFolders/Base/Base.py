@@ -1,11 +1,83 @@
 import os
+import logging
 import threading
 import traceback
 import queue
 
 import rapidjson as json
-from rich import print
+from rich import print as rich_print
 from ModuleFolders.Base.EventManager import EventManager
+
+
+class TUIHandler(logging.Handler):
+    """自定义 logging.Handler，将日志发射到 TUI 的 TaskUI 实例"""
+
+    # 类级别的全局实例引用
+    _instance = None
+    _ui = None
+    _file_handler = None
+
+    def __init__(self):
+        super().__init__()
+        self.setFormatter(logging.Formatter('%(message)s'))
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    @classmethod
+    def set_ui(cls, ui):
+        """设置 TaskUI 实例"""
+        cls._ui = ui
+
+    @classmethod
+    def set_file(cls, file_handle):
+        """设置日志文件句柄"""
+        cls._file_handler = file_handle
+
+    @classmethod
+    def clear(cls):
+        """清理 UI 和文件引用"""
+        cls._ui = None
+        cls._file_handler = None
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            if not msg:
+                return
+
+            # 根据日志级别添加 rich 标签
+            level = record.levelno
+            if level >= logging.ERROR:
+                formatted = f"[[red]{record.levelname}[/]] {msg}"
+            elif level >= logging.WARNING:
+                formatted = f"[[yellow]{record.levelname}[/]] {msg}"
+            elif level >= logging.INFO:
+                formatted = f"[[green]{record.levelname}[/]] {msg}"
+            else:  # DEBUG
+                formatted = f"[[yellow]DEBUG[/]] {msg}"
+
+            # 发送到 TUI
+            if self._ui is not None and hasattr(self._ui, 'log'):
+                self._ui.log(formatted)
+            else:
+                # 回退到 rich print
+                rich_print(formatted)
+
+        except Exception:
+            self.handleError(record)
+
+
+def get_logger(name: str = "ainiee") -> logging.Logger:
+    """获取配置好的 logger 实例"""
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        logger.addHandler(TUIHandler.get_instance())
+        logger.setLevel(logging.DEBUG)
+    return logger
 
 # 事件列表
 class Event():
@@ -104,6 +176,15 @@ class Base():
         return text
 
 
+    # 类级别的 logger
+    _logger = None
+
+    @classmethod
+    def get_logger(cls):
+        if cls._logger is None:
+            cls._logger = get_logger("ainiee")
+        return cls._logger
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
@@ -133,8 +214,8 @@ class Base():
                             for key, value in data[top_level_key].items():
                                 combined_data[key] = value
                 except Exception as e:
-                    print(f"[red]Error loading translation file {filename}: {e}[/red]")
-                    traceback.print_exc() # 打印更详细的错误信息
+                    rich_print(f"[red]Error loading translation file {filename}: {e}[/red]")
+                    traceback.print_exc()
         return combined_data
 
 
@@ -150,9 +231,9 @@ class Base():
     def reset_debug(self) -> None:
         Base._is_debug = None
 
-    # PRINT
+    # PRINT (保留兼容性，内部转发到 logger)
     def print(self, msg: str) -> None:
-        print(msg)
+        Base.get_logger().info(msg)
 
     # DEBUG
     def debug(self, msg: str, e: Exception = None) -> None:
@@ -160,41 +241,41 @@ class Base():
             return None
 
         if e is None:
-            self.print(f"[[yellow]DEBUG[/]] {msg}")
+            Base.get_logger().debug(msg)
         else:
-            self.print(f"[[yellow]DEBUG[/]] {msg}\n{e}\n{(''.join(traceback.format_exception(None, e, e.__traceback__))).strip()}")
+            Base.get_logger().debug(f"{msg}\n{e}\n{(''.join(traceback.format_exception(None, e, e.__traceback__))).strip()}")
 
     # INFO
     def info(self, msg: str) -> None:
-        self.print(f"[[green]INFO[/]] {msg}")
+        Base.get_logger().info(msg)
 
     # ERROR
     def error(self, msg: str, e: Exception = None) -> None:
         if e is None:
-            self.print(f"[[red]ERROR[/]] {msg}")
+            Base.get_logger().error(msg)
         else:
-            self.print(f"[[red]ERROR[/]] {msg}\n{e}\n{(''.join(traceback.format_exception(None, e, e.__traceback__))).strip()}")
+            Base.get_logger().error(f"{msg}\n{e}\n{(''.join(traceback.format_exception(None, e, e.__traceback__))).strip()}")
 
     # WARNING
     def warning(self, msg: str) -> None:
-        self.print(f"[[red]WARNING[/]] {msg}")
+        Base.get_logger().warning(msg)
 
     def get_parent_window(self):
         """Mock method for compatibility"""
         return None
 
-    # Toast replacements - using console log
+    # Toast replacements - using logger
     def info_toast(self, title: str, content: str) -> None:
-        self.print(f"[[blue]TOAST-INFO[/]] {title}: {content}")
+        Base.get_logger().info(f"[TOAST] {title}: {content}")
 
     def error_toast(self, title: str, content: str) -> None:
-        self.print(f"[[red]TOAST-ERROR[/]] {title}: {content}")
+        Base.get_logger().error(f"[TOAST] {title}: {content}")
 
     def success_toast(self, title: str, content: str) -> None:
-        self.print(f"[[green]TOAST-SUCCESS[/]] {title}: {content}")
+        Base.get_logger().info(f"[TOAST] {title}: {content}")
 
     def warning_toast(self, title: str, content: str) -> None:
-        self.print(f"[[yellow]TOAST-WARN[/]] {title}: {content}")
+        Base.get_logger().warning(f"[TOAST] {title}: {content}")
 
     # 载入配置文件
     def load_config(self) -> dict:
