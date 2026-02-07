@@ -756,6 +756,19 @@ register_config(ConfigItem(
     category="advanced"
 ))
 
+# --- WebServer 配置 (ADVANCED) ---
+register_config(ConfigItem(
+    key="webserver_port",
+    default=8000,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.INT,
+    i18n_key="setting_webserver_port",
+    i18n_desc_key="setting_webserver_port_desc",
+    min_value=1,
+    max_value=65535,
+    category="advanced"
+))
+
 # --- 系统级配置 (SYSTEM) - 不对用户显示 ---
 register_config(ConfigItem(
     key="translation_project",

@@ -614,5 +614,7 @@
         "option_use_current_config": "Use current config",
         "option_use_temp_config": "Use temporary config",
         "msg_using_temp_config": "Using temporary API config",
-        "msg_using_current_config": "Using current config"
+        "msg_using_current_config": "Using current config",
+        "setting_webserver_port": "WebServer Port",
+        "setting_webserver_port_desc": "Port number for WebServer (1-65535)"
     }

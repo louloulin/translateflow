@@ -852,19 +852,20 @@ class CLIMenu:
             try:
                 from Tools.WebServer.web_server import run_server
                 import Tools.WebServer.web_server as ws_module
-                
+
                 # Setup handlers (same as in start_web_server)
                 ws_module.profile_handlers['create'] = self._host_create_profile
                 ws_module.profile_handlers['rename'] = self._host_rename_profile
                 ws_module.profile_handlers['delete'] = self._host_delete_profile
 
-                self.web_server_thread = run_server(host="0.0.0.0", port=8000, monitor_mode=True)
+                webserver_port = self.config.get("webserver_port", 8000)
+                self.web_server_thread = run_server(host="0.0.0.0", port=webserver_port, monitor_mode=True)
 
                 # 设置环境变量，让后续启动的翻译任务能推送数据到这个webserver
-                os.environ["AINIEE_INTERNAL_API_URL"] = "http://127.0.0.1:8000"
+                os.environ["AINIEE_INTERNAL_API_URL"] = f"http://127.0.0.1:{webserver_port}"
 
                 Base.print(f"[bold green]{i18n.get('msg_web_server_started_bg')}[/bold green]")
-                Base.print(f"[cyan]您可以通过 http://{local_ip}:8000 访问网页监控面板[/cyan]")
+                Base.print(f"[cyan]您可以通过 http://{local_ip}:{webserver_port} 访问网页监控面板[/cyan]")
                 
                 # Signal TUI takeover if running
                 if self.task_running and hasattr(self, "ui") and isinstance(self.ui, TaskUI):
@@ -1101,9 +1102,10 @@ class CLIMenu:
         import threading
         from Tools.WebServer.web_server import run_server
 
+        webserver_port = self.config.get("webserver_port", 8000)
         def start_server():
             try:
-                run_server(host="127.0.0.1", port=8000, monitor_mode=False)
+                run_server(host="127.0.0.1", port=webserver_port, monitor_mode=False)
             except Exception as e:
                 self.ui.log(f"[red]Failed to start web server: {e}[/red]")
 
@@ -5336,22 +5338,23 @@ class CLIMenu:
             s.close()
         except: pass
 
+        webserver_port = self.config.get("webserver_port", 8000)
         console.print("[green]Starting Web Server...[/green]")
         console.print("[dim]Press Ctrl+C to stop the server and return to menu.[/dim]")
-        
-        server_thread = run_server(host="0.0.0.0", port=8000)
-        
+
+        server_thread = run_server(host="0.0.0.0", port=webserver_port)
+
         if server_thread:
             import webbrowser
-            time.sleep(1) 
+            time.sleep(1)
             console.print(Panel(
-                f"Local: [bold cyan]http://127.0.0.1:8000[/bold cyan]\n"
-                f"Network: [bold cyan]http://{local_ip}:8000[/bold cyan]",
+                f"Local: [bold cyan]http://127.0.0.1:{webserver_port}[/bold cyan]\n"
+                f"Network: [bold cyan]http://{local_ip}:{webserver_port}[/bold cyan]",
                 title="Web Server Active",
                 border_style="green",
                 expand=False
             ))
-            webbrowser.open("http://127.0.0.1:8000")
+            webbrowser.open(f"http://127.0.0.1:{webserver_port}")
             
             try:
                 while server_thread.is_alive():

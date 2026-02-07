@@ -593,5 +593,7 @@
         "option_use_current_config": "現在の設定を使用",
         "option_use_temp_config": "一時設定を使用",
         "msg_using_temp_config": "一時API設定を使用",
-        "msg_using_current_config": "現在の設定を使用"
+        "msg_using_current_config": "現在の設定を使用",
+        "setting_webserver_port": "WebServerポート",
+        "setting_webserver_port_desc": "WebServerのポート番号 (1-65535)"
     }

@@ -636,5 +636,7 @@
         "option_use_current_config": "使用当前配置",
         "option_use_temp_config": "使用临时配置",
         "msg_using_temp_config": "使用临时API配置",
-        "msg_using_current_config": "使用当前配置"
+        "msg_using_current_config": "使用当前配置",
+        "setting_webserver_port": "WebServer 端口",
+        "setting_webserver_port_desc": "WebServer 服务监听的端口号 (1-65535)"
     }
