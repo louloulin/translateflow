@@ -6,6 +6,7 @@ import queue
 
 import rapidjson as json
 from rich import print as rich_print
+from rich.console import RenderableType
 from ModuleFolders.Base.EventManager import EventManager
 
 
@@ -45,6 +46,15 @@ class TUIHandler(logging.Handler):
 
     def emit(self, record):
         try:
+            # 检查是否是 rich 可渲染对象（如 Table, Panel 等）
+            if isinstance(record.msg, RenderableType) and not isinstance(record.msg, str):
+                # 直接用 rich_print 渲染，不转成字符串
+                if self._ui is not None and hasattr(self._ui, 'log'):
+                    self._ui.log(record.msg)
+                else:
+                    rich_print(record.msg)
+                return
+
             msg = self.format(record)
             if not msg:
                 return
