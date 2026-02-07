@@ -79,33 +79,52 @@ export const GlobalProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [rulesProfiles, setRulesProfiles] = useState<string[]>([]);
 
   // Theme & Transition
-  const [activeTheme, setActiveThemeState] = useState<ThemeType>(() => (localStorage.getItem('active_theme') as ThemeType) || 'default');
+  const [activeTheme, setActiveThemeState] = useState<ThemeType>('default');
   const [notification, setNotification] = useState<ThemeType | null>(null);
 
   const [unlockedThemes, setUnlockedThemes] = useState<ThemeType[]>(['default']);
-  
-  // Update unlockedThemes when config is loaded
+
+  // Update unlockedThemes and activeTheme when config is loaded
   useEffect(() => {
     if (config?.unlocked_themes) {
         setUnlockedThemes(config.unlocked_themes as ThemeType[]);
-        
+
         // Auto-unlock Herrscher of Human if all 13 Flame-Chasers are unlocked
         const flameChasers: ThemeType[] = ['elysia', 'eden', 'mobius', 'pardofelis', 'griseo', 'kevin', 'kalpas', 'aponia', 'villv', 'su', 'sakura', 'kosma', 'hua'];
         const allUnlocked = flameChasers.every(t => config.unlocked_themes?.includes(t));
-        
+
         if (allUnlocked && !config.unlocked_themes.includes('herrscher_of_human')) {
             unlockThemeWithNotification('herrscher_of_human');
         }
     }
-  }, [config?.unlocked_themes]);
+    // Load active theme from config (server-side), fallback to localStorage for backwards compatibility
+    if (config?.active_theme) {
+        setActiveThemeState(config.active_theme as ThemeType);
+    } else {
+        const localTheme = localStorage.getItem('active_theme') as ThemeType;
+        if (localTheme) {
+            setActiveThemeState(localTheme);
+        }
+    }
+  }, [config?.unlocked_themes, config?.active_theme]);
 
   const elysiaActive = activeTheme === 'elysia';
 
   const [rippleData, setRippleData] = useState<{ active: boolean, x: number, y: number, type: 'in' | 'out', targetTheme?: ThemeType }>({ active: false, x: 0, y: 0, type: 'out' });
 
-  const setActiveTheme = (theme: ThemeType) => {
+  const setActiveTheme = async (theme: ThemeType) => {
     setActiveThemeState(theme);
     localStorage.setItem('active_theme', theme);
+    // Also save to server-side config for persistence across port changes
+    if (config) {
+      const updatedConfig = { ...config, active_theme: theme };
+      setConfigState(updatedConfig);
+      try {
+        await DataService.saveConfig(updatedConfig);
+      } catch (e) {
+        console.error("Failed to persist active theme to config", e);
+      }
+    }
   };
 
   const unlockTheme = (theme: ThemeType) => {
