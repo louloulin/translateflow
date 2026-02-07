@@ -167,10 +167,14 @@ export const Settings: React.FC = () => {
   // Handle Response Check Switch (Nested Object)
   const handleCheckChange = (key: string, val: boolean) => {
       if (!config) return;
+      // 防护：确保 response_check_switch 是对象而非字符串
+      const currentSwitch = typeof config.response_check_switch === 'object' && config.response_check_switch !== null
+          ? config.response_check_switch
+          : { newline_character_count_check: false, return_to_original_text_check: false, residual_original_text_check: false, reply_format_check: false };
       setConfig({
           ...config,
           response_check_switch: {
-              ...config.response_check_switch,
+              ...currentSwitch,
               [key]: val
           }
       });
@@ -908,13 +912,13 @@ export const Settings: React.FC = () => {
                  </div>
                  
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                     {Object.entries(config.response_check_switch).map(([key, val]) => (
+                     {typeof config.response_check_switch === 'object' && config.response_check_switch !== null && Object.entries(config.response_check_switch).map(([key, val]) => (
                          <div key={key} className="flex items-center justify-between p-3 bg-slate-900/50 rounded border border-slate-800/50">
                              <div className="flex items-center gap-2">
                                 <AlertTriangle size={14} className="text-yellow-500 cursor-help" onClick={handleWarningClick} />
                                 <span className="text-xs text-slate-300">{t(`check_${key}`) || key}</span>
                              </div>
-                             <button onClick={() => handleCheckChange(key, !val)} className={`transition-all duration-300 ${val ? getThemeColorClass() + ' scale-110' : 'text-slate-600'}`}>
+                             <button onClick={() => handleCheckChange(key, !(val as boolean))} className={`transition-all duration-300 ${val ? getThemeColorClass() + ' scale-110' : 'text-slate-600'}`}>
                                  {val ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
                              </button>
                          </div>

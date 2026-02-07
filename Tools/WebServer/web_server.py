@@ -647,13 +647,15 @@ async def get_config():
     # Meta
     loaded_config["active_profile"] = current_profile_name
     loaded_config["active_rules_profile"] = current_rules_name
-    
-    if "response_check_switch" not in loaded_config:
-        loaded_config["response_check_switch"] = {
-            "newline_character_count_check": False, "return_to_original_text_check": False,
-            "residual_original_text_check": False, "reply_format_check": False
-        }
-    
+
+    # 防护：确保 response_check_switch 是正确的 dict 类型
+    default_check_switch = {
+        "newline_character_count_check": False, "return_to_original_text_check": False,
+        "residual_original_text_check": False, "reply_format_check": False
+    }
+    if "response_check_switch" not in loaded_config or not isinstance(loaded_config.get("response_check_switch"), dict):
+        loaded_config["response_check_switch"] = default_check_switch
+
     _config_cache[cache_key] = loaded_config
     return loaded_config
 
@@ -1243,15 +1245,16 @@ async def switch_profile(request: ProfileSwitchRequest):
         with open(profile_path, 'r', encoding='utf-8-sig') as f:
             new_active_config = json.load(f)
             new_active_config["active_profile"] = profile_name
-            
-            # Apply frontend compatibility patch for the returned config as well
-            if "response_check_switch" not in new_active_config:
-                new_active_config["response_check_switch"] = {
-                    "newline_character_count_check": False,
-                    "return_to_original_text_check": False,
-                    "residual_original_text_check": False,
-                    "reply_format_check": False
-                }
+
+            # 防护：确保 response_check_switch 是正确的 dict 类型
+            default_check_switch = {
+                "newline_character_count_check": False,
+                "return_to_original_text_check": False,
+                "residual_original_text_check": False,
+                "reply_format_check": False
+            }
+            if "response_check_switch" not in new_active_config or not isinstance(new_active_config.get("response_check_switch"), dict):
+                new_active_config["response_check_switch"] = default_check_switch
             return new_active_config
             
     except Exception as e:
