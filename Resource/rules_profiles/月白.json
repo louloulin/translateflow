@@ -1,4 +1,5 @@
 {
+    "exclusion_list_data": [],
     "prompt_dictionary_data": [
         {
             "src": "サァリ",
@@ -90,5 +91,9 @@
             "dst": "",
             "info": "人名"
         }
-    ]
+    ],
+    "characterization_data": [],
+    "world_building_content": "",
+    "writing_style_content": "",
+    "translation_example_data": []
 }
