@@ -616,5 +616,19 @@
         "msg_using_temp_config": "Using temporary API config",
         "msg_using_current_config": "Using current config",
         "setting_webserver_port": "WebServer Port",
-        "setting_webserver_port_desc": "Port number for WebServer (1-65535)"
+        "setting_webserver_port_desc": "Port number for WebServer (1-65535)",
+        "menu_ai_proofread": "AI Proofreading",
+        "menu_view_proofread_report": "View Proofread Reports",
+        "proofread_start_current": "Start Proofreading (Current Project)",
+        "proofread_select_project": "Select Project to Proofread",
+        "proofread_settings": "Proofread Settings",
+        "proofread_no_cache": "Cache file not found",
+        "proofread_error": "Proofreading error",
+        "proofread_warning_llm": "This feature depends on LLM capability, reasoning models recommended",
+        "proofread_warning_cost": "Proofreading will incur additional API costs",
+        "setting_enable_auto_proofread": "Auto AI Proofread After Translation",
+        "setting_enable_auto_proofread_desc": "Automatically run AI proofreading after translation, incurs additional API costs",
+        "setting_proofread_context_lines": "Proofread Context Lines",
+        "setting_proofread_batch_size": "Proofread Batch Size",
+        "setting_proofread_confidence_threshold": "Proofread Confidence Threshold"
     }

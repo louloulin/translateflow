@@ -595,5 +595,19 @@
         "msg_using_temp_config": "一時API設定を使用",
         "msg_using_current_config": "現在の設定を使用",
         "setting_webserver_port": "WebServerポート",
-        "setting_webserver_port_desc": "WebServerのポート番号 (1-65535)"
+        "setting_webserver_port_desc": "WebServerのポート番号 (1-65535)",
+        "menu_ai_proofread": "AI校正",
+        "menu_view_proofread_report": "校正レポートを表示",
+        "proofread_start_current": "校正を開始（現在のプロジェクト）",
+        "proofread_select_project": "プロジェクトを選択して校正",
+        "proofread_settings": "校正設定",
+        "proofread_no_cache": "キャッシュファイルが見つかりません",
+        "proofread_error": "校正エラー",
+        "proofread_warning_llm": "この機能はLLMの性能に依存します。推論モデルを推奨",
+        "proofread_warning_cost": "校正には追加のAPI費用がかかります",
+        "setting_enable_auto_proofread": "翻訳後に自動AI校正",
+        "setting_enable_auto_proofread_desc": "翻訳完了後に自動でAI校正を実行、追加API費用が発生",
+        "setting_proofread_context_lines": "校正コンテキスト行数",
+        "setting_proofread_batch_size": "校正バッチサイズ",
+        "setting_proofread_confidence_threshold": "校正信頼度閾値"
     }

@@ -638,5 +638,19 @@
         "msg_using_temp_config": "使用临时API配置",
         "msg_using_current_config": "使用当前配置",
         "setting_webserver_port": "WebServer 端口",
-        "setting_webserver_port_desc": "WebServer 服务监听的端口号 (1-65535)"
+        "setting_webserver_port_desc": "WebServer 服务监听的端口号 (1-65535)",
+        "menu_ai_proofread": "AI自主校对",
+        "menu_view_proofread_report": "查看校对报告",
+        "proofread_start_current": "开始校对（当前项目）",
+        "proofread_select_project": "选择项目校对",
+        "proofread_settings": "校对设置",
+        "proofread_no_cache": "未找到缓存文件",
+        "proofread_error": "校对出错",
+        "proofread_warning_llm": "此功能依赖LLM自身性能，推荐使用推理模型",
+        "proofread_warning_cost": "校对将产生额外API费用，请确认后继续",
+        "setting_enable_auto_proofread": "翻译后自动AI校对",
+        "setting_enable_auto_proofread_desc": "翻译完成后自动调用AI校对，会产生额外API费用",
+        "setting_proofread_context_lines": "校对上下文行数",
+        "setting_proofread_batch_size": "校对批量大小",
+        "setting_proofread_confidence_threshold": "校对置信度阈值"
     }

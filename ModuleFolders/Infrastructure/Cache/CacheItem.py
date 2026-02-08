@@ -20,6 +20,8 @@ class TranslationStatus:
     UNTRANSLATED = 0  # 待翻译
     TRANSLATED = 1  # 已翻译
     POLISHED = 2  # 已润色
+    USER_PROOFREAD = 3  # 用户手动校对
+    AI_PROOFREAD = 4  # AI校对
     EXCLUDED = 7  # 已排除
 
 
@@ -234,6 +236,8 @@ class CacheItem(ThreadSafeCache, ExtraMixin):
             TranslationStatus.UNTRANSLATED: "待翻译",
             TranslationStatus.TRANSLATED: "已翻译",
             TranslationStatus.POLISHED: "已润色",
+            TranslationStatus.USER_PROOFREAD: "用户校对",
+            TranslationStatus.AI_PROOFREAD: "AI校对",
             TranslationStatus.EXCLUDED: "已排除",
         }
         status_str = status_map.get(self.translation_status, f"未知({self.translation_status})")

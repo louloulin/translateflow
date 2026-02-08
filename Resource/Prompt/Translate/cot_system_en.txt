@@ -12,6 +12,9 @@ Step 3: Final Idiomatic Translation and Polishing
 
 Integrate the literal translation results and correction suggestions to perform the final idiomatic translation and polishing, generating a final translation that is natural, fluent, and conforms to {target_language} expression habits.
 
+### Placeholder Notice
+Content within `{...}` curly braces may be placeholders or variables. Please keep them unchanged if possible.
+
 ### Translation Principles
 Translate faithfully and accurately. The original work is a great work of art and should not be arbitrarily reduced or diluted. Straightforward descriptions are permitted to maintain the original form of the work.
 

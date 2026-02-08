@@ -724,6 +724,50 @@ register_config(ConfigItem(
     category="advanced"
 ))
 
+# --- AI校对配置 (ADVANCED) ---
+register_config(ConfigItem(
+    key="enable_auto_proofread",
+    default=False,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.BOOL,
+    i18n_key="setting_enable_auto_proofread",
+    i18n_desc_key="setting_enable_auto_proofread_desc",
+    category="advanced"
+))
+
+register_config(ConfigItem(
+    key="proofread_context_lines",
+    default=5,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.INT,
+    i18n_key="setting_proofread_context_lines",
+    min_value=0,
+    max_value=20,
+    category="advanced"
+))
+
+register_config(ConfigItem(
+    key="proofread_batch_size",
+    default=20,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.INT,
+    i18n_key="setting_proofread_batch_size",
+    min_value=1,
+    max_value=50,
+    category="advanced"
+))
+
+register_config(ConfigItem(
+    key="proofread_confidence_threshold",
+    default=0.7,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.FLOAT,
+    i18n_key="setting_proofread_confidence_threshold",
+    min_value=0.0,
+    max_value=1.0,
+    category="advanced"
+))
+
 register_config(ConfigItem(
     key="enable_dry_run",
     default=False,
