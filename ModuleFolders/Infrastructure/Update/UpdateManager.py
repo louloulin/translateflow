@@ -188,20 +188,25 @@ class UpdateManager(Base):
                 }
         except: pass
 
-        # 3. Fetch Latest Pre-release
+        # 3. Fetch Latest Pre-release (主程序Beta版本，排除WebUI专用的pre-release)
         try:
             response = requests.get(self.RELEASES_URL, headers=headers, timeout=5)
             if response.status_code == 200:
                 releases = response.json()
                 for r in releases:
                     if r.get("prerelease"):
-                        prerelease_info = {
-                            "tag": r.get("tag_name"),
-                            "name": r.get("name"),
-                            "body": r.get("body", ""),
-                            "date": r.get("published_at", "")[:10],
-                            "datetime": r.get("published_at", "")
-                        }
+                        tag = r.get("tag_name", "")
+                        # 只获取主程序的Beta版本（tag包含V且包含B，如V2.4.0B）
+                        # 排除WebUI专用的pre-release（如web-dist-dev等）
+                        if 'V' in tag.upper() and 'B' in tag.upper():
+                            prerelease_info = {
+                                "tag": tag,
+                                "name": r.get("name"),
+                                "body": r.get("body", ""),
+                                "date": r.get("published_at", "")[:10],
+                                "datetime": r.get("published_at", "")
+                            }
+                            break
                         break
         except: pass
 
