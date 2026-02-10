@@ -30,13 +30,13 @@ class FileSelector:
             
             display_list = []
 
-            # Parent directory
-            table.add_row("0", "[dir]", "..")
+            # Parent directory (返回上一级)
+            table.add_row("0", self.i18n.get("file_type_dir") or "DIR", self.i18n.get("file_selector_parent") or "..")
             display_list.append(current_path.parent)
 
             # Current directory selection
             if select_dir:
-                table.add_row("1", "[dir]", f"Select this directory -> '{current_path.name}'")
+                table.add_row("1", self.i18n.get("file_type_dir") or "DIR", f"{self.i18n.get('file_selector_select_current') or 'Select this directory'} -> '{current_path.name}'")
                 display_list.append(current_path)
 
             idx_offset = len(display_list)
@@ -46,11 +46,25 @@ class FileSelector:
 
             for i, entry in enumerate(dirs + files):
                 is_dir = entry.is_dir()
-                entry_type = "[dir]" if is_dir else "[file]"
-                
+                if is_dir:
+                    entry_type = self.i18n.get("file_type_dir") or "DIR"
+                else:
+                    # 根据文件扩展名显示具体类型
+                    ext = Path(entry.name).suffix.lower()
+                    type_map = {
+                        '.epub': 'EPUB', '.txt': 'TXT', '.srt': 'SRT', '.lrc': 'LRC',
+                        '.vtt': 'VTT', '.ass': 'ASS', '.ssa': 'SSA', '.json': 'JSON',
+                        '.xlsx': 'XLSX', '.xml': 'XML', '.html': 'HTML', '.htm': 'HTML',
+                        '.md': 'MD', '.csv': 'CSV', '.py': 'Python', '.js': 'JS',
+                        '.ts': 'TS', '.docx': 'DOCX', '.pdf': 'PDF', '.zip': 'ZIP',
+                        '.rar': 'RAR', '.7z': '7Z', '.png': 'PNG', '.jpg': 'JPG',
+                        '.jpeg': 'JPEG', '.gif': 'GIF', '.mp3': 'MP3', '.mp4': 'MP4',
+                    }
+                    entry_type = type_map.get(ext, ext[1:].upper() if ext else 'FILE')
+
                 if not select_file and not is_dir:
                     continue
-                    
+
                 table.add_row(str(i + idx_offset), entry_type, entry.name)
                 display_list.append(Path(entry.path))
             

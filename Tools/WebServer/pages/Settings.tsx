@@ -666,9 +666,10 @@ export const Settings: React.FC = () => {
                                         <label className="text-xs font-semibold text-slate-400 uppercase">
                                             {t('menu_api_think_budget')}
                                         </label>
+                                        <span className="text-xs text-slate-500 block">{t('hint_think_budget')}</span>
                                         <input
                                             type="number"
-                                            value={config.thinking_budget || 4096}
+                                            value={config.thinking_budget ?? 4096}
                                             onChange={(e) => {
                                                 const newBudget = parseInt(e.target.value);
                                                 setConfig({
@@ -684,8 +685,7 @@ export const Settings: React.FC = () => {
                                                 });
                                             }}
                                             className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-primary text-sm"
-                                            min="1000"
-                                            max="100000"
+                                            min="-1"
                                         />
                                     </div>
                                 </>

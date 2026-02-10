@@ -1679,15 +1679,18 @@ class CLIMenu:
             if getattr(self, "stop_requested", False):
                 console.print("\n[bold red]Force quitting immediately...[/bold red]")
                 os._exit(1)
-            
+
             console.print("\n[yellow]Stopping task... (Press Ctrl+C again to force quit)[/yellow]")
             self.stop_requested = True
-            
+
             # Immediately set status to stop threads faster
             Base.work_status = Base.STATUS.STOPING
-            
+
             from ModuleFolders.Base.EventManager import EventManager
             EventManager.get_singleton().emit(Base.EVENT.TASK_STOP, {})
+        elif getattr(self, "web_server_active", False):
+            # Webserver运行时，抛出KeyboardInterrupt让try-except捕获
+            raise KeyboardInterrupt
         else:
             sys.exit(0)
 
@@ -2343,7 +2346,12 @@ class CLIMenu:
                     sel_conf["think_depth"] = Prompt.ask(i18n.get("prompt_temp_think_depth"), choices=["low", "medium", "high"], default="low")
                 else:
                     sel_conf["think_depth"] = Prompt.ask(i18n.get("prompt_temp_think_depth"), default="0")
-                sel_conf["thinking_budget"] = IntPrompt.ask(i18n.get("prompt_temp_think_budget"), default=4096)
+                console.print(f"[dim]{i18n.get('hint_think_budget') or '提示: 0=关闭, -1=无上限'}[/dim]")
+                budget_str = Prompt.ask(i18n.get("prompt_temp_think_budget"), default="4096")
+                try:
+                    sel_conf["thinking_budget"] = int(budget_str)
+                except ValueError:
+                    sel_conf["thinking_budget"] = 4096
             else:
                 sel_conf["think_switch"] = False
 
@@ -3993,10 +4001,15 @@ class CLIMenu:
                 if tp in self.config.get("platforms", {}):
                     self.config["platforms"][tp]["think_depth"] = val
             elif choice == 8:  # Think Budget
-                val = IntPrompt.ask(i18n.get("prompt_think_budget"), default=int(think_budget))
-                self.config["thinking_budget"] = val
-                if tp in self.config.get("platforms", {}):
-                    self.config["platforms"][tp]["thinking_budget"] = val
+                console.print(f"[dim]{i18n.get('hint_think_budget') or '提示: 0=关闭, -1=无上限'}[/dim]")
+                val_str = Prompt.ask(i18n.get("prompt_think_budget"), default=str(int(think_budget)))
+                try:
+                    val = int(val_str)
+                    self.config["thinking_budget"] = val
+                    if tp in self.config.get("platforms", {}):
+                        self.config["platforms"][tp]["thinking_budget"] = val
+                except ValueError:
+                    console.print("[red]Invalid input[/red]")
             elif choice == 10:
                 new_state = not auto_comp
                 if tp in self.config.get("platforms", {}):
@@ -4277,8 +4290,11 @@ class CLIMenu:
         # 获取要分析的文本
         items_to_analyze = all_items[:lines_to_analyze]
 
-        # 分批处理
-        batch_size = self.config.get("lines_limit", 20)
+        # 分批处理 (兼容lines和tokens两种模式)
+        if self.config.get("tokens_limit_switch"):
+            batch_size = self.config.get("tokens_limit") or 1000
+        else:
+            batch_size = self.config.get("lines_limit") or 20
         batches = [items_to_analyze[i:i+batch_size] for i in range(0, len(items_to_analyze), batch_size)]
 
         console.print(f"[cyan]{i18n.get('msg_batch_count') or '批次数量'}: {len(batches)}[/cyan]")
@@ -5965,6 +5981,14 @@ class CLIMenu:
         server_thread = run_server(host="0.0.0.0", port=webserver_port)
 
         if server_thread:
+            # 等待一小段时间检查服务器是否成功启动
+            time.sleep(1.5)
+            if not server_thread.is_alive():
+                # 服务器启动失败（如端口占用）
+                console.print(f"\n[bold red]Web Server failed to start. Please check if port {webserver_port} is already in use.[/bold red]")
+                time.sleep(3)  # 给用户3秒查看错误
+                return
+
             import webbrowser
             time.sleep(1)
             console.print(Panel(
@@ -5975,13 +5999,15 @@ class CLIMenu:
                 expand=False
             ))
             webbrowser.open(f"http://127.0.0.1:{webserver_port}")
-            
+
+            self.web_server_active = True
             try:
                 while server_thread.is_alive():
                     time.sleep(1)
             except KeyboardInterrupt:
                 console.print("\n[yellow]Stopping Web Server...[/yellow]")
-                pass
+            finally:
+                self.web_server_active = False
 
     def _get_profiles_list(self, profiles_dir):
         if not os.path.exists(profiles_dir): return []
@@ -6188,8 +6214,13 @@ class CLIMenu:
                     else:
                         t.think_depth = Prompt.ask(f"{i18n.get('prompt_think_depth')}{i18n.get('tip_follow_profile')}", 
                                                 default=current_think_depth) or None
-                    t.thinking_budget = IntPrompt.ask(f"{i18n.get('menu_api_think_budget')}{i18n.get('tip_follow_profile')}", 
-                                                    default=t.thinking_budget if t.thinking_budget is not None else 0) or None
+                    console.print(f"[dim]{i18n.get('hint_think_budget') or '提示: 0=关闭, -1=无上限'}[/dim]")
+                    budget_str = Prompt.ask(f"{i18n.get('menu_api_think_budget')}{i18n.get('tip_follow_profile')}",
+                                            default=str(t.thinking_budget) if t.thinking_budget is not None else "0")
+                    try:
+                        t.thinking_budget = int(budget_str) if budget_str else None
+                    except ValueError:
+                        t.thinking_budget = None
 
                     qm.save_tasks()
                     console.print("[green]Task updated.[/green]")
