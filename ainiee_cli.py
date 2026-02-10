@@ -3919,7 +3919,12 @@ class CLIMenu:
             # Values can be in root config (overrides) or platform config
             think_sw = self.config.get("think_switch", plat_conf.get("think_switch", False))
             think_dp = self.config.get("think_depth", plat_conf.get("think_depth", "low"))
-            think_budget = self.config.get("thinking_budget", plat_conf.get("thinking_budget", 4096))
+            
+            # Use explicit None check to allow 0 and -1
+            think_budget = self.config.get("thinking_budget")
+            if think_budget is None:
+                think_budget = plat_conf.get("thinking_budget", 4096)
+                
             structured_mode = plat_conf.get("structured_output_mode", 0)
             auto_comp = plat_conf.get("auto_complete", False)
 
@@ -6005,8 +6010,10 @@ class CLIMenu:
                 while server_thread.is_alive():
                     time.sleep(1)
             except KeyboardInterrupt:
-                console.print("\n[yellow]Stopping Web Server...[/yellow]")
+                console.print("\n[yellow]Stopping Web Server and cleaning up...[/yellow]")
             finally:
+                ws_module.stop_server()
+                time.sleep(3) # Wait for uvicorn shutdown logs to finish
                 self.web_server_active = False
 
     def _get_profiles_list(self, profiles_dir):
@@ -6370,11 +6377,19 @@ def main():
         else:
             cli.main_menu()
     except KeyboardInterrupt:
-        sys.exit(0)
+        pass
     except Exception as e:
         import traceback
         error_msg = traceback.format_exc()
         cli.handle_crash(error_msg)
+    finally:
+        # Final cleanup for WebServer and its subtasks
+        try:
+            import Tools.WebServer.web_server as ws_module
+            ws_module.stop_server()
+        except:
+            pass
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()

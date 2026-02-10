@@ -642,6 +642,7 @@ export const TaskQueue: React.FC = () => {
                                         onChange={e => setTaskForm({...taskForm, thinking_budget: e.target.value ? parseInt(e.target.value) : undefined})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-xs text-white outline-none"
                                     />
+                                    <p className="text-[9px] text-slate-500 italic px-1">{t('hint_think_budget')}</p>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase">{t('label_think_depth')}</label>

@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional
 
 # --- Pre-emptive Import for FastAPI & Pydantic ---
 try:
+    import uvicorn
     from fastapi import FastAPI, HTTPException, Body, File, UploadFile, Response, BackgroundTasks
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
@@ -2788,20 +2789,40 @@ async def serve_index():
 
 # --- Main Server Runner Function (to be called from ainiee_cli.py) ---
 
+class StoppableServer(uvicorn.Server):
+    def install_signal_handlers(self):
+        pass
+
+    @property
+    def is_running(self):
+        return self.started and not self.should_exit
+
+_current_server: Optional[StoppableServer] = None
+
+def stop_server():
+    """Stops the running uvicorn server and any active tasks."""
+    global _current_server
+    if _current_server:
+        # 1. Stop any running subprocess task
+        task_manager.stop_task()
+        # 2. Tell uvicorn to exit
+        _current_server.should_exit = True
+        _current_server = None
+
 def run_server(host: str = "127.0.0.1", port: int = 8000, monitor_mode: bool = False):
     """Starts the FastAPI server in a separate thread."""
-    global SYSTEM_MODE
+    global SYSTEM_MODE, _current_server
     SYSTEM_MODE = "monitor" if monitor_mode else "full"
     
     # 动态记录 WebServer 的地址，以便子进程上报数据
     task_manager.api_url = f"http://{host}:{port}"
     
     try:
-        import uvicorn
+        config = uvicorn.Config(app, host=host, port=port, log_level="info")
+        _current_server = StoppableServer(config)
 
         def server_task():
-            # Use reload=True for development, but it's better to disable it for production
-            uvicorn.run(app, host=host, port=port, log_level="info")
+            _current_server.run()
 
         # Running in a daemon thread allows the main TUI to exit cleanly
         thread = threading.Thread(target=server_task, daemon=True)

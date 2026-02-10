@@ -693,12 +693,12 @@ register_config(ConfigItem(
 
 register_config(ConfigItem(
     key="thinking_budget",
-    default=4096,
+    default=-1,
     level=ConfigLevel.ADVANCED,
     config_type=ConfigType.INT,
     i18n_key="menu_api_think_budget",
-    min_value=1024,
-    max_value=32768,
+    min_value=-1,
+    max_value=128000,
     depends_on="think_switch",
     category="advanced",
     online_only=True

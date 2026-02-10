@@ -119,7 +119,7 @@ class TaskConfig(Base):
         self.exclude_rule_str = ""
         self.think_switch = False
         self.think_depth = 0
-        self.thinking_budget = 4096
+        self.thinking_budget = -1
         self.structured_output_mode = 0
         self.enable_stream_api = True  # 流式API开关，默认启用
         self.show_detailed_logs = False # Fix: Initialize show_detailed_logs
@@ -422,7 +422,10 @@ class TaskConfig(Base):
         extra_body = self.platforms.get(target_platform).get("extra_body",{})
         think_switch = self.platforms.get(target_platform).get("think_switch")
         think_depth = self.platforms.get(target_platform).get("think_depth")
-        thinking_budget = self.platforms.get(target_platform).get("thinking_budget", -1)
+        thinking_budget = self.platforms.get(target_platform).get("thinking_budget")
+        if thinking_budget is None:
+            thinking_budget = -1
+            
         structured_output_mode = self.platforms.get(target_platform).get("structured_output_mode", 0)
         auto_complete = self.platforms.get(target_platform).get("auto_complete", False)
         enable_stream_api = getattr(self, "enable_stream_api", True)
