@@ -588,7 +588,29 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "ai_glossary_temp_model": "模型",
     "ai_glossary_temp_url": "API地址",
     "ai_glossary_temp_key": "API密钥",
-    "ai_glossary_temp_threads": "并发数"
+    "ai_glossary_temp_threads": "并发数",
+    "term_selector_title": "术语多翻译选择",
+    "term_selector_api_hint": "翻译质量取决于您设定的API所调用的LLM性能，使用更好的模型可能有更好的效果，但会消耗更多费用",
+    "term_selector_hint": "双击选项进行编辑，点击圆圈切换选择，点击刷新图标重新翻译",
+    "term_selector_translate_all": "一键翻译全部",
+    "term_selector_translating_all": "批量翻译中...",
+    "term_selector_save_all": "保存全部",
+    "term_selector_cancel": "取消",
+    "term_selector_header_term": "术语 (双击编辑原文)",
+    "term_selector_header_type": "类型",
+    "term_selector_header_options": "翻译选项 (双击翻译文字进行编辑)",
+    "term_selector_header_action": "操作",
+    "term_selector_waiting": "等待翻译...",
+    "term_selector_manual_add": "+ 手动",
+    "term_selector_retry_tooltip": "重新生成翻译建议 (获取更多选项)",
+    "term_selector_save_tooltip": "保存到术语表",
+    "term_selector_summary": "共 {} 个术语 | 已保存: {}",
+    "term_selector_edit_hint": "提示: 双击翻译文本可直接修改译文",
+    "term_selector_current_selection": "当前选择",
+    "term_selector_confirm_save": "确认并保存",
+    "term_selector_saved": "已保存",
+    "term_selector_new_manual": "新翻译",
+    "term_selector_duplicate_hint": "模型返回的译文和当前译文一致，可能需要人工处理"
 };
 
 // Approximated English Locale for demonstration
@@ -1019,7 +1041,29 @@ export const EN_LOCALE: Record<string, string> = {
     "ai_glossary_temp_model": "Model",
     "ai_glossary_temp_url": "API URL",
     "ai_glossary_temp_key": "API Key",
-    "ai_glossary_temp_threads": "Threads"
+    "ai_glossary_temp_threads": "Threads",
+    "term_selector_title": "Term Translation Selection",
+    "term_selector_api_hint": "Translation quality depends on the LLM performance of your configured API. Better models may yield better results but cost more",
+    "term_selector_hint": "Double-click options to edit, click circle to switch, click refresh icon to re-translate",
+    "term_selector_translate_all": "Translate All",
+    "term_selector_translating_all": "Translating All...",
+    "term_selector_save_all": "Save All",
+    "term_selector_cancel": "Cancel",
+    "term_selector_header_term": "Term (Double-click to edit source)",
+    "term_selector_header_type": "Type",
+    "term_selector_header_options": "Options (Double-click text to edit)",
+    "term_selector_header_action": "Action",
+    "term_selector_waiting": "Waiting...",
+    "term_selector_manual_add": "+ Manual",
+    "term_selector_retry_tooltip": "Regenerate translation suggestion (get more options)",
+    "term_selector_save_tooltip": "Save to glossary",
+    "term_selector_summary": "Total {} terms | Saved: {}",
+    "term_selector_edit_hint": "Tip: Double-click translation text to edit directly",
+    "term_selector_current_selection": "Current Selection",
+    "term_selector_confirm_save": "Confirm & Save",
+    "term_selector_saved": "Saved",
+    "term_selector_new_manual": "New Translation",
+    "term_selector_duplicate_hint": "Model returned the same translation as existing, may need manual handling"
 };
 
 export const DEFAULT_CONFIG: AppConfig = {

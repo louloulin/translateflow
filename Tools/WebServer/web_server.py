@@ -374,6 +374,16 @@ class GlossaryItem(BaseModel):
     dst: str
     info: Optional[str] = None
 
+class TermOption(BaseModel):
+    dst: str
+    info: str
+
+class TermRetryRequest(BaseModel):
+    src: str
+    type: str
+    avoid: List[str]
+    temp_config: Optional[Dict[str, Any]] = None
+
 class ExclusionItem(BaseModel):
     markers: str
     info: Optional[str] = None
@@ -706,6 +716,134 @@ async def get_glossary():
 async def save_glossary(items: List[GlossaryItem]):
     save_rule_generic("prompt_dictionary_data", [item.dict() for item in items])
     return {"message": "Glossary saved successfully."}
+
+@app.post("/api/glossary/add")
+async def add_glossary_item(item: GlossaryItem):
+    current = await get_glossary()
+    # Check if exists - current items may be dicts
+    found = False
+    for i, existing in enumerate(current):
+        existing_src = existing.src if hasattr(existing, 'src') else existing.get('src', '')
+        if existing_src == item.src:
+            current[i] = item
+            found = True
+            break
+
+    if not found:
+        current.append(item)
+
+    save_rule_generic("prompt_dictionary_data", [i.dict() if hasattr(i, 'dict') else i for i in current])
+    return {"message": "Term added to glossary."}
+
+@app.post("/api/glossary/batch-add")
+async def batch_add_glossary_items(request: Dict[str, List[GlossaryItem]]):
+    items = request.get("terms", [])
+    current = await get_glossary()
+
+    # Build map from current glossary (handle both dict and GlossaryItem)
+    current_map = {}
+    for it in current:
+        if isinstance(it, dict):
+            current_map[it.get('src', '')] = it
+        else:
+            current_map[it.src] = it
+
+    # Add/update items (items from request are dicts)
+    for item in items:
+        if isinstance(item, dict):
+            src = item.get('src', '')
+            current_map[src] = item
+        else:
+            current_map[item.src] = item.dict() if hasattr(item, 'dict') else item
+
+    # Save all as dicts
+    save_rule_generic("prompt_dictionary_data", list(current_map.values()))
+    return {"message": f"Successfully added {len(items)} terms."}
+
+@app.post("/api/term/retry")
+async def retry_term_translation(request: TermRetryRequest):
+    try:
+        from ModuleFolders.Infrastructure.LLMRequester.LLMRequester import LLMRequester
+        from ModuleFolders.Infrastructure.TaskConfig.TaskConfig import TaskConfig
+        from ModuleFolders.Infrastructure.TaskConfig.TaskType import TaskType
+
+        # 1. Load configuration
+        config = await get_config()
+        task_config = TaskConfig()
+        task_config.load_config_from_dict(config)
+        
+        # 2. Handle temporary overrides if provided
+        if request.temp_config:
+            platform_name = request.temp_config.get("platform")
+            if platform_name:
+                # Ensure the platform exists in config
+                if platform_name not in task_config.platforms:
+                    # Create a default structure if it's a new platform tag
+                    task_config.platforms[platform_name] = {
+                        "tag": platform_name,
+                        "name": platform_name,
+                        "group": "custom",
+                        "api_format": "OpenAI"
+                    }
+                
+                # Update specific fields
+                plat_ref = task_config.platforms[platform_name]
+                if request.temp_config.get("api_key"): plat_ref["api_key"] = request.temp_config["api_key"]
+                if request.temp_config.get("api_url"): plat_ref["api_url"] = request.temp_config["api_url"]
+                if request.temp_config.get("model"): plat_ref["model"] = request.temp_config["model"]
+                
+                # Set as active platform for this request
+                task_config.api_settings["translate"] = platform_name
+
+        # 3. Prepare task config (this handles model normalization, URL completion, API key rotation)
+        task_config.prepare_for_translation(TaskType.TRANSLATION)
+        platform_config = task_config.get_platform_configuration("translationReq")
+        target_language = task_config.target_language
+        
+        # 4. Construct Prompt (Match ainiee_cli.py logic)
+        term_type = request.type or "专有名词"
+        avoid_hint = ""
+        if request.avoid:
+            avoid_list = ", ".join(request.avoid[:5])
+            avoid_hint = f"\nPlease provide a different translation from: {avoid_list}"
+
+        system_prompt = f"""You are a terminology translator. Translate the term into "{target_language}".
+Term type: {term_type}
+{avoid_hint}
+
+Output format (use | as separator):
+Translation|Note"""
+
+        messages = [{"role": "user", "content": request.src}]
+
+        # 5. Execute Request
+        requester = LLMRequester()
+        skip, _, response, _, _ = requester.sent_request(messages, system_prompt, platform_config)
+        
+        if skip or not response:
+            raise HTTPException(status_code=500, detail="LLM request failed or was skipped")
+            
+        # 6. Parse Response (Match ainiee_cli.py logic)
+        response_text = response.strip()
+        if '|' in response_text:
+            parts = response_text.split('|', 1)
+            dst = parts[0].strip()
+            info = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            dst = response_text
+            info = ""
+            
+        # Post-process dst
+        if dst.startswith(("Translation:", "译文:", "译文：")):
+            dst = dst.split(":", 1)[-1].split("：", 1)[-1].strip()
+        dst = dst.strip('"').strip("'")
+            
+        return {"dst": dst, "info": info}
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/exclusion", response_model=List[ExclusionItem])
 async def get_exclusion():

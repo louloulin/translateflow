@@ -175,6 +175,19 @@ export interface TranslationExampleItem {
   dst: string;
 }
 
+export interface TermOption {
+  dst: string;      // 翻译结果
+  info: string;     // 说明（音译/直译/意译/不译）
+}
+
+export interface TermItem {
+  src: string;           // 原文术语
+  type: string;          // 类型（人名/地名/专有名词等）
+  options: TermOption[]; // 翻译选项列表
+  selected_index: number; // 当前选中的选项索引
+  saved: boolean;        // 是否已保存
+}
+
 export interface StringContent {
   content: string;
 }

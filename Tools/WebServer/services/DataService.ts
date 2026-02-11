@@ -197,6 +197,34 @@ export const DataService = {
         }
     },
 
+    async addGlossaryItem(item: { src: string, dst: string, info?: string }): Promise<void> {
+        const res = await fetch(`${API_BASE}/glossary/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item)
+        });
+        if (!res.ok) throw new Error('Failed to add term');
+    },
+
+    async batchAddGlossaryItems(terms: { src: string, dst: string, info?: string }[]): Promise<void> {
+        const res = await fetch(`${API_BASE}/glossary/batch-add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ terms })
+        });
+        if (!res.ok) throw new Error('Failed to batch add terms');
+    },
+
+    async retryTermTranslation(src: string, type: string, avoid: string[], tempConfig?: any): Promise<{ dst: string, info: string }> {
+        const res = await fetch(`${API_BASE}/term/retry`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ src, type, avoid, temp_config: tempConfig })
+        });
+        if (!res.ok) throw new Error('Failed to retry translation');
+        return await res.json();
+    },
+
     async getExclusion(): Promise<any[]> {
         try {
             const res = await fetch(`${API_BASE}/exclusion`);
