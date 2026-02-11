@@ -332,10 +332,35 @@ class CacheManager(Base):
 
         return collected
 
+    # 生成原文上下文数据条目片段
+    def generate_source_context(self, all_items: list[CacheItem], start_idx: int, context_count: int) -> List[CacheItem]:
+        """
+        获取当前chunk之前的原文上下文，用于帮助LLM理解段落连贯性
+
+        Args:
+            all_items: 文件的所有条目列表
+            start_idx: 当前chunk第一个条目在all_items中的索引
+            context_count: 要获取的上下文行数
+
+        Returns:
+            包含上下文条目的列表（用于提取source_text）
+        """
+        if not all_items or context_count <= 0 or start_idx <= 0:
+            return []
+
+        from_idx = max(0, start_idx - context_count)
+        to_idx = min(start_idx, len(all_items))
+
+        if from_idx >= to_idx:
+            return []
+
+        return all_items[from_idx:to_idx]
+
     # 生成待翻译片段
-    def generate_item_chunks(self, limit_type: str, limit_count: int, previous_line_count: int, task_mode) -> \
-            Tuple[List[List[CacheItem]], List[List[CacheItem]], List[str]]:
-        chunks, previous_chunks, file_paths = [], [], []
+    def generate_item_chunks(self, limit_type: str, limit_count: int, previous_line_count: int, task_mode,
+                              enable_context_enhancement: bool = False, context_line_count: int = 5) -> \
+            Tuple[List[List[CacheItem]], List[List[CacheItem]], List[str], List[List[CacheItem]]]:
+        chunks, previous_chunks, file_paths, source_context_chunks = [], [], [], []
 
         for file in self.project.files.values():
             # 1. 筛选出当前任务需要的条目
@@ -364,7 +389,7 @@ class CacheManager(Base):
                 # 如果当前 chunk 满了，提交它
                 if current_chunk and (current_length + item_length > limit_count):
                     chunks.append(current_chunk)
-                    
+
                     # 关键修复：从原始完整列表 (file.items) 中获取真实的上文
                     # 这样即便断点续传，AI 也能看到前一页已经翻译过的内容
                     real_idx = file.index_of(first_item_in_chunk.text_index)
@@ -372,6 +397,14 @@ class CacheManager(Base):
                         self.generate_previous_chunks(file.items, previous_line_count, real_idx)
                     )
                     file_paths.append(file.storage_path)
+
+                    # 上下文增强：获取当前chunk之前的原文上下文
+                    if enable_context_enhancement:
+                        source_context_chunks.append(
+                            self.generate_source_context(file.items, real_idx, context_line_count)
+                        )
+                    else:
+                        source_context_chunks.append([])
 
                     # 重置，为下一个 chunk 做准备
                     current_chunk, current_length = [], 0
@@ -390,8 +423,15 @@ class CacheManager(Base):
                     self.generate_previous_chunks(file.items, previous_line_count, real_idx)
                 )
                 file_paths.append(file.storage_path)
+                # 上下文增强：获取当前chunk之前的原文上下文
+                if enable_context_enhancement:
+                    source_context_chunks.append(
+                        self.generate_source_context(file.items, real_idx, context_line_count)
+                    )
+                else:
+                    source_context_chunks.append([])
 
-        return chunks, previous_chunks, file_paths
+        return chunks, previous_chunks, file_paths, source_context_chunks
 
 
     # 获取文件层级结构

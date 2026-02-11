@@ -579,23 +579,35 @@ async def save_config(config: AppConfig):
     """
     global _config_cache
     target_path = get_active_profile_path()
-    
+
     # Identify keys that belong to rules (to exclude them from settings save)
     rule_keys = [
         "prompt_dictionary_data", "exclusion_list_data", "characterization_data",
         "world_building_content", "writing_style_content", "translation_example_data"
     ]
-    
+
     try:
         config_dict = config.model_dump(exclude_unset=True) if hasattr(config, 'model_dump') else config.dict(exclude_unset=True)
-        
+
         # Filter out rule data to prevent corruption/desync
         settings_only = {k: v for k, v in config_dict.items() if k not in rule_keys}
 
+        # Read existing config first to preserve fields not sent by frontend
+        current_config = {}
+        if os.path.exists(target_path):
+            try:
+                with open(target_path, 'r', encoding='utf-8-sig') as f:
+                    current_config = json.load(f)
+            except:
+                pass
+
+        # Merge new settings into existing config
+        current_config.update(settings_only)
+
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
         with open(target_path, 'w', encoding='utf-8') as f:
-            json.dump(settings_only, f, indent=4, ensure_ascii=False)
-        
+            json.dump(current_config, f, indent=4, ensure_ascii=False)
+
         _config_cache.clear()
         return {"message": "Settings saved successfully."}
     except Exception as e:

@@ -20,7 +20,15 @@ class RequestLimiter:
         self.lock = threading.Lock()
 
     # 设置限制器的参数
-    def set_limit(self, tpm_limit: int, rpm_limit: int) -> None:
+    def set_limit(self, tpm_limit: int, rpm_limit: int, enable_rate_limit: bool = False,
+                  custom_rpm: int = 0, custom_tpm: int = 0) -> None:
+        # 如果启用了自定义速率限制，使用用户设置的值
+        if enable_rate_limit:
+            if custom_rpm > 0:
+                rpm_limit = custom_rpm
+            if custom_tpm > 0:
+                tpm_limit = custom_tpm
+
         # 设置限制器的TPM参数
         self.max_tokens = 32000  # 令牌桶最大容量
         self.tokens_rate = tpm_limit / 60  # 令牌每秒的恢复速率

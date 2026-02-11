@@ -300,7 +300,12 @@ class TaskExecutor(Base):
             self.config.prepare_for_translation(self.current_mode)
             
             # Update limiter with new limits
-            self.request_limiter.set_limit(self.config.tpm_limit, self.config.rpm_limit)
+            self.request_limiter.set_limit(
+                self.config.tpm_limit, self.config.rpm_limit,
+                getattr(self.config, 'enable_rate_limit', False),
+                getattr(self.config, 'custom_rpm_limit', 0),
+                getattr(self.config, 'custom_tpm_limit', 0)
+            )
             
             self.info(f"Successfully switched to {new_api}. New Model: {self.config.model}")
             
@@ -453,7 +458,12 @@ class TaskExecutor(Base):
             self.config.prepare_for_translation(TaskType.TRANSLATION)
 
             # 配置请求限制器
-            self.request_limiter.set_limit(self.config.tpm_limit, self.config.rpm_limit)
+            self.request_limiter.set_limit(
+                self.config.tpm_limit, self.config.rpm_limit,
+                getattr(self.config, 'enable_rate_limit', False),
+                getattr(self.config, 'custom_rpm_limit', 0),
+                getattr(self.config, 'custom_tpm_limit', 0)
+            )
 
             # --- 修复：确保总行数始终被正确初始化 ---
             if continue_status == False or self.cache_manager.project.stats_data is None:
@@ -527,11 +537,13 @@ class TaskExecutor(Base):
                         self.config.lines_limit = max(1, int(self.config.lines_limit / 2))
 
                 # 生成缓存数据条目片段的合集列表，原文列表与上文列表一一对应
-                chunks, previous_chunks, file_paths = self.cache_manager.generate_item_chunks(
+                chunks, previous_chunks, file_paths, source_context_chunks = self.cache_manager.generate_item_chunks(
                     "line" if self.config.tokens_limit_switch == False else "token",
                     self.config.lines_limit if self.config.tokens_limit_switch == False else self.config.tokens_limit,
                     self.config.pre_line_counts,
-                    TaskType.TRANSLATION
+                    TaskType.TRANSLATION,
+                    getattr(self.config, 'enable_context_enhancement', False),
+                    self.config.pre_line_counts
                 )
 
                 # 生成翻译任务合集列表
@@ -544,7 +556,7 @@ class TaskExecutor(Base):
                 file_info_map = {path: {"name": os.path.basename(path), "index": i} for i, path in enumerate(unique_files, 1)}
                 total_files = len(unique_files)
 
-                for i, (chunk, previous_chunk, file_path) in enumerate(zip(chunks, previous_chunks, file_paths), 1):
+                for i, (chunk, previous_chunk, file_path, source_context) in enumerate(zip(chunks, previous_chunks, file_paths, source_context_chunks), 1):
                     # Skip task creation if file is marked for skipping
                     with self._skip_lock:
                         if file_path in self.skipped_files:
@@ -569,6 +581,7 @@ class TaskExecutor(Base):
 
                     task.set_items(chunk)  # 传入该任务待翻译原文
                     task.set_previous_items(previous_chunk)  # 传入该任务待翻译原文的上文
+                    task.set_source_context_items(source_context)  # 传入原文上下文（用于上下文增强）
                     task.prepare(self.config.target_platform)  # 预先构建消息列表
                     tasks_list.append(task)
                 self.info(f"已经生成全部翻译任务 ...")
@@ -718,7 +731,12 @@ class TaskExecutor(Base):
             self.config.prepare_for_translation(TaskType.POLISH)
 
             # 配置请求限制器
-            self.request_limiter.set_limit(self.config.tpm_limit, self.config.rpm_limit)
+            self.request_limiter.set_limit(
+                self.config.tpm_limit, self.config.rpm_limit,
+                getattr(self.config, 'enable_rate_limit', False),
+                getattr(self.config, 'custom_rpm_limit', 0),
+                getattr(self.config, 'custom_tpm_limit', 0)
+            )
 
             # --- 修复：确保总行数始终被正确初始化 ---
             if continue_status == False or self.cache_manager.project.stats_data is None:
@@ -805,18 +823,22 @@ class TaskExecutor(Base):
 
                 # 生成缓存数据条目片段的合集列表
                 if self.config.polishing_mode_selection == "source_text_polish":
-                    chunks, previous_chunks, file_paths = self.cache_manager.generate_item_chunks(
+                    chunks, previous_chunks, file_paths, source_context_chunks = self.cache_manager.generate_item_chunks(
                         "line" if self.config.tokens_limit_switch == False else "token",
                         self.config.lines_limit if self.config.tokens_limit_switch == False else self.config.tokens_limit,
                         self.config.polishing_pre_line_counts,
-                        TaskType.TRANSLATION
+                        TaskType.TRANSLATION,
+                        False,  # 润色模式不需要上下文增强
+                        0
                     )
                 elif self.config.polishing_mode_selection == "translated_text_polish":
-                    chunks, previous_chunks, file_paths = self.cache_manager.generate_item_chunks(
+                    chunks, previous_chunks, file_paths, source_context_chunks = self.cache_manager.generate_item_chunks(
                         "line" if self.config.tokens_limit_switch == False else "token",
                         self.config.lines_limit if self.config.tokens_limit_switch == False else self.config.tokens_limit,
                         self.config.polishing_pre_line_counts,
-                        TaskType.POLISH
+                        TaskType.POLISH,
+                        False,  # 润色模式不需要上下文增强
+                        0
                     )
 
                 # 生成润色任务合集列表
@@ -824,7 +846,7 @@ class TaskExecutor(Base):
                 if not silent:
                     self.print("")
                     self.info(f"正在生成润色任务 ...")
-                for i, (chunk, previous_chunk, file_path) in enumerate(zip(chunks, previous_chunks, file_paths), 1):
+                for i, (chunk, previous_chunk, file_path, _) in enumerate(zip(chunks, previous_chunks, file_paths, source_context_chunks), 1):
                     task = PolisherTask(self.config, self.plugin_manager, self.request_limiter)  # 实例化
                     task.task_id = f"{current_round + 1:02d}-{i:03d}"
                     task.set_items(chunk)  # 传入该任务待润色文

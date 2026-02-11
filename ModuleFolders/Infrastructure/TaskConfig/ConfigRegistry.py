@@ -190,6 +190,16 @@ register_config(ConfigItem(
 ))
 
 register_config(ConfigItem(
+    key="enable_context_enhancement",
+    default=False,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.BOOL,
+    i18n_key="setting_enable_context_enhancement",
+    i18n_desc_key="setting_enable_context_enhancement_desc",
+    category="translation"
+))
+
+register_config(ConfigItem(
     key="round_limit",
     default=3,
     level=ConfigLevel.USER,
@@ -797,6 +807,44 @@ register_config(ConfigItem(
     config_type=ConfigType.BOOL,
     i18n_key="setting_enable_async_mode",
     i18n_desc_key="setting_enable_async_mode_desc",
+    category="advanced"
+))
+
+# --- 速率限制配置 (ADVANCED) ---
+# 启用后将严格限制请求速率，可能降低翻译速度
+register_config(ConfigItem(
+    key="enable_rate_limit",
+    default=False,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.BOOL,
+    i18n_key="setting_enable_rate_limit",
+    i18n_desc_key="setting_enable_rate_limit_desc",
+    category="advanced"
+))
+
+register_config(ConfigItem(
+    key="custom_rpm_limit",
+    default=0,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.INT,
+    i18n_key="setting_custom_rpm_limit",
+    i18n_desc_key="setting_custom_rpm_limit_desc",
+    min_value=0,
+    max_value=100000,
+    depends_on="enable_rate_limit",
+    category="advanced"
+))
+
+register_config(ConfigItem(
+    key="custom_tpm_limit",
+    default=0,
+    level=ConfigLevel.ADVANCED,
+    config_type=ConfigType.INT,
+    i18n_key="setting_custom_tpm_limit",
+    i18n_desc_key="setting_custom_tpm_limit_desc",
+    min_value=0,
+    max_value=100000000,
+    depends_on="enable_rate_limit",
     category="advanced"
 ))
 

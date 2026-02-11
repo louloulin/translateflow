@@ -532,7 +532,7 @@ export const Settings: React.FC = () => {
                                     ...config,
                                     platforms: {
                                         ...config.platforms,
-                                        [config.target_platform]: { ...config.platforms[config.target_platform], api_key: newKey }
+                                        [config.target_platform]: { ...(config.platforms[config.target_platform] || {}), api_key: newKey }
                                     }
                                 });
                             }}
@@ -558,7 +558,7 @@ export const Settings: React.FC = () => {
                                         ...config,
                                         platforms: {
                                             ...config.platforms,
-                                            [config.target_platform]: { ...config.platforms[config.target_platform], auto_complete: newVal }
+                                            [config.target_platform]: { ...(config.platforms[config.target_platform] || {}), auto_complete: newVal }
                                         }
                                     });
                                 }}
@@ -591,7 +591,7 @@ export const Settings: React.FC = () => {
                                             platforms: {
                                                 ...config.platforms,
                                                 [config.target_platform]: {
-                                                    ...config.platforms[config.target_platform],
+                                                    ...(config.platforms[config.target_platform] || {}),
                                                     think_switch: newThinkSwitch
                                                 }
                                             }
@@ -625,7 +625,7 @@ export const Settings: React.FC = () => {
                                                         platforms: {
                                                             ...config.platforms,
                                                             [config.target_platform]: {
-                                                                ...config.platforms[config.target_platform],
+                                                                ...(config.platforms[config.target_platform] || {}),
                                                                 think_depth: newDepth
                                                             }
                                                         }
@@ -649,7 +649,7 @@ export const Settings: React.FC = () => {
                                                         platforms: {
                                                             ...config.platforms,
                                                             [config.target_platform]: {
-                                                                ...config.platforms[config.target_platform],
+                                                                ...(config.platforms[config.target_platform] || {}),
                                                                 think_depth: newDepth
                                                             }
                                                         }
@@ -678,7 +678,7 @@ export const Settings: React.FC = () => {
                                                     platforms: {
                                                         ...config.platforms,
                                                         [config.target_platform]: {
-                                                            ...config.platforms[config.target_platform],
+                                                            ...(config.platforms[config.target_platform] || {}),
                                                             thinking_budget: newBudget
                                                         }
                                                     }
@@ -852,7 +852,28 @@ export const Settings: React.FC = () => {
              <Toggle field="enable_dry_run" label={t('setting_dry_run')} />
              <Toggle field="enable_retry" label={t('setting_enable_retry')} />
              <Toggle field="enable_smart_round_limit" label={t('setting_enable_smart_round_limit')} />
+             <Toggle field="enable_rate_limit" label={t('setting_enable_rate_limit')} desc={t('setting_enable_rate_limit_desc')} />
              <Toggle field="response_conversion_toggle" label={t('setting_response_conversion_toggle')} />
+             <Toggle field="enable_context_enhancement" label={t('setting_enable_context_enhancement')} desc={t('setting_enable_context_enhancement_desc')} />
+
+             {config.enable_rate_limit && (
+               <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-900/30 border border-slate-700 rounded-lg">
+                 <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-400 uppercase">{t('setting_custom_rpm_limit')}</label>
+                    <input type="number" value={config.custom_rpm_limit ?? 0} onChange={(e) => handleChange('custom_rpm_limit', parseInt(e.target.value) || 0)}
+                      placeholder="0 = use platform default"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-primary text-sm" />
+                    <p className="text-xs text-slate-500">{t('setting_custom_rpm_limit_desc')}</p>
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-400 uppercase">{t('setting_custom_tpm_limit')}</label>
+                    <input type="number" value={config.custom_tpm_limit ?? 0} onChange={(e) => handleChange('custom_tpm_limit', parseInt(e.target.value) || 0)}
+                      placeholder="0 = use platform default"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-primary text-sm" />
+                    <p className="text-xs text-slate-500">{t('setting_custom_tpm_limit_desc')}</p>
+                 </div>
+               </div>
+             )}
 
              <div className="space-y-2">
                 <label className="text-xs font-semibold text-slate-400 uppercase">{t('setting_temp_file_limit')}</label>

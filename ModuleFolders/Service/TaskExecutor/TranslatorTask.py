@@ -51,6 +51,8 @@ class TranslatorTask(Base):
         self.placeholder_order = {}
         # 前后换行空格处理信息存储
         self.affix_whitespace_storage = {}
+        # 原文上下文数据（用于上下文增强）
+        self.source_context_items = []
 
 
     # 设置缓存数据
@@ -61,11 +63,18 @@ class TranslatorTask(Base):
     def set_previous_items(self, previous_items: list[CacheItem]) -> None:
         self.previous_items = previous_items
 
+    # 设置原文上下文数据（用于上下文增强）
+    def set_source_context_items(self, source_context_items: list[CacheItem]) -> None:
+        self.source_context_items = source_context_items
+
     # 消息构建预处理
     def prepare(self, target_platform: str) -> None:
 
         # 生成上文文本列表
         self.previous_text_list = [v.source_text for v in self.previous_items]
+
+        # 生成原文上下文文本列表（用于上下文增强）
+        self.source_context_text_list = [v.source_text for v in self.source_context_items]
 
         # 生成原文文本字典
         self.source_text_dict = {str(i): v.source_text for i, v in enumerate(self.items)}
@@ -116,7 +125,8 @@ class TranslatorTask(Base):
                 self.source_text_dict,
                 self.previous_text_list,
                 self.source_lang,
-                self.rag_context
+                self.rag_context,
+                self.source_context_text_list
             )
 
         # 预估 Token 消费

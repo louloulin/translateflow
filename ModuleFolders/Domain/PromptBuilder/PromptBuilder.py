@@ -742,6 +742,21 @@ class PromptBuilder(Base):
 
         return profile
 
+    # 携带原文上下文（用于上下文增强）
+    def build_source_context(config: TaskConfig, input_list: list[str]) -> str:
+        if config.target_language in ("chinese_simplified", "chinese_traditional"):
+            profile = "###原文上下文（供参考，帮助理解段落连贯性）\n"
+            profile += "<source_context>\n"
+        else:
+            profile = "###Source Context (for reference, to help understand paragraph continuity)\n"
+            profile += "<source_context>\n"
+
+        formatted_rows = [item for item in input_list]
+        profile += f"{"\n".join(formatted_rows)}\n"
+        profile += "</source_context>\n"
+
+        return profile
+
     # 构建用户示例前文
     def build_userExamplePrefix(config: TaskConfig) -> str:
         # 根据中文开关构建
@@ -794,7 +809,7 @@ class PromptBuilder(Base):
 
 
     # 生成信息结构 - 通用
-    def generate_prompt(config, source_text_dict: dict, previous_text_list: list[str], source_lang, rag_context: str = "") -> tuple[list[dict], str, list[str]]:
+    def generate_prompt(config, source_text_dict: dict, previous_text_list: list[str], source_lang, rag_context: str = "", source_context_text_list: list[str] = None) -> tuple[list[dict], str, list[str]]:
         # 储存指令
         messages = []
         # 储存额外日志
@@ -888,11 +903,17 @@ class PromptBuilder(Base):
             if previous != "":
                 extra_log.append(f"###上文内容\n{"\n".join(previous_text_list)}")
 
+        # 如果启用上下文增强，添加原文上下文
+        source_context = ""
+        if source_context_text_list:
+            source_context = PromptBuilder.build_source_context(config, source_context_text_list)
+            if source_context != "":
+                extra_log.append(f"###原文上下文\n{"\n".join(source_context_text_list)}")
 
         # 构建待翻译文本
         source_text = PromptBuilder.build_source_text(config,source_text_dict)
         pre_prompt = PromptBuilder.build_userQueryPrefix(config) # 用户提问前置文本
-        source_text_str = f"{previous}\n{pre_prompt}<textarea>\n{source_text}\n</textarea>"
+        source_text_str = f"{previous}{source_context}\n{pre_prompt}<textarea>\n{source_text}\n</textarea>"
 
         # 构建用户信息
         messages.append(
