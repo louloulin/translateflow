@@ -368,7 +368,7 @@
     "setting_enable_retry": "开启任务失败时重试",
     "setting_retry_count": "最大重试次数",
     "setting_pre_line_counts": "上文行数 (影响质量)",
-    "setting_enable_context_enhancement": "启用上下文增强",
+    "setting_enable_context_enhancement": "启用上下文增强（略微增加Token消耗）",
     "setting_enable_context_enhancement_desc": "在段落中间切分时保留原文上下文，提升翻译连贯性（会略微增加Token消耗）",
     "setting_round_limit": "最大执行轮次",
     "setting_lines_limit": "每次翻译行数",
