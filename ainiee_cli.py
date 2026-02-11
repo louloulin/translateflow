@@ -4428,14 +4428,203 @@ class CLIMenu:
 
         console.print(f"[green]{i18n.get('msg_log_saved') or '分析日志已保存'}: {log_path}[/green]")
 
-        # 询问是否导入到当前术语表
-        if Confirm.ask(i18n.get('prompt_import_glossary') or "是否将术语表导入到当前配置?", default=True):
-            existing_data = self.config.get("prompt_dictionary_data", [])
-            existing_data.extend(glossary_data)
-            self.config["prompt_dictionary_data"] = existing_data
-            self.config["prompt_dictionary_switch"] = True
+        # 显示操作菜单
+        self._show_glossary_action_menu(filtered_terms, glossary_data, temp_config)
+
+    def _show_glossary_action_menu(self, filtered_terms, glossary_data, temp_config=None):
+        """显示术语表操作菜单"""
+        console.print(f"\n[cyan]{i18n.get('prompt_select_action') or '请选择操作:'}[/cyan]")
+        table = Table(show_header=False, box=None)
+        table.add_row("[cyan]1.[/]", i18n.get('option_save_without_translation') or "直接保存到术语表（无翻译）")
+        table.add_row("[cyan]2.[/]", (i18n.get('option_multi_translate') or "多翻译选择") + " (当前配置)")
+        table.add_row("[cyan]3.[/]", (i18n.get('option_multi_translate') or "多翻译选择") + " (临时API)")
+        table.add_row("[cyan]4.[/]", (i18n.get('option_set_rounds') or "设置轮询次数") + " (当前配置)")
+        table.add_row("[cyan]5.[/]", (i18n.get('option_set_rounds') or "设置轮询次数") + " (临时API)")
+        console.print(table)
+        console.print(f"\n[dim]0. {i18n.get('menu_back')}[/dim]")
+
+        choice = IntPrompt.ask(i18n.get('prompt_select'), choices=["0", "1", "2", "3", "4", "5"], show_choices=False, default=2)
+
+        if choice == 0:
+            return
+        elif choice == 1:
+            self._save_glossary_directly(glossary_data)
+        elif choice == 2:
+            # 多翻译选择（当前配置）
+            rounds = self.config.get("term_translation_rounds", 3)
+            self._multi_translate_and_select(filtered_terms, None, rounds)
+        elif choice == 3:
+            # 多翻译选择（临时API）
+            translate_config = self._configure_temp_api_for_analysis()
+            if translate_config:
+                rounds = self.config.get("term_translation_rounds", 3)
+                self._multi_translate_and_select(filtered_terms, translate_config, rounds)
+        elif choice == 4:
+            # 设置轮询次数（当前配置）
+            rounds = IntPrompt.ask(
+                i18n.get('prompt_translation_rounds') or "翻译轮询次数",
+                default=self.config.get("term_translation_rounds", 3)
+            )
+            rounds = max(1, min(10, rounds))
+            self.config["term_translation_rounds"] = rounds
             self.save_config()
-            console.print(f"[bold green]{i18n.get('msg_glossary_imported') or '术语表已导入!'}[/bold green]")
+            self._multi_translate_and_select(filtered_terms, None, rounds)
+        elif choice == 5:
+            # 设置轮询次数（临时API）
+            translate_config = self._configure_temp_api_for_analysis()
+            if translate_config:
+                rounds = IntPrompt.ask(
+                    i18n.get('prompt_translation_rounds') or "翻译轮询次数",
+                    default=self.config.get("term_translation_rounds", 3)
+                )
+                rounds = max(1, min(10, rounds))
+                self.config["term_translation_rounds"] = rounds
+                self.save_config()
+                self._multi_translate_and_select(filtered_terms, translate_config, rounds)
+
+    def _save_glossary_directly(self, glossary_data):
+        """直接保存术语表（无翻译）"""
+        existing_data = self.config.get("prompt_dictionary_data", [])
+        existing_data.extend(glossary_data)
+        self.config["prompt_dictionary_data"] = existing_data
+        self.config["prompt_dictionary_switch"] = True
+        self.save_config()
+        console.print(f"[bold green]{i18n.get('msg_glossary_imported') or '术语表已导入!'}[/bold green]")
+
+    def _multi_translate_and_select(self, filtered_terms, temp_config=None, rounds=3):
+        """多翻译选择功能"""
+        from ModuleFolders.UserInterface.TermSelector.TermSelector import TermSelector
+        from ModuleFolders.Infrastructure.TaskConfig.TaskConfig import TaskConfig
+
+        console.print(f"\n[cyan]{i18n.get('msg_starting_multi_translate') or '开始多翻译请求...'}[/cyan]")
+        console.print(f"[dim]{i18n.get('msg_rounds')}: {rounds}[/dim]")
+
+        # 准备配置
+        task_config = TaskConfig()
+        task_config.load_config_from_dict(self.config)
+        task_config.prepare_for_translation(TaskType.TRANSLATION)
+
+        if temp_config:
+            platform_config = temp_config
+        else:
+            platform_config = task_config.get_platform_configuration("translationReq")
+
+        target_language = task_config.target_language
+
+        # 为每个术语请求多次翻译
+        multi_results = []
+        total = len(filtered_terms)
+
+        for idx, (src, term_data) in enumerate(filtered_terms.items(), 1):
+            console.print(f"[{idx}/{total}] {i18n.get('msg_translating') or '正在翻译'}: {src}")
+
+            options = []
+            seen = set()
+
+            for r in range(rounds):
+                result = self._request_term_translation(src, term_data, target_language, platform_config, seen)
+                if result and result['dst'] not in seen:
+                    seen.add(result['dst'])
+                    options.append(result)
+
+            multi_results.append({
+                "src": src,
+                "type": term_data.get("type", ""),
+                "options": options,
+                "selected_index": 0
+            })
+
+        if not multi_results:
+            console.print(f"[yellow]{i18n.get('msg_no_translation_results') or '未获得翻译结果'}[/yellow]")
+            return
+
+        # 显示选择界面
+        console.print(f"\n[green]{i18n.get('msg_translation_complete') or '翻译完成，请选择最佳译法'}[/green]")
+
+        # 定义单条保存回调
+        def save_single_term(term_data):
+            existing_data = self.config.get("prompt_dictionary_data", [])
+            existing_srcs = {item['src'] for item in existing_data}
+            if term_data['src'] not in existing_srcs:
+                existing_data.append(term_data)
+                self.config["prompt_dictionary_data"] = existing_data
+                self.config["prompt_dictionary_switch"] = True
+                self.save_config()
+
+        # 定义重试翻译回调
+        def retry_translation(src, term_type, avoid_set=None):
+            term_data = {"type": term_type}
+            return self._request_term_translation(src, term_data, target_language, platform_config, avoid_set or set())
+
+        selector = TermSelector(multi_results, request_callback=retry_translation, save_callback=save_single_term)
+        selected_results = selector.show_selector()
+
+        if not selected_results:
+            console.print(f"[yellow]{i18n.get('msg_cancelled') or '已取消'}[/yellow]")
+            return
+
+        # 保存到术语表
+        self._save_selected_translations(selected_results)
+
+    def _save_selected_translations(self, selected_results):
+        """保存用户选择的翻译到术语表"""
+        existing_data = self.config.get("prompt_dictionary_data", [])
+        existing_srcs = {item['src'] for item in existing_data}
+
+        added_count = 0
+        for item in selected_results:
+            if item['src'] not in existing_srcs:
+                existing_data.append(item)
+                existing_srcs.add(item['src'])
+                added_count += 1
+
+        self.config["prompt_dictionary_data"] = existing_data
+        self.config["prompt_dictionary_switch"] = True
+        self.save_config()
+
+        console.print(f"[bold green]{i18n.get('msg_terms_added') or '已添加'} {added_count} {i18n.get('msg_terms_to_glossary') or '个术语到术语表'}[/bold green]")
+
+    def _request_term_translation(self, src, term_data, target_language, platform_config, avoid_set):
+        """请求单个术语的翻译"""
+        from ModuleFolders.Infrastructure.LLMRequester.LLMRequester import LLMRequester
+
+        term_type = term_data.get("type", "专有名词")
+        avoid_hint = ""
+        if avoid_set:
+            avoid_list = ", ".join(list(avoid_set)[:5])
+            avoid_hint = f"\nPlease provide a different translation from: {avoid_list}"
+
+        system_prompt = f"""You are a terminology translator. Translate the term into "{target_language}".
+Term type: {term_type}
+{avoid_hint}
+
+Output format (use | as separator):
+Translation|Note"""
+
+        messages = [{"role": "user", "content": src}]
+
+        try:
+            requester = LLMRequester()
+            skip, _, response, _, _ = requester.sent_request(messages, system_prompt, platform_config)
+
+            if skip or not response:
+                return None
+
+            response = response.strip()
+            if '|' in response:
+                parts = response.split('|', 1)
+                dst = parts[0].strip()
+                info = parts[1].strip() if len(parts) > 1 else ""
+            else:
+                dst = response.strip()
+                info = ""
+
+            if dst and dst != src:
+                return {"dst": dst, "info": info}
+        except Exception as e:
+            console.print(f"[red]{i18n.get('msg_translation_error') or '翻译错误'}: {e}[/red]")
+
+        return None
 
     def _parse_glossary_response(self, response):
         """解析LLM返回的术语表JSON"""

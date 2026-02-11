@@ -958,6 +958,19 @@ register_config(ConfigItem(
     category="system"
 ))
 
+# --- 术语多翻译配置 (USER) ---
+register_config(ConfigItem(
+    key="term_translation_rounds",
+    default=3,
+    level=ConfigLevel.USER,
+    config_type=ConfigType.INT,
+    i18n_key="setting_term_translation_rounds",
+    i18n_desc_key="setting_term_translation_rounds_desc",
+    min_value=1,
+    max_value=10,
+    category="translation"
+))
+
 
 # ============================================================
 # 辅助函数

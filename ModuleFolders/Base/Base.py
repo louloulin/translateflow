@@ -128,7 +128,10 @@ class Event():
     TERM_EXTRACTION_DONE = 831                     
 
     TERM_TRANSLATE_SAVE_START = 832              # 实体提取开始
-    TERM_TRANSLATE_SAVE_DONE = 833 
+    TERM_TRANSLATE_SAVE_DONE = 833
+
+    TERM_MULTI_TRANSLATE_START = 834             # 术语多翻译开始
+    TERM_MULTI_TRANSLATE_DONE = 835              # 术语多翻译完成
 
     TRANSLATION_CHECK_START = 840                # 语言检查开始    
 

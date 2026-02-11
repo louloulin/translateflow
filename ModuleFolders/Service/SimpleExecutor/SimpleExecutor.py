@@ -32,6 +32,8 @@ class SimpleExecutor(Base):
         self.subscribe(Base.EVENT.TERM_EXTRACTION_START, self.handle_term_extraction_start)
         # 订阅术语提取翻译事件
         self.subscribe(Base.EVENT.TERM_TRANSLATE_SAVE_START, self.handle_term_translate_save_start)
+        # 订阅术语多翻译事件
+        self.subscribe(Base.EVENT.TERM_MULTI_TRANSLATE_START, self.handle_term_multi_translate_start)
 
     # 响应接口测试开始事件
     def api_test_start(self, event: int, data: dict):
@@ -143,7 +145,7 @@ class SimpleExecutor(Base):
         self.print("")
         self.info(f"接口测试结果：共测试 {len(api_keys)} 个接口，成功 {len(success)} 个，失败 {len(failure)} 个 ...")
         if len(failure) >0:
-            self.error(f"失败的接口密钥 - {", ".join(failure)}")
+            self.error(f"失败的接口密钥 - {', '.join(failure)}")
         self.print("")
 
         # 发送完成事件
@@ -788,9 +790,138 @@ class SimpleExecutor(Base):
         self.save_config(app_config)
         
         # 日志输出
-        self.info(f"🐳 术语翻译与保存任务已完成！成功添加 {added_count} 个新术语到术语表。")
+        self.info(f"术语翻译与保存任务已完成！成功添加 {added_count} 个新术语到术语表。")
         self.emit(Base.EVENT.TERM_TRANSLATE_SAVE_DONE, {
-            "status": "success", 
+            "status": "success",
             "message": f"成功添加 {added_count} 个新术语。",
             "added_count": added_count
         })
+
+    # 响应术语多翻译事件，启动新线程
+    def handle_term_multi_translate_start(self, event, data: dict):
+        thread = threading.Thread(target=self.process_term_multi_translate, args=(data,), daemon=True)
+        thread.start()
+
+    def process_term_multi_translate(self, data: dict):
+        """为每个术语请求多次翻译，返回多个翻译选项供用户选择。"""
+        filtered_terms = data.get("filtered_terms", {})
+        rounds = data.get("rounds", 3)
+        platform_config = data.get("platform_config")
+        target_language = data.get("target_language", "Chinese")
+
+        if not filtered_terms:
+            self.warning(Base.tra("术语多翻译任务中止：没有需要翻译的术语。"))
+            self.emit(Base.EVENT.TERM_MULTI_TRANSLATE_DONE, {"status": "no_result", "results": []})
+            return
+
+        self.info(Base.tra("开始执行术语多翻译任务..."))
+        self.info(f"{Base.tra('术语数量')}: {len(filtered_terms)}")
+        self.info(f"{Base.tra('翻译轮次')}: {rounds}")
+        self.info(f"{Base.tra('目标语言')}: {target_language}")
+
+        # 准备翻译配置
+        if not platform_config:
+            config = TaskConfig()
+            config.initialize()
+            config.prepare_for_translation(TaskType.TRANSLATION)
+            platform_config = config.get_platform_configuration("translationReq")
+            target_language = config.target_language
+
+        multi_results = []
+        total = len(filtered_terms)
+
+        for idx, (src, term_data) in enumerate(filtered_terms.items(), 1):
+            self.info(f"[{idx}/{total}] {Base.tra('正在翻译')}: {src}")
+            options = []
+            seen_translations = set()
+
+            for round_num in range(rounds):
+                translation = self._request_single_term_translation(
+                    src, term_data, target_language, platform_config, seen_translations
+                )
+                if translation and translation['dst'] not in seen_translations:
+                    seen_translations.add(translation['dst'])
+                    options.append(translation)
+
+            multi_results.append({
+                "src": src,
+                "type": term_data.get("type", ""),
+                "options": options,
+                "selected_index": 0
+            })
+
+        self.info(f"{Base.tra('术语多翻译任务完成')}! {Base.tra('共处理')} {len(multi_results)} {Base.tra('个术语')}。")
+        self.emit(Base.EVENT.TERM_MULTI_TRANSLATE_DONE, {
+            "status": "success",
+            "results": multi_results
+        })
+
+    def _request_single_term_translation(self, src: str, term_data: dict, target_language: str,
+                                          platform_config: dict, avoid_translations: set) -> dict:
+        """请求单个术语的翻译"""
+        term_type = term_data.get("type", "专有名词")
+
+        avoid_hint = ""
+        if avoid_translations:
+            avoid_list = ", ".join(list(avoid_translations)[:5])
+            avoid_hint = f"\n请提供不同于以下的翻译: {avoid_list}"
+
+        # 根据目标语言选择提示词
+        if "中文" in target_language or "Chinese" in target_language:
+            system_prompt = f"""术语翻译器。将术语翻译成"{target_language}"。
+术语类型: {term_type}
+{avoid_hint}
+
+输出格式:
+译文|说明
+
+严格规则:
+- 说明只能是: 音译/直译/意译/不译 (四选一)
+- 说明禁止超过3个字
+- 禁止解释词义
+- 禁止提及任何作品
+- 非常见专有名词（如人名、地名、称号）可保留原文，说明填"不译" """
+        else:
+            if avoid_translations:
+                avoid_hint = f"\nProvide a different translation from: {avoid_list}"
+            system_prompt = f"""Terminology translator. Translate into "{target_language}".
+Term type: {term_type}
+{avoid_hint}
+
+Output format:
+Translation|Note
+
+Strict rules:
+- Note can ONLY be: phonetic/literal/localized/keep (pick one)
+- Note must be under 3 words
+- Do NOT explain meaning
+- Do NOT mention any media
+- Uncommon proper nouns (names, places, titles) may keep original, note "keep" """
+
+        messages = [{"role": "user", "content": src}]
+
+        try:
+            requester = LLMRequester()
+            skip, _, response_content, _, _ = requester.sent_request(
+                messages, system_prompt, platform_config
+            )
+
+            if skip or not response_content:
+                return None
+
+            response_content = response_content.strip()
+            if '|' in response_content:
+                parts = response_content.split('|', 1)
+                dst = parts[0].strip()
+                info = parts[1].strip() if len(parts) > 1 else ""
+            else:
+                dst = response_content.strip()
+                info = ""
+
+            if dst and dst != src:
+                return {"dst": dst, "info": info}
+
+        except Exception as e:
+            self.error(f"{Base.tra('术语翻译请求失败')}: {e}")
+
+        return None
