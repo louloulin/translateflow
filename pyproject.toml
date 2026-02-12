@@ -3,7 +3,7 @@ name = "ainiee-cli"
 version = "0.1.0"
 description = "A CLI-based hard fork of AiNiee for batch translation."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = "==3.12.*"
 dependencies = [
     "pyinstaller",
     "openai>=1.59.3",

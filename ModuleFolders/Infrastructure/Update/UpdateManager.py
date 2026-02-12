@@ -494,8 +494,12 @@ class UpdateManager(Base):
             if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
             os.makedirs(temp_dir)
 
+            # 解压并尝试恢复Unix权限
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(temp_dir)
+                # 在Unix系统上恢复文件权限
+                if sys.platform != "win32":
+                    self._restore_unix_permissions(zip_ref, temp_dir)
 
             extracted_subdirs = [d for d in os.listdir(temp_dir) if os.path.isdir(os.path.join(temp_dir, d))]
             if not extracted_subdirs: raise Exception("Failed to find extracted content.")
@@ -519,6 +523,10 @@ class UpdateManager(Base):
                     else: shutil.copytree(s, d)
                 else: shutil.copy2(s, d)
 
+            # 在Unix系统上修复项目目录权限
+            if sys.platform != "win32":
+                self._fix_project_permissions()
+
             self.print(f"[bold green]{self.get_msg('complete')}[/bold green]")
             time.sleep(2)
             if "update_temp.zip" in zip_path and os.path.exists(zip_path): 
@@ -538,6 +546,64 @@ class UpdateManager(Base):
                 if not os.path.exists(d): os.makedirs(d)
                 self._merge_dirs(s, d)
             else: shutil.copy2(s, d)
+
+    def _restore_unix_permissions(self, zip_ref, extract_dir):
+        """在Unix系统上恢复ZIP文件中存储的权限信息"""
+        for info in zip_ref.infolist():
+            if info.is_dir():
+                continue
+
+            extracted_path = os.path.join(extract_dir, info.filename)
+            if not os.path.exists(extracted_path):
+                continue
+
+            # ZIP文件的external_attr高16位存储Unix权限
+            unix_mode = (info.external_attr >> 16) & 0o777
+
+            if unix_mode:
+                try:
+                    os.chmod(extracted_path, unix_mode)
+                except OSError:
+                    pass
+
+        # 额外确保常见可执行文件有执行权限
+        self._ensure_executable_permissions(extract_dir)
+
+    def _ensure_executable_permissions(self, directory):
+        """确保常见可执行文件类型有执行权限"""
+        if sys.platform == "win32":
+            return
+
+        executable_extensions = {'.sh', '.py', '.pl', '.rb', '.bash'}
+        executable_names = {'Launch.sh', 'ainiee_cli.py'}
+
+        for root, dirs, files in os.walk(directory):
+            for filename in files:
+                filepath = os.path.join(root, filename)
+                _, ext = os.path.splitext(filename)
+
+                # 检查是否需要可执行权限
+                needs_exec = (
+                    ext.lower() in executable_extensions or
+                    filename in executable_names
+                )
+
+                if needs_exec:
+                    try:
+                        # 获取当前权限并添加执行位
+                        current_mode = os.stat(filepath).st_mode
+                        # 添加用户执行权限，如果有读权限则也添加组和其他的执行权限
+                        new_mode = current_mode | 0o111
+                        os.chmod(filepath, new_mode)
+                    except OSError:
+                        pass
+
+    def _fix_project_permissions(self):
+        """修复项目目录中的文件权限（仅Unix系统）"""
+        if sys.platform == "win32":
+            return
+
+        self._ensure_executable_permissions(self.project_root)
 
     def _merge_resource_dir(self, src, dst):
         for item in os.listdir(src):

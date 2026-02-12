@@ -1910,21 +1910,42 @@ class CLIMenu:
             result['capable'] = True
             return result
 
-        # 检查 COLORTERM (truecolor/24bit 表示完整支持)
+        # 检查 TERM_PROGRAM (已知的高质量终端，优先级最高)
+        term_program = result['term_program'].lower()
+        high_quality_terminals = ('iterm.app', 'vscode', 'hyper', 'tabby', 'wezterm', 'kitty', 'alacritty')
+        if term_program in high_quality_terminals:
+            result['capable'] = True
+            return result
+
+        # SSH 环境需要更严格的检测
+        if result['is_ssh']:
+            # SSH 环境下，只有 COLORTERM=truecolor/24bit 才能确认支持良好
+            # 因为很多 SSH 客户端会伪造 TERM=xterm-256color 但实际支持很差
+            if result['colorterm'].lower() in ('truecolor', '24bit'):
+                result['capable'] = True
+                return result
+            # SSH 环境下，即使有 TERM=xterm-256color 也不信任，显示提示
+            return result
+
+        # 非 SSH 环境：检查 COLORTERM (truecolor/24bit 表示完整支持)
         if result['colorterm'].lower() in ('truecolor', '24bit'):
             result['capable'] = True
             return result
 
-        # 检查 TERM 变量
+        # 非 SSH 环境：检查 TERM 变量
         term = result['term'].lower()
         # 现代终端标识
-        if any(t in term for t in ['256color', 'xterm', 'screen', 'tmux', 'rxvt', 'kitty', 'alacritty']):
+        if any(t in term for t in ['256color', 'kitty', 'alacritty']):
             result['capable'] = True
             return result
 
-        # 检查 TERM_PROGRAM (macOS/常见终端)
-        term_program = result['term_program'].lower()
-        if term_program in ('apple_terminal', 'iterm.app', 'vscode', 'hyper', 'tabby', 'wezterm'):
+        # xterm/screen/tmux 在本地环境通常可以信任
+        if any(t in term for t in ['xterm', 'screen', 'tmux', 'rxvt']):
+            result['capable'] = True
+            return result
+
+        # macOS 默认终端
+        if term_program == 'apple_terminal':
             result['capable'] = True
             return result
 
