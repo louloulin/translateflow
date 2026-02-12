@@ -4143,6 +4143,11 @@ class CLIMenu:
             table.add_row("8", i18n.get("menu_api_think_budget"), str(think_budget))
             table.add_row("10", i18n.get("自动补全 OpenAI 规范的 Chat 终点"), "[green]ON[/]" if auto_comp else "[red]OFF[/]")
 
+            # 采样参数显示
+            temp_val = plat_conf.get("temperature", 1.0)
+            top_p_val = plat_conf.get("top_p", 1.0)
+            table.add_row("11", f"[yellow]{i18n.get('menu_api_sampling_params')}[/yellow]", f"[dim]T={temp_val}, P={top_p_val}[/dim]")
+
             if api_format == "Anthropic":
                 table.add_row("9", i18n.get("menu_fetch_models"), "...")
 
@@ -4156,7 +4161,7 @@ class CLIMenu:
                     console.print(f"\n[red]⚠️ {i18n.get('warning_thinking_compatibility')}[/red]")
 
             console.print(f"\n[dim]0. {i18n.get('menu_exit')}[/dim]")
-            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=["0","1","2","3","4","5","6","7","8","9","10"], show_choices=False)
+            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=["0","1","2","3","4","5","6","7","8","9","10","11"], show_choices=False)
             console.print()
             
             if choice == 0: break
@@ -4216,6 +4221,8 @@ class CLIMenu:
                 new_state = not auto_comp
                 if tp in self.config.get("platforms", {}):
                     self.config["platforms"][tp]["auto_complete"] = new_state
+            elif choice == 11:
+                self._sampling_params_menu(tp, plat_conf)
             elif choice == 9 and api_format == "Anthropic":
                 from ModuleFolders.Infrastructure.LLMRequester.AnthropicRequester import AnthropicRequester
                 from ModuleFolders.Infrastructure.LLMRequester.LLMRequester import LLMRequester
@@ -4255,6 +4262,87 @@ class CLIMenu:
                         time.sleep(1)
 
             self.save_config()
+
+    def _sampling_params_menu(self, tp: str, plat_conf: dict):
+        """采样参数设置子菜单，带二次确认"""
+        while True:
+            self.display_banner()
+            console.print(Panel(
+                f"[bold yellow]{i18n.get('warn_sampling_params')}[/bold yellow]\n"
+                f"[dim]{i18n.get('warn_sampling_params_desc')}[/dim]",
+                title=f"[bold]{i18n.get('menu_api_sampling_params')}[/bold]",
+                border_style="yellow"
+            ))
+
+            # 获取当前值
+            temp_val = plat_conf.get("temperature", 1.0)
+            top_p_val = plat_conf.get("top_p", 1.0)
+            top_k_val = plat_conf.get("top_k", 0)
+            presence_val = plat_conf.get("presence_penalty", 0.0)
+            frequency_val = plat_conf.get("frequency_penalty", 0.0)
+
+            table = Table(show_header=True)
+            table.add_column("ID", style="dim")
+            table.add_column(i18n.get("label_setting_name"))
+            table.add_column(i18n.get("label_value"), style="cyan")
+            table.add_column("Hint", style="dim")
+
+            table.add_row("1", i18n.get("setting_temperature"), str(temp_val), i18n.get("hint_temperature"))
+            table.add_row("2", i18n.get("setting_top_p"), str(top_p_val), i18n.get("hint_top_p"))
+            table.add_row("3", i18n.get("setting_top_k"), str(top_k_val), i18n.get("hint_top_k"))
+            table.add_row("4", i18n.get("setting_presence_penalty"), str(presence_val), i18n.get("hint_presence_penalty"))
+            table.add_row("5", i18n.get("setting_frequency_penalty"), str(frequency_val), i18n.get("hint_frequency_penalty"))
+
+            console.print(table)
+            console.print(f"\n[dim]0. {i18n.get('menu_back')}[/dim]")
+
+            choice = IntPrompt.ask(i18n.get('prompt_select'), choices=["0", "1", "2", "3", "4", "5"], show_choices=False)
+
+            if choice == 0:
+                break
+
+            # 二次确认
+            console.print(f"\n[bold red]{i18n.get('warn_sampling_params')}[/bold red]")
+            confirm = Prompt.ask(i18n.get('confirm_sampling_change')).strip().upper()
+
+            if confirm != "YES":
+                console.print(f"[yellow]{i18n.get('msg_sampling_change_cancelled')}[/yellow]")
+                time.sleep(1)
+                continue
+
+            # 根据选择修改参数
+            param_map = {
+                1: ("temperature", temp_val, 0.0, 2.0),
+                2: ("top_p", top_p_val, 0.0, 1.0),
+                3: ("top_k", top_k_val, 0, 100),
+                4: ("presence_penalty", presence_val, -2.0, 2.0),
+                5: ("frequency_penalty", frequency_val, -2.0, 2.0),
+            }
+
+            param_name, current_val, min_val, max_val = param_map[choice]
+
+            try:
+                if choice == 3:  # top_k 是整数
+                    new_val = IntPrompt.ask(f"{i18n.get('prompt_new_value')} ({min_val}-{max_val})", default=int(current_val))
+                    new_val = max(min_val, min(max_val, new_val))
+                else:  # 其他是浮点数
+                    new_val_str = Prompt.ask(f"{i18n.get('prompt_new_value')} ({min_val}-{max_val})", default=str(current_val))
+                    new_val = float(new_val_str)
+                    new_val = max(min_val, min(max_val, new_val))
+
+                # 保存到平台配置
+                if tp in self.config.get("platforms", {}):
+                    self.config["platforms"][tp][param_name] = new_val
+                    plat_conf[param_name] = new_val  # 更新本地引用
+
+                self.save_config()
+                console.print(f"[green]{i18n.get('msg_sampling_change_saved')} {param_name} = {new_val}[/green]")
+                time.sleep(1)
+
+            except ValueError:
+                console.print("[red]Invalid input[/red]")
+                time.sleep(1)
+
     def prompt_menu(self):
         while True:
             self.display_banner(); console.print(Panel(f"[bold]{i18n.get('menu_glossary_rules')}[/bold]"))

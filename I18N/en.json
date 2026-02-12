@@ -707,5 +707,21 @@
         "terminal_compat_wt_not_found": "Windows Terminal not found. Please install it manually.",
         "terminal_compat_install_from_store": "You can install Windows Terminal from Microsoft Store",
         "terminal_compat_install_url": "Or visit: https://learn.microsoft.com/en-us/windows/terminal/install",
-        "terminal_compat_continue_anyway": "Continuing in current terminal..."
+        "terminal_compat_continue_anyway": "Continuing in current terminal...",
+        "menu_api_sampling_params": "Sampling Parameters (Advanced)",
+        "setting_temperature": "Temperature",
+        "setting_top_p": "Top P",
+        "setting_top_k": "Top K",
+        "setting_presence_penalty": "Presence Penalty",
+        "setting_frequency_penalty": "Frequency Penalty",
+        "warn_sampling_params": "WARNING: Modifying sampling parameters will significantly affect model output quality and style. Improper settings may severely degrade translation quality!",
+        "warn_sampling_params_desc": "These parameters control the model's randomness and creativity. Unless you understand each parameter's effect, it's recommended to keep default values.",
+        "confirm_sampling_change": "Are you sure you want to modify this parameter? Type 'YES' to confirm: ",
+        "msg_sampling_change_cancelled": "Parameter change cancelled.",
+        "msg_sampling_change_saved": "Sampling parameters saved.",
+        "hint_temperature": "Controls output randomness, 0=deterministic, 2=high randomness, recommended 0.7-1.0",
+        "hint_top_p": "Nucleus sampling, used with temperature, recommended 0.9-1.0",
+        "hint_top_k": "Limits candidate tokens, 0=unlimited, recommended 0 or 40-100",
+        "hint_presence_penalty": "Penalizes tokens already present, -2 to 2, recommended 0",
+        "hint_frequency_penalty": "Penalizes frequent tokens, -2 to 2, recommended 0"
     }

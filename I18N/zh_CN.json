@@ -729,5 +729,21 @@
         "terminal_compat_wt_not_found": "未找到 Windows Terminal，请手动安装后重试。",
         "terminal_compat_install_from_store": "您可以从 Microsoft Store 安装 Windows Terminal",
         "terminal_compat_install_url": "或访问: https://learn.microsoft.com/zh-cn/windows/terminal/install",
-        "terminal_compat_continue_anyway": "将继续在当前终端运行..."
+        "terminal_compat_continue_anyway": "将继续在当前终端运行...",
+        "menu_api_sampling_params": "采样参数设置 (高级)",
+        "setting_temperature": "温度 (Temperature)",
+        "setting_top_p": "Top P",
+        "setting_top_k": "Top K",
+        "setting_presence_penalty": "存在惩罚 (Presence Penalty)",
+        "setting_frequency_penalty": "频率惩罚 (Frequency Penalty)",
+        "warn_sampling_params": "警告: 修改采样参数会显著影响模型输出质量和风格。不当的设置可能导致翻译质量严重下降！",
+        "warn_sampling_params_desc": "这些参数控制模型的随机性和创造性。除非您清楚了解每个参数的作用，否则建议保持默认值。",
+        "confirm_sampling_change": "您确定要修改此参数吗？请输入 'YES' 确认: ",
+        "msg_sampling_change_cancelled": "参数修改已取消。",
+        "msg_sampling_change_saved": "采样参数已保存。",
+        "hint_temperature": "控制输出随机性，0=确定性，2=高随机性，推荐0.7-1.0",
+        "hint_top_p": "核采样，与temperature配合使用，推荐0.9-1.0",
+        "hint_top_k": "限制候选token数量，0=不限制，推荐0或40-100",
+        "hint_presence_penalty": "惩罚已出现的token，-2到2，推荐0",
+        "hint_frequency_penalty": "惩罚高频token，-2到2，推荐0"
     }

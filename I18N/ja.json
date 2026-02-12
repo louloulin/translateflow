@@ -686,5 +686,21 @@
         "terminal_compat_wt_not_found": "Windows Terminalが見つかりません。手動でインストールしてください。",
         "terminal_compat_install_from_store": "Microsoft StoreからWindows Terminalをインストールできます",
         "terminal_compat_install_url": "または: https://learn.microsoft.com/ja-jp/windows/terminal/install",
-        "terminal_compat_continue_anyway": "現在のターミナルで続行します..."
+        "terminal_compat_continue_anyway": "現在のターミナルで続行します...",
+        "menu_api_sampling_params": "サンプリングパラメータ設定 (上級)",
+        "setting_temperature": "温度 (Temperature)",
+        "setting_top_p": "Top P",
+        "setting_top_k": "Top K",
+        "setting_presence_penalty": "存在ペナルティ (Presence Penalty)",
+        "setting_frequency_penalty": "頻度ペナルティ (Frequency Penalty)",
+        "warn_sampling_params": "警告: サンプリングパラメータを変更すると、モデル出力の品質とスタイルに大きく影響します。不適切な設定は翻訳品質を著しく低下させる可能性があります！",
+        "warn_sampling_params_desc": "これらのパラメータはモデルのランダム性と創造性を制御します。各パラメータの効果を理解していない限り、デフォルト値を維持することをお勧めします。",
+        "confirm_sampling_change": "このパラメータを変更してもよろしいですか？確認するには 'YES' と入力してください: ",
+        "msg_sampling_change_cancelled": "パラメータの変更がキャンセルされました。",
+        "msg_sampling_change_saved": "サンプリングパラメータが保存されました。",
+        "hint_temperature": "出力のランダム性を制御、0=決定的、2=高ランダム性、推奨0.7-1.0",
+        "hint_top_p": "核サンプリング、temperatureと併用、推奨0.9-1.0",
+        "hint_top_k": "候補トークン数を制限、0=無制限、推奨0または40-100",
+        "hint_presence_penalty": "既出トークンにペナルティ、-2から2、推奨0",
+        "hint_frequency_penalty": "高頻度トークンにペナルティ、-2から2、推奨0"
     }
