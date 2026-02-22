@@ -460,9 +460,9 @@ class APIManager:
                     self.config["platforms"][tp]["structured_output_mode"] = new_mode
             elif choice == 7:
                 if api_format == "Anthropic":
-                    val = Prompt.ask(self.i18n.get("prompt_think_depth_claude"), choices=["low", "medium", "high"], default=str(think_dp))
+                    val = Prompt.ask(self.i18n.get("prompt_think_depth_claude"), choices=["low", "medium", "high"], default=str(think_dp) if think_dp in ["low", "medium", "high"] else "low")
                 else:
-                    val = IntPrompt.ask(self.i18n.get("prompt_think_depth"), default=int(think_dp) if str(think_dp).isdigit() else 0)
+                    val = Prompt.ask(self.i18n.get("prompt_think_depth"), choices=["minimal", "low", "medium", "high"], default=str(think_dp) if think_dp in ["minimal", "low", "medium", "high"] else "low")
                 self.config["think_depth"] = val
                 if tp in self.config.get("platforms", {}):
                     self.config["platforms"][tp]["think_depth"] = val

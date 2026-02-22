@@ -1993,7 +1993,7 @@ class CLIMenu:
                 if sel_conf.get("api_format") == "Anthropic":
                     sel_conf["think_depth"] = Prompt.ask(i18n.get("prompt_temp_think_depth"), choices=["low", "medium", "high"], default="low")
                 else:
-                    sel_conf["think_depth"] = Prompt.ask(i18n.get("prompt_temp_think_depth"), default="0")
+                    sel_conf["think_depth"] = Prompt.ask(i18n.get("prompt_temp_think_depth"), choices=["minimal", "low", "medium", "high"], default="low")
                 console.print(f"[dim]{i18n.get('hint_think_budget') or '提示: 0=关闭, -1=无上限'}[/dim]")
                 budget_str = Prompt.ask(i18n.get("prompt_temp_think_budget"), default="4096")
                 try:
@@ -3718,7 +3718,8 @@ class CLIMenu:
                                                 choices=["low", "medium", "high", ""], 
                                                 default=current_think_depth) or None
                     else:
-                        t.think_depth = Prompt.ask(f"{i18n.get('prompt_think_depth')}{i18n.get('tip_follow_profile')}", 
+                        t.think_depth = Prompt.ask(f"{i18n.get('prompt_think_depth')}{i18n.get('tip_follow_profile')}",
+                                                choices=["minimal", "low", "medium", "high", ""],
                                                 default=current_think_depth) or None
                     console.print(f"[dim]{i18n.get('hint_think_budget') or '提示: 0=关闭, -1=无上限'}[/dim]")
                     budget_str = Prompt.ask(f"{i18n.get('menu_api_think_budget')}{i18n.get('tip_follow_profile')}",
