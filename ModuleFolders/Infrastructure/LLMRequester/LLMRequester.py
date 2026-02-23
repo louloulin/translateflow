@@ -1,4 +1,5 @@
 from ModuleFolders.Infrastructure.LLMRequester.SakuraRequester import SakuraRequester
+from ModuleFolders.Infrastructure.LLMRequester.MurasakiRequester import MurasakiRequester
 from ModuleFolders.Infrastructure.LLMRequester.LocalLLMRequester import LocalLLMRequester
 from ModuleFolders.Infrastructure.LLMRequester.CohereRequester import CohereRequester
 from ModuleFolders.Infrastructure.LLMRequester.GoogleRequester import GoogleRequester
@@ -35,6 +36,13 @@ class LLMRequester():
             if target_platform == "sakura":
                 sakura_requester = SakuraRequester()
                 skip, response_think, response_content, prompt_tokens, completion_tokens = sakura_requester.request_sakura(
+                    messages,
+                    system_prompt,
+                    platform_config,
+                )
+            elif target_platform == "murasaki":
+                murasaki_requester = MurasakiRequester()
+                skip, response_think, response_content, prompt_tokens, completion_tokens = murasaki_requester.request_murasaki(
                     messages,
                     system_prompt,
                     platform_config,

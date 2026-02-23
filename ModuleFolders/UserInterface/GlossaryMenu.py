@@ -555,7 +555,7 @@ class GlossaryMenu:
             rounds = max(1, min(10, rounds))
             self.config["term_translation_rounds"] = rounds
             self.save_config()
-            self.analyzer.multi_translate_and_select(filtered_terms, None, rounds)
+            self._ask_translate_mode_and_run(filtered_terms, None, rounds)
         elif choice == 5:
             # 设置轮询次数（临时API）
             translate_config = self.api_manager.configure_temp_api_for_analysis()
@@ -567,7 +567,22 @@ class GlossaryMenu:
                 rounds = max(1, min(10, rounds))
                 self.config["term_translation_rounds"] = rounds
                 self.save_config()
-                self.analyzer.multi_translate_and_select(filtered_terms, translate_config, rounds)
+                self._ask_translate_mode_and_run(filtered_terms, translate_config, rounds)
+
+    def _ask_translate_mode_and_run(self, filtered_terms, temp_config, rounds):
+        """询问翻译模式并执行"""
+        console.print(f"\n[cyan]{self.i18n.get('msg_translate_mode_select')}[/cyan]")
+        table = Table(show_header=False, box=None)
+        table.add_row("[cyan]1.[/]", self.i18n.get('option_translate_sequential'))
+        table.add_row("[cyan]2.[/]", self.i18n.get('option_translate_batch'))
+        console.print(table)
+
+        mode = IntPrompt.ask(self.i18n.get('prompt_select'), choices=["1", "2"], default=1, show_choices=False)
+
+        if mode == 1:
+            self.analyzer.multi_translate_and_select(filtered_terms, temp_config, rounds)
+        else:
+            self.analyzer.batch_translate_and_select(filtered_terms, temp_config)
 
     def rules_profiles_menu(self):
         """规则配置文件菜单"""

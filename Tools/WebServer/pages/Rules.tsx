@@ -301,7 +301,7 @@ export const Rules: React.FC = () => {
         setConfig({ ...config, [field]: !config[field] });
     };
 
-    const isLocal = config?.target_platform && ["sakura", "localllm"].includes(config.target_platform.toLowerCase());
+    const isLocal = config?.target_platform && ["sakura", "localllm", "murasaki"].includes(config.target_platform.toLowerCase());
     const isOnlineOnlyTab = ['characterization', 'world', 'style', 'example'].includes(activeTab);
 
     // --- UI Helpers ---

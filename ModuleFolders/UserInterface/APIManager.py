@@ -119,7 +119,7 @@ class APIManager:
 
     def select_api_menu(self, online: bool):
         """选择API平台菜单"""
-        local_keys = ["localllm", "sakura"]
+        local_keys = ["localllm", "sakura", "murasaki"]
         platforms = self.config.get("platforms", {})
 
         # 分类逻辑
@@ -245,6 +245,11 @@ class APIManager:
 
         self.save_config()
         console.print(f"\n[green]{self.i18n.get('msg_active_platform').format(sel)}[/green]")
+
+        # Murasaki 推理模型提示
+        if sel == "murasaki" or "murasaki" in new_plat_conf.get("model", "").lower():
+            console.print(f"\n[bold yellow]⚠ {self.i18n.get('msg_murasaki_think_hint')}[/bold yellow]")
+
         time.sleep(1)
 
     def validate_api(self):
@@ -267,7 +272,7 @@ class APIManager:
 
         with console.status(f"[cyan]{self.i18n.get('msg_api_validating')}[/cyan]"):
             try:
-                if target_platform.lower() in ["localllm", "sakura"]:
+                if target_platform.lower() in ["localllm", "sakura", "murasaki"]:
                     import httpx
                     console.print(f"[dim]Debug: base_url_for_validation = {base_url_for_validation}[/dim]")
 
@@ -401,7 +406,7 @@ class APIManager:
             table.add_row("6", self.i18n.get("menu_api_structured_output_switch"), f"[cyan]{mode_display}[/cyan]")
 
             api_format = plat_conf.get("api_format", "")
-            is_local_platform = tp.lower() in ["sakura", "localllm"]
+            is_local_platform = tp.lower() in ["sakura", "localllm", "murasaki"]
 
             table.add_row("7", self.i18n.get("menu_api_think_depth"), str(think_dp))
             table.add_row("8", self.i18n.get("menu_api_think_budget"), str(think_budget))
@@ -633,7 +638,7 @@ class APIManager:
             elif c == 2:
                 self.config["api_failover_threshold"] = IntPrompt.ask(self.i18n.get("setting_failover_threshold"), default=10)
             elif c == 3:
-                local_keys = ["localllm", "sakura"]
+                local_keys = ["localllm", "sakura", "murasaki"]
                 online_platforms = [k for k in self.config.get("platforms", {}).keys() if k.lower() not in local_keys]
                 candidates = [k for k in online_platforms if k not in pool]
                 if not candidates:

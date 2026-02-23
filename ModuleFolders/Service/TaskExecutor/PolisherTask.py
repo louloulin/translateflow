@@ -193,7 +193,7 @@ class PolisherTask(Base):
             # 1. 获取最新配置
             platform_config = self.config.get_platform_configuration("polishingReq")
             current_api = platform_config.get("target_platform", "Unknown")
-            is_local = current_api.lower() in ["localllm", "sakura"]
+            is_local = current_api.lower() in ["localllm", "sakura", "murasaki"]
 
             # 2. 发起请求
             requester = LLMRequester()

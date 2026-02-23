@@ -115,6 +115,8 @@ class AsyncLLMRequester(Base):
                 # 根据平台分发请求
                 if target_platform == "sakura":
                     result = await self._request_sakura_async(messages, system_prompt, platform_config)
+                elif target_platform == "murasaki":
+                    result = await self._request_sakura_async(messages, system_prompt, platform_config)
                 elif target_platform == "LocalLLM":
                     result = await self._request_local_async(messages, system_prompt, platform_config)
                 elif target_platform == "google" or (target_platform.startswith("custom_platform_") and api_format == "Google"):

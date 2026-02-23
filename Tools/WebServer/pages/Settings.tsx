@@ -700,7 +700,7 @@ export const Settings: React.FC = () => {
                                 <div className="flex items-start gap-2">
                                     <AlertTriangle size={16} className="text-red-400 mt-0.5" />
                                     <p className="text-red-300 text-sm">
-                                        {['sakura', 'localllm'].includes(config.target_platform?.toLowerCase() || '')
+                                        {['sakura', 'localllm', 'murasaki'].includes(config.target_platform?.toLowerCase() || '')
                                             ? t('warning_thinking_online_only')
                                             : t('warning_thinking_compatibility')
                                         }

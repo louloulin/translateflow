@@ -313,12 +313,19 @@ class GlossaryAnalyzer:
                     seen.add(result['dst'])
                     options.append(result)
 
-            multi_results.append({
-                "src": src,
-                "type": term_data.get("type", ""),
-                "options": options,
-                "selected_index": 0
-            })
+            if options:
+                multi_results.append({
+                    "src": src,
+                    "type": term_data.get("type", ""),
+                    "options": options,
+                    "selected_index": 0
+                })
+            else:
+                console.print(f"[red]✗ {src} {self.i18n.get('msg_term_all_failed')}[/red]")
+
+        skipped = total - len(multi_results)
+        if skipped > 0:
+            console.print(f"\n[yellow]⚠ {skipped} {self.i18n.get('msg_term_skipped_count')}[/yellow]")
 
         if not multi_results:
             console.print(f"[yellow]{self.i18n.get('msg_no_translation_results') or '未获得翻译结果'}[/yellow]")
@@ -350,6 +357,103 @@ class GlossaryAnalyzer:
             return
 
         # 保存到术语表
+        self._save_selected_translations(selected_results)
+
+    def batch_translate_and_select(self, filtered_terms, temp_config=None):
+        """批量翻译 - 所有术语一次性发送给AI"""
+        from ModuleFolders.UserInterface.TermSelector.TermSelector import TermSelector
+        from ModuleFolders.Infrastructure.TaskConfig.TaskConfig import TaskConfig
+        from ModuleFolders.Infrastructure.TaskConfig.TaskType import TaskType
+        from ModuleFolders.Infrastructure.LLMRequester.LLMRequester import LLMRequester
+        import re
+
+        console.print(f"\n[cyan]{self.i18n.get('msg_starting_batch_translate')}[/cyan]")
+
+        task_config = TaskConfig()
+        task_config.load_config_from_dict(self.config)
+        task_config.prepare_for_translation(TaskType.TRANSLATION)
+
+        platform_config = temp_config if temp_config else task_config.get_platform_configuration("translationReq")
+        target_language = task_config.target_language
+
+        # 构建批量请求
+        term_list = []
+        for src, data in filtered_terms.items():
+            term_list.append({"src": src, "type": data.get("type", "专有名词")})
+
+        system_prompt = f"""You are a terminology translator. Translate all terms into "{target_language}".
+
+Output a JSON array, each element: {{"src": "original", "dst": "translation", "info": "note"}}
+Only output the JSON array, no other text."""
+
+        user_content = json.dumps(term_list, ensure_ascii=False)
+        messages = [{"role": "user", "content": user_content}]
+
+        requester = LLMRequester()
+        skip, _, response, pt, ct = requester.sent_request(messages, system_prompt, platform_config)
+
+        if skip or not response:
+            console.print(f"[red]{self.i18n.get('msg_no_translation_results')}[/red]")
+            return
+
+        console.print(f"[green]{self.i18n.get('msg_batch_translate_complete')} | {pt}+{ct}T[/green]")
+
+        # 解析批量响应
+        translated = {}
+        try:
+            json_match = re.search(r'\[[\s\S]*\]', response)
+            if json_match:
+                parsed = json.loads(json_match.group())
+                for item in parsed:
+                    if isinstance(item, dict) and 'src' in item and 'dst' in item:
+                        translated[item['src']] = {"dst": item['dst'], "info": item.get('info', '')}
+        except Exception:
+            pass
+
+        # 构建结果
+        multi_results = []
+        for src, data in filtered_terms.items():
+            t = translated.get(src)
+            options = [t] if t and t['dst'] else []
+            if options:
+                multi_results.append({
+                    "src": src,
+                    "type": data.get("type", ""),
+                    "options": options,
+                    "selected_index": 0
+                })
+            else:
+                console.print(f"[red]✗ {src} {self.i18n.get('msg_term_all_failed')}[/red]")
+
+        skipped = len(filtered_terms) - len(multi_results)
+        if skipped > 0:
+            console.print(f"\n[yellow]⚠ {skipped} {self.i18n.get('msg_term_skipped_count')}[/yellow]")
+
+        if not multi_results:
+            console.print(f"[yellow]{self.i18n.get('msg_no_translation_results')}[/yellow]")
+            return
+
+        # 定义回调
+        def save_single_term(term_data):
+            existing_data = self.config.get("prompt_dictionary_data", [])
+            existing_srcs = {item['src'] for item in existing_data}
+            if term_data['src'] not in existing_srcs:
+                existing_data.append(term_data)
+                self.config["prompt_dictionary_data"] = existing_data
+                self.config["prompt_dictionary_switch"] = True
+                self.save_config()
+
+        def retry_translation(src, term_type, avoid_set=None):
+            term_data = {"type": term_type}
+            return self._request_term_translation(src, term_data, target_language, platform_config, avoid_set or set())
+
+        selector = TermSelector(multi_results, request_callback=retry_translation, save_callback=save_single_term)
+        selected_results = selector.show_selector()
+
+        if not selected_results:
+            console.print(f"[yellow]{self.i18n.get('msg_cancelled')}[/yellow]")
+            return
+
         self._save_selected_translations(selected_results)
 
     def _save_selected_translations(self, selected_results):

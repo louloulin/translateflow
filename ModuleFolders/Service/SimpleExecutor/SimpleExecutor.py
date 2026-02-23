@@ -67,7 +67,7 @@ class SimpleExecutor(Base):
                     break
 
             # 2. 自动补全 /v1 逻辑
-            should_auto_complete_v1 = (platform_tag in ["sakura", "LocalLLM"]) or auto_complete
+            should_auto_complete_v1 = (platform_tag in ["sakura", "LocalLLM", "murasaki"]) or auto_complete
             if should_auto_complete_v1:
                 version_suffixes = ["/v1", "/v2", "/v3", "/v4", "/v5", "/v6"]
                 if not any(api_url.endswith(suffix) for suffix in version_suffixes):

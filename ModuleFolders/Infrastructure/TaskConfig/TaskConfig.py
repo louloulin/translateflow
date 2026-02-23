@@ -221,7 +221,7 @@ class TaskConfig(Base):
 
         # 只有在开启自动补全或者特定本地平台时，才进行规范化裁剪
         # 否则尊重原始输入，防止用户手动填写的完整地址被破坏
-        should_auto_process = (target_platform in ["sakura", "LocalLLM"]) or auto_complete
+        should_auto_process = (target_platform in ["sakura", "LocalLLM", "murasaki"]) or auto_complete
 
         if not should_auto_process:
             return url
@@ -237,7 +237,7 @@ class TaskConfig(Base):
 
         # 3. 自动补全 /v1 逻辑
         # 某些平台强制补全，或者配置开启了 auto_complete
-        should_auto_complete = (target_platform in ["sakura", "LocalLLM"]) or auto_complete
+        should_auto_complete = (target_platform in ["sakura", "LocalLLM", "murasaki"]) or auto_complete
 
         if should_auto_complete:
             version_suffixes = ["/v1", "/v2", "/v3", "/v4", "/v5", "/v6"]
@@ -348,7 +348,7 @@ class TaskConfig(Base):
             actual_thread_counts = user_thread_counts
 
         # 如果是本地类接口，尝试访问slots数
-        elif target_platform in ("sakura","LocalLLM"):
+        elif target_platform in ("sakura","LocalLLM","murasaki"):
             num = self.get_llama_cpp_slots_num(self.platforms.get(target_platform).get("api_url"))
             actual_thread_counts = num if num > 0 else 4
             self.info(f"根据 llama.cpp 接口信息，自动设置同时执行的翻译任务数量为 {actual_thread_counts} 个 ...")

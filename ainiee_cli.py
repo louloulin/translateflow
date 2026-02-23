@@ -1274,7 +1274,7 @@ class CLIMenu:
         user_threads = self.config.get("user_thread_counts", 0)
         context_lines = self.config.get("pre_line_counts", 3)
         think_on = self.config.get("think_switch", False)
-        is_local = target_platform.lower() in ["sakura", "localllm"]
+        is_local = target_platform.lower() in ["sakura", "localllm", "murasaki"]
 
         # 使用 I18N 获取文字
         conv_on_text = i18n.get("banner_on")
@@ -2016,7 +2016,7 @@ class CLIMenu:
 
     def _analyze_error_with_llm(self, error_msg, temp_config=None):
         # 检查是否配置了在线 API
-        if not temp_config and self.config.get("target_platform", "None").lower() in ["none", "localllm", "sakura"]:
+        if not temp_config and self.config.get("target_platform", "None").lower() in ["none", "localllm", "sakura", "murasaki"]:
             console.print(f"[yellow]{i18n.get('msg_temp_api_prompt')}[/yellow]")
             console.print(f"[red]{i18n.get('msg_api_not_configured')}[/red]")
             return None

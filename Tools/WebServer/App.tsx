@@ -413,7 +413,7 @@ const MainLayout: React.FC = () => {
     const userThreads = config?.user_thread_counts || 0;
     const contextLines = config?.pre_line_counts || 3;
     const thinkOn = config?.think_switch || false;
-      const isLocal = ["sakura", "localllm"].includes(targetPlatform.toLowerCase());
+      const isLocal = ["sakura", "localllm", "murasaki"].includes(targetPlatform.toLowerCase());
       
       const getThemeColor = () => {
         switch(activeTheme) {
