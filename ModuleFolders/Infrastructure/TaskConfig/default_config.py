@@ -368,6 +368,9 @@ DEFAULT_CONFIG = {
             "think_depth": "low",
             "auto_complete": False,
             "model_datas": [
+                "doubao-seed-2-0-pro-260215",
+                "doubao-seed-2-0-lite-260215",
+                "doubao-seed-2-0-mini-260215",
                 "doubao-seed-1-6-flash-250615",
                 "doubao-seed-1-6-250615",
                 "deepseek-v3-250324",

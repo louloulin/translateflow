@@ -57,9 +57,10 @@ class ResponseChecker():
         # 残留原文检查
         if response_check_switch.get('residual_original_text_check', False):
             if not detecting_remaining_original_text(
-                source_text_dict, 
-                response_dict, 
+                source_text_dict,
+                response_dict,
                 source_language,
+                config.target_language,
             ):
                 return False, "【翻译残留】 - 译文中残留部分原文"
 

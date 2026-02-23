@@ -2786,6 +2786,7 @@ class CLIMenu:
             # 只有在收到明确的任务停止完成事件时才记录日志
             if e == Base.EVENT.TASK_STOP_DONE:
                 self.ui.log(f"[bold yellow]{i18n.get('msg_task_stopped')}[/bold yellow]")
+                finished.set()  # 任务停止完成，设置finished事件
 
             # 记录是否为熔断导致的停止
             if d and isinstance(d, dict) and d.get("status") == "critical_error":
@@ -3055,9 +3056,9 @@ class CLIMenu:
                             elif key == 'y': # 进入诊断模式 (当检测到多次API错误时)
                                 if self._show_diagnostic_hint or self._api_error_count >= 3:
                                     self.ui.log(f"[bold cyan]{i18n.get('msg_entering_diagnostic')}[/bold cyan]")
-                                    # 停止当前任务
-                                    EventManager.get_singleton().emit(Base.EVENT.TASK_STOP, {})
-                                    time.sleep(1)
+                                    # 强制停止
+                                    Base.work_status = Base.STATUS.STOPING
+                                    finished.set()
                                     # 设置标志，退出后进入诊断菜单
                                     self._enter_diagnostic_on_exit = True
                                     self._is_critical_failure = True
