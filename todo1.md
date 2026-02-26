@@ -470,3 +470,449 @@ bilingual_config=TranslationOutputConfig(enable_bilingual, bilingual_suffix, ...
 **文档版本**: 1.1
 **创建日期**: 2026-02-26
 **最后更新**: 2026-02-26 (补充深度代码对比)
+
+---
+
+## 十、核心翻译功能深度分析（2026-02-26 新增）
+
+### 10.1 Qt (source/AiNiee) 核心翻译功能解析
+
+#### 10.1.1 EditViewPage 核心功能
+**文件位置**: `source/AiNiee/UserInterface/EditView/EditViewPage.py`
+
+**核心特性**:
+1. **BottomCommandBar (底部命令栏)**
+   - 开始翻译/开始润色按钮（可切换模式）
+   - 继续按钮（断点续传）
+   - 停止按钮
+   - 定时任务按钮
+   - 导出结果按钮
+   - 项目名称显示
+   - 进度条和状态显示
+   - 实时更新定时器（每秒刷新）
+
+2. **事件驱动更新机制**
+   ```python
+   # 订阅事件
+   self.subscribe(Base.EVENT.TASK_UPDATE, self.data_update)
+   self.subscribe(Base.EVENT.TASK_STOP_DONE, self.task_stop_done)
+   self.subscribe(Base.EVENT.APP_SHUT_DOWN, self.app_shut_down)
+
+   # UI更新定时器
+   self.ui_update_timer.timeout.connect(lambda: self.emit(Base.EVENT.TASK_UPDATE, {}))
+   ```
+
+3. **进度显示**
+   - 进度条百分比
+   - 当前进度/总行数（例如 "15/100"）
+
+#### 10.1.2 MonitoringPage 监控页面
+**文件位置**: `source/AiNiee/UserInterface/EditView/Monitoring/MonitoringPage.py`
+
+**核心组件**:
+1. **DashboardCard** - 数据卡片
+   - 累计时间（Time）
+   - 剩余时间（Time）
+   - 平均速度（T/S）
+   - 累计消耗（Token）
+   - 实时任务数
+   - 任务稳定性（%）
+
+2. **CombinedLineCard** - 行数统计卡片
+   - 已完成行数
+   - 剩余行数
+   - 双列显示
+
+3. **ProgressRingCard** - 进度环
+   - 圆形进度显示
+   - 任务进度百分比
+
+4. **WaveformCard** - 波形图
+   - 实时速度波形
+   - 可配置网格线
+
+5. **实时数据更新**
+   ```python
+   # 监听任务更新事件
+   self.subscribe(Base.EVENT.TASK_UPDATE, self.data_update)
+   self.subscribe(Base.EVENT.TASK_COMPLETED, self.data_update)
+   ```
+
+#### 10.1.3 StartupPage 启动页面
+**文件位置**: `source/AiNiee/UserInterface/EditView/Startup/StartupPage.py`
+
+**核心功能**:
+1. **项目类型选择** - ComboBoxCard
+2. **文件夹拖放** - FolderDropCard
+3. **继续项目** - ActionCard（显示上次项目）
+4. **异步加载** - 子线程加载项目，信号通知主线程
+   ```python
+   folderSelected = pyqtSignal(str, str)  # 文件夹已选好
+   loadSuccess = pyqtSignal(str, str)     # 加载成功
+   loadFailed = pyqtSignal(str)           # 加载失败
+   ```
+
+---
+
+### 10.2 TUI (ModuleFolders) 核心翻译功能解析
+
+#### 10.2.1 TUIEditor 交互式编辑器
+**文件位置**: `ModuleFolders/UserInterface/Editor/TUIEditor.py`
+
+**核心特性**:
+1. **双栏对照布局**
+   ```python
+   self.layout["body"].split_row(
+       Layout(name="source_pane"),
+       Layout(name="target_pane")
+   )
+   ```
+
+2. **模式切换**
+   - VIEW: 查看模式（只读）
+   - EDIT: 编辑模式（可修改译文）
+
+3. **动态终端适配**
+   ```python
+   # 根据终端大小动态调整页面大小
+   terminal_width, terminal_height = self._get_terminal_size()
+   available_lines = max(terminal_height - reserved_lines, 10)
+   ```
+
+4. **数据加载**
+   - 支持 AI 校对版本 cache
+   - 自动过滤未翻译内容
+   - 保留原始 cache_item 引用
+
+5. **编辑功能**
+   - 修改译文
+   - 撤销功能（original_translation）
+   - 修改追踪（modified_items）
+
+#### 10.2.2 TaskUI 任务界面
+**文件位置**: `ModuleFolders/UserInterface/TaskUI.py`
+
+**核心特性**:
+1. **双模式显示**
+   - **详细模式** (show_detailed=True): 三段式布局
+     - Header (3行)
+     - Body: 双栏对照（source_pane + target_pane）
+     - Footer (15行): 小日志窗格 + 统计信息
+   - **经典模式** (show_detailed=False): 上下两段式
+     - Upper: 日志显示
+     - Lower: 进度条 + 统计
+
+2. **实时对照内容**
+   ```python
+   self.current_source = Text("Waiting...", style="dim")
+   self.current_translation = Text("Waiting...", style="dim")
+   ```
+
+3. **进度条组件**
+   ```python
+   self.progress = Progress(
+       SpinnerColumn(),
+       TextColumn("[bold blue]{task.fields[action]}"),
+       BarColumn(),
+       TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+       TimeElapsedColumn(),
+       TextColumn("/"),
+       TimeRemainingColumn()
+   )
+   ```
+
+4. **状态颜色映射**
+   ```python
+   color_map = {
+       "normal": "green",
+       "fixing": "yellow",
+       "warning": "yellow",
+       "error": "red",
+       "paused": "yellow",
+       "critical_error": "red"
+   }
+   ```
+
+---
+
+### 10.3 Web (Tools/WebServer) 核心翻译功能解析
+
+#### 10.3.1 Monitor 页面
+**文件位置**: `Tools/WebServer/pages/Monitor.tsx`
+
+**核心特性**:
+1. **轮询机制**
+   ```typescript
+   const startPolling = () => {
+       intervalRef.current = setInterval(async () => {
+           const data = await DataService.getTaskStatus();
+           setTaskState(prev => ({
+               stats: data.stats,
+               logs: mappedLogs,
+               chartData: data.chart_data,
+               comparison: data.comparison
+           }));
+       }, 1000);  // 每秒更新
+   };
+   ```
+
+2. **标签页切换**
+   - Console Tab: 指标和控制台日志
+   - Comparison Tab: 双语对照视图
+
+3. **双语对照视图**
+   ```tsx
+   {/* Source Pane */}
+   <div className="flex flex-col bg-slate-900/40 border border-magenta/20">
+       <div className="px-4 py-2 bg-magenta/10 border-b border-magenta/20">
+           <span className="text-[10px] font-bold text-magenta">Original Source</span>
+       </div>
+       <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-slate-300">
+           {taskState.comparison?.source || "Waiting for text..."}
+       </div>
+   </div>
+
+   {/* Translation Pane */}
+   <div className="flex flex-col bg-slate-900/40 border border-primary/20">
+       <div className="px-4 py-2 bg-primary/10 border-b border-primary/20">
+           <span className="text-[10px] font-bold text-primary">Translation Output</span>
+       </div>
+       <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-primary-light">
+           {taskState.comparison?.translation || "Processing batch..."}
+       </div>
+   </div>
+   ```
+
+4. **状态显示**
+   - SYSTEM ACTIVE: 绿色脉冲动画
+   - SYSTEM IDLE: 灰色静态
+
+5. **统计信息**
+   ```tsx
+   <span>S-Rate: {taskState.stats?.successRate.toFixed(1)}%</span>
+   <span>E-Rate: {taskState.stats?.errorRate.toFixed(1)}%</span>
+   <span>RPM: {taskState.stats?.rpm.toFixed(2)}</span>
+   <span>TPM: {taskState.stats?.tpm.toFixed(2)}k</span>
+   ```
+
+---
+
+### 10.4 功能对比总结表
+
+#### 10.4.1 核心翻译功能对比
+
+| 功能特性 | Qt (source/AiNiee) | TUI (ModuleFolders) | Web (Tools/WebServer) |
+|---------|-------------------|---------------------|----------------------|
+| **双栏对照显示** | ✗ 无（独立表格） | ✓ 实时对照 | ✓ 实时对照 |
+| **实时进度条** | ✓ ProgressBar | ✓ Rich Progress | ✓ 统计面板 |
+| **波形图** | ✓ WaveformCard | ✗ 无 | ✗ 无 |
+| **进度环** | ✓ ProgressRingCard | ✗ 无 | ✗ 无 |
+| **累计/剩余时间** | ✓ DashboardCard | ✓ Rich显示 | ✓ 轮询更新 |
+| **行数统计** | ✓ CombinedLineCard | ✓ Rich显示 | ✓ 轮询更新 |
+| **任务稳定性** | ✓ DashboardCard (%) | ✓ Rich显示 | ✓ 轮询更新 |
+| **Token统计** | ✓ DashboardCard | ✓ Rich显示 | ✓ 轮询更新 |
+| **速度显示** | ✓ T/S | ✓ Rich显示 | ✓ RPM/TPM |
+| **日志显示** | ✗ 无专用界面 | ✓ 双模式 | ✓ Terminal组件 |
+| **编辑器** | ✓ TableWidget | ✓ TUIEditor | ✗ 无独立编辑器 |
+| **搜索功能** | ✓ SearchDialog | ✗ 无 | ✗ 无 |
+| **定时任务** | ✓ ScheduledDialogPage | ✓ SchedulerManager | ✗ 无 |
+| **断点续传** | ✓ 继续按钮 | ✓ 启动时检测 | ✗ 无 |
+| **AI校对支持** | ✓ 基础支持 | ✓ ProofreadTUI | ✗ 无 |
+| **双语对照** | ✓ 硬编码启用 | ✗ 配置默认禁用 | ✗ 配置默认禁用 |
+| **动态终端适配** | N/A | ✓ 动态布局 | N/A |
+| **主题系统** | ✓ qfluentwidgets | ✓ Rich主题 | ✓ Tailwind主题 |
+
+#### 10.4.2 预览/对照功能对比
+
+| 特性 | Qt | TUI | Web |
+|------|----|----|-----|
+| **双语对照显示** | ❌ 缺失 | ✅ 有（详细模式） | ✅ 有（标签页） |
+| **对照模式切换** | N/A | ⚠️ show_detailed配置 | ✅ Tab切换 |
+| **实时对照更新** | ❌ 无 | ✅ 每秒更新 | ✅ 轮询1秒 |
+| **对照内容滚动** | N/A | ✅ Rich自动滚动 | ✅ CSS overflow |
+| **对照行数统计** | ❌ 无 | ✅ 显示行数 | ✅ 显示行数 |
+| **对照样式** | N/A | ✅ magenta/green | ✅ magenta/primary |
+| **对照等待提示** | N/A | ✅ "Waiting..." | ✅ "Waiting..." |
+
+---
+
+### 10.5 核心缺失功能分析
+
+#### 10.5.1 TUI 缺失的 Qt 功能
+
+| 功能 | 优先级 | 实现难度 | 说明 |
+|------|--------|----------|------|
+| **波形图** | 低 | 高 | Rich库不支持动态波形，需自定义 |
+| **进度环** | 低 | 中 | 可用 Rich Progress 模拟 |
+| **搜索功能** | 中 | 中 | 可添加搜索对话框 |
+| **双语对照UI开关** | 高 | 低 | show_detailed 已实现 |
+| **实时编辑** | ✅ 已实现 | - | TUIEditor 已支持 |
+| **定时任务对话框** | 中 | 中 | 已有 SchedulerManager，缺UI |
+
+#### 10.5.2 Web 缺失的 Qt 功能
+
+| 功能 | 优先级 | 实现难度 | 说明 |
+|------|--------|----------|------|
+| **波形图** | 中 | 中 | 可用 Chart.js/Recharts |
+| **进度环** | 低 | 低 | 可用 React 组件库 |
+| **编辑器** | 高 | 中 | 需添加在线编辑器 |
+| **搜索功能** | 中 | 低 | 可添加搜索框 |
+| **定时任务** | 中 | 中 | 需添加定时任务UI |
+| **断点续传** | 高 | 低 | 启动时检测 cache |
+| **文件选择器** | 中 | 中 | 文件上传组件 |
+
+#### 10.5.3 TUI/Web 缺失的 Qt 对照功能
+
+| 功能 | Qt | TUI | Web | 建议 |
+|------|----|----|-----|------|
+| **双语对照** | ❌ 缺失 | ✅ 有 | ✅ 有 | TUI/Web 已超越 Qt |
+| **对照实时更新** | ❌ | ✅ | ✅ | TUI/Web 已超越 Qt |
+| **对照样式切换** | ❌ | ⚠️ 配置 | ✅ Tab | 保持现状 |
+| **对照内容滚动** | ❌ | ✅ | ✅ | 保持现状 |
+
+---
+
+### 10.6 架构优势对比
+
+#### 10.6.1 Qt 优势
+1. **成熟的桌面应用框架**
+2. **丰富的组件库** (qfluentwidgets)
+3. **拖放交互** (FolderDropCard)
+4. **对话框系统** (SearchDialog, ScheduledDialog)
+5. **信号槽机制** (事件驱动)
+
+#### 10.6.2 TUI 优势
+1. **终端适配** (动态布局)
+2. **异步支持** (AsyncLLMRequester)
+3. **诊断系统** (SmartDiagnostic)
+4. **自动化功能** (WatchManager, SchedulerManager)
+5. **AI校对** (AIProofreader, ProofreadTUI)
+
+#### 10.6.3 Web 优势
+1. **现代化架构** (React + FastAPI)
+2. **跨平台访问** (浏览器)
+3. **实时轮询** (1秒更新)
+4. **响应式设计** (Tailwind CSS)
+5. **主题系统** (15+主题)
+
+---
+
+### 10.7 改造建议
+
+#### 10.7.1 短期改进（1-2周）
+
+**TUI 改进**:
+1. ✅ 双语对照已实现（show_detailed 模式）
+2. ✅ 实时编辑已实现（TUIEditor）
+3. ⚠️ 需修复配置默认值（enable_bilingual_output: true）
+4. 🔨 添加搜索对话框
+5. 🔨 添加定时任务配置 UI
+
+**Web 改进**:
+1. ✅ 双语对照已实现（Monitor.tsx Comparison Tab）
+2. ✅ 实时轮询已实现（1秒间隔）
+3. ⚠️ 需修复配置默认值
+4. 🔨 添加在线编辑器（基于 Monaco Editor）
+5. 🔨 添加断点续传检测
+
+#### 10.7.2 中期改进（3-4周）
+
+**TUI 改进**:
+1. 添加波形图（使用 ASCII art 或 canvas）
+2. 添加进度环（Rich Progress）
+3. 改进搜索功能（支持正则表达式）
+
+**Web 改进**:
+1. 添加波形图（Chart.js 或 Recharts）
+2. 添加进度环（React 组件库）
+3. 添加文件上传进度显示
+
+#### 10.7.3 长期优化（1-2月）
+
+1. **统一双语对照机制**
+   - Qt 添加双语对照显示
+   - TUI/Web 保持现有优势
+
+2. **统一编辑器体验**
+   - TUI: 保持 TUIEditor
+   - Web: 添加 Monaco Editor
+   - Qt: 保持 TableWidget
+
+3. **统一配置管理**
+   - 统一 preset.json 配置
+   - 统一默认值
+
+---
+
+## 十一、总结与行动计划（2026-02-26 更新）
+
+### 11.1 核心发现
+
+1. **双语对照功能分析**
+   - ✅ 功能已完整实现（BilingualPlugin + FileOutputer）
+   - ❌ 配置默认值导致不生效（`enable_bilingual_output: false`）
+   - 📊 TUI/Web 已超越 Qt（有实时对照，Qt 无）
+
+2. **核心翻译功能对比**
+   - Qt: 成熟的桌面应用，丰富的组件（波形图、进度环）
+   - TUI: 终端适配，异步支持，诊断系统（超出 Qt）
+   - Web: 现代化架构，跨平台访问（超出 Qt）
+
+3. **预览/对照功能对比**
+   - Qt: ❌ 无双语对照显示
+   - TUI: ✅ 详细模式双栏对照
+   - Web: ✅ Tab切换双栏对照
+
+### 11.2 立即行动项
+
+| 优先级 | 任务 | 预计时间 | 负责模块 |
+|--------|------|----------|----------|
+| 🔴 P0 | 修复双语配置默认值 | 1小时 | preset.json |
+| 🟡 P1 | TUI 添加搜索对话框 | 6小时 | TUIEditor |
+| 🟡 P1 | Web 添加在线编辑器 | 12小时 | CacheEditor |
+| 🟡 P1 | Web 添加断点续传检测 | 4小时 | Startup |
+| 🟢 P2 | TUI 添加定时任务UI | 8小时 | AutomationMenu |
+| 🟢 P2 | Web 添加定时任务UI | 8小时 | TaskQueue |
+| 🟢 P2 | Qt 添加双语对照显示 | 12小时 | MonitoringPage |
+
+### 11.3 配置修复方案
+
+**立即执行**:
+```bash
+# 修改 Resource/platforms/preset.json
+# "enable_bilingual_output": false → true
+```
+
+**验证步骤**:
+1. 翻译测试文件
+2. 检查是否生成 `_bilingual` 文件
+3. 验证双语文件内容格式
+
+### 11.4 后续改造路线图
+
+**第1阶段（1周）**: 配置修复 + 基础功能补齐
+- 修复双语配置
+- 添加 TUI 搜索
+- 添加 Web 编辑器基础
+
+**第2阶段（2周）**: 功能增强
+- TUI 定时任务 UI
+- Web 断点续传
+- Web 定时任务 UI
+
+**第3阶段（3-4周）**: Qt 追赶
+- Qt 添加双语对照显示
+- Qt 添加诊断系统
+- Qt 添加自动化功能
+
+**第4阶段（持续）**: 优化整合
+- 统一配置管理
+- 统一双语机制
+- 性能优化
+
+---
+
+**文档版本**: 2.0
+**最后更新**: 2026-02-26 23:40
+**分析深度**: ⭐⭐⭐⭐⭐ (源码级深度分析)
+**覆盖范围**: Qt + TUI + Web 全面对比
