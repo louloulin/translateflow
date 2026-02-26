@@ -18,6 +18,7 @@ from .EditorUI import EditorUI
 from .EditorInput import EditorInput
 from .GlossaryHighlighter import GlossaryHighlighter
 from .EditorUtils import EditorUtils
+from .SearchDialog import SearchDialog
 
 
 class EditorMode:
@@ -422,53 +423,26 @@ class TUIEditor:
             pass  # 用户取消输入
 
     def _search(self):
-        """搜索功能"""
+        """搜索功能 - 使用SearchDialog"""
         try:
-            # 暂停当前显示，切换到输入模式
-            self.console.print(f"\n[cyan]{self.i18n.get('editor_search_prompt') or 'Search in text:'}[/cyan]")
-            search_term = input(f"{self.i18n.get('editor_search_term') or 'Search term'}: ").strip()
+            # 暂停Live显示以进行交互
+            dialog = SearchDialog(self.console, self.cache_data, self.current_line)
 
-            if not search_term:
-                return
-
-            # 从当前位置开始搜索
-            found_indices = []
-            search_term_lower = search_term.lower()
-
-            for i, item in enumerate(self.cache_data):
-                # 在原文和翻译中搜索
-                source_text = item.get('source_text', '').lower()
-                translation = item.get('translation', '').lower()
-
-                if search_term_lower in source_text or search_term_lower in translation:
-                    found_indices.append(i)
-
-            if found_indices:
-                # 找到下一个匹配项（从当前行之后开始）
-                next_match = None
-                for idx in found_indices:
-                    if idx > self.current_line:
-                        next_match = idx
-                        break
-
-                # 如果没有找到后续匹配项，使用第一个匹配项（循环搜索）
-                if next_match is None:
-                    next_match = found_indices[0]
-
-                # 跳转到匹配项
-                self.current_line = next_match
-                self.current_page = next_match // self.page_size
-
-                self.console.print(f"[green]{self.i18n.get('editor_found_at_line') or 'Found at line'} {next_match + 1} ({len(found_indices)} {self.i18n.get('editor_total_matches') or 'total matches'})[/green]")
-                import time
-                time.sleep(1)
-            else:
-                self.console.print(f"[yellow]{self.i18n.get('editor_not_found') or 'Not found'}[/yellow]")
-                import time
-                time.sleep(1)
+            # 显示搜索对话框
+            if dialog.show():
+                # 如果有搜索结果，导航到下一个匹配项
+                next_match = dialog.get_next_match()
+                if next_match is not None:
+                    self.current_line = next_match
+                    self.current_page = self.current_line // self.page_size
 
         except KeyboardInterrupt:
-            pass  # 用户取消输入
+            pass  # 用户取消搜索
+        except Exception as e:
+            self.console.print(f"[red]搜索错误: {e}[/red]")
+            import traceback
+            import time
+            time.sleep(1)
 
     def _move_cursor_up_in_text(self):
         """在多行文本中向上移动光标"""
