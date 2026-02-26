@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Code2 } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
 import { useGlobal } from '../contexts/GlobalContext';
+import { MonacoInlineEditor } from '../components/MonacoEditor';
 
 interface CacheItem {
   id: number;
@@ -166,6 +167,12 @@ export const CacheEditor: React.FC = () => {
     corrected_translation?: string;
   } | null>(null);
 
+  // Monaco Editor mode
+  const [useMonaco, setUseMonaco] = useState(() => {
+    const saved = localStorage.getItem('use_monaco_editor');
+    return saved ? JSON.parse(saved) : false;
+  });
+
   // Refs for scroll sync
   const sourceScrollRef = useRef<HTMLDivElement>(null);
   const translationScrollRef = useRef<HTMLDivElement>(null);
@@ -187,6 +194,11 @@ export const CacheEditor: React.FC = () => {
   useEffect(() => {
     saveProofreadState(proofreadState);
   }, [proofreadState]);
+
+  // Persist Monaco mode preference
+  useEffect(() => {
+    localStorage.setItem('use_monaco_editor', JSON.stringify(useMonaco));
+  }, [useMonaco]);
 
   // Poll proofread status when running
   useEffect(() => {
@@ -757,6 +769,21 @@ export const CacheEditor: React.FC = () => {
               </span>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => {
+                  setUseMonaco(!useMonaco);
+                  localStorage.setItem('use_monaco_editor', JSON.stringify(!useMonaco));
+                }}
+                className={`flex items-center gap-2 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                  useMonaco
+                    ? 'bg-primary/20 text-primary border border-primary/30'
+                    : 'bg-white/5 text-slate-500 border border-white/5 hover:bg-white/10'
+                }`}
+                title={t('cache_editor_toggle_monaco') || 'Toggle Monaco Editor'}
+              >
+                <Code2 size={12} />
+                {useMonaco ? 'Monaco' : 'Basic'}
+              </button>
               <input
                 type="text"
                 value={searchQuery}
@@ -866,14 +893,31 @@ export const CacheEditor: React.FC = () => {
 
                       {editingItem === item.id ? (
                         <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
-                          <textarea
-                            value={editingText}
-                            onChange={(e) => setEditingText(e.target.value)}
-                            className={`w-full h-32 p-3 bg-slate-950/80 border rounded-lg resize-none focus:outline-none focus:ring-2 transition-all text-sm leading-relaxed ${
-                                elysiaActive ? 'border-pink-500/50 focus:ring-pink-500/30' : 'border-primary/50 focus:ring-primary/30'
-                            }`}
-                            autoFocus
-                          />
+                          {useMonaco ? (
+                            <div className="h-32 rounded-lg overflow-hidden border bg-slate-950/80">
+                              <MonacoInlineEditor
+                                value={editingText}
+                                onChange={(value) => setEditingText(value || '')}
+                                language="plaintext"
+                                theme="vs-dark"
+                                options={{
+                                  readOnly: false,
+                                  fontSize: 13,
+                                  fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
+                                }}
+                                autoFocus
+                              />
+                            </div>
+                          ) : (
+                            <textarea
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              className={`w-full h-32 p-3 bg-slate-950/80 border rounded-lg resize-none focus:outline-none focus:ring-2 transition-all text-sm leading-relaxed ${
+                                  elysiaActive ? 'border-pink-500/50 focus:ring-pink-500/30' : 'border-primary/50 focus:ring-primary/30'
+                              }`}
+                              autoFocus
+                            />
+                          )}
                           
                           {/* AI Analysis Result Display */}
                           {(analyzingLine || lineAnalysisResult) && (
