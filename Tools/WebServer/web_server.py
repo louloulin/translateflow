@@ -1647,6 +1647,96 @@ async def internal_update_comparison(payload: InternalComparisonPayload):
     task_manager.current_translation = payload.translation
     return {"status": "ok"}
 
+@app.get("/api/task/breakpoint-status")
+async def get_breakpoint_status(input_path: str = ""):
+    """
+    Check if there's an incomplete translation task that can be resumed.
+    Reads ProjectStatistics.json from the cache folder to detect breakpoint.
+    """
+    try:
+        config = await get_config()
+        output_path = config.get("label_output_path", os.path.join(PROJECT_ROOT, "output"))
+        cache_folder_path = os.path.join(output_path, "cache")
+
+        # Check if cache folder exists
+        if not os.path.isdir(cache_folder_path):
+            return {
+                "can_resume": False,
+                "has_incomplete": False,
+                "message": "No cache folder found"
+            }
+
+        json_file_path = os.path.join(cache_folder_path, "ProjectStatistics.json")
+        if not os.path.isfile(json_file_path):
+            return {
+                "can_resume": False,
+                "has_incomplete": False,
+                "message": "No project statistics found"
+            }
+
+        # Try to read the statistics file
+        try:
+            # Check file size to avoid reading empty files
+            if os.path.getsize(json_file_path) == 0:
+                return {
+                    "can_resume": False,
+                    "has_incomplete": False,
+                    "message": "Project statistics file is empty"
+                }
+
+            with open(json_file_path, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    return {
+                        "can_resume": False,
+                        "has_incomplete": False,
+                        "message": "Project statistics content is empty"
+                    }
+
+                data = json.loads(content)
+
+            # Get statistics
+            project_name = data.get("project_name", "Unknown")
+            total_line = data.get("total_line", 0)
+            line = data.get("line", 0)
+            total_requests = data.get("total_requests", 0)
+            success_requests = data.get("success_requests", 0)
+            token = data.get("token", 0)
+            time_elapsed = data.get("time", 0)
+
+            # Check if there's incomplete work
+            has_incomplete = total_line > 0 and line < total_line
+            can_resume = total_line > 0
+
+            # Format progress percentage
+            progress = 0
+            if total_line > 0:
+                progress = (line / total_line) * 100
+
+            return {
+                "can_resume": can_resume,
+                "has_incomplete": has_incomplete,
+                "project_name": project_name,
+                "progress": round(progress, 2),
+                "total_line": total_line,
+                "completed_line": line,
+                "total_requests": total_requests,
+                "success_requests": success_requests,
+                "token": token,
+                "time_elapsed": round(time_elapsed, 2),
+                "message": f"Found incomplete project: {project_name} ({line}/{total_line} lines, {progress:.1f}%)" if has_incomplete else f"Project complete: {project_name}"
+            }
+
+        except (json.JSONDecodeError, OSError, IOError) as e:
+            return {
+                "can_resume": False,
+                "has_incomplete": False,
+                "message": f"Failed to read project statistics: {str(e)}"
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # --- File Management Endpoints ---
 
 @app.post("/api/files/upload")

@@ -514,6 +514,32 @@ export const DataService = {
         }
     },
 
+    /**
+     * Check if there's an incomplete translation that can be resumed
+     */
+    async getBreakpointStatus(): Promise<{
+        can_resume: boolean;
+        has_incomplete: boolean;
+        project_name?: string;
+        progress?: number;
+        total_line?: number;
+        completed_line?: number;
+        message: string;
+    }> {
+        try {
+            const res = await fetch(`${API_BASE}/task/breakpoint-status`);
+            if (!res.ok) throw new Error('Failed to get breakpoint status');
+            return await res.json();
+        } catch (error) {
+            console.error("API Error: getBreakpointStatus", error);
+            return {
+                can_resume: false,
+                has_incomplete: false,
+                message: 'Failed to check breakpoint status'
+            };
+        }
+    },
+
     // --- File Management ---
 
     async listTempFiles(): Promise<{ name: string; path: string; size: number }[]> {

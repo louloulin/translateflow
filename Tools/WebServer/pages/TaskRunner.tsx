@@ -301,6 +301,23 @@ export const TaskRunner: React.FC = () => {
         addLog(`[SYSTEM] Ready. Loaded profile: ${config.active_profile || 'default'}`, 'system');
     }
     loadTempFiles();
+
+    // Check for breakpoint/resume status when config loads
+    const checkBreakpoint = async () => {
+        try {
+            const breakpoint = await DataService.getBreakpointStatus();
+            if (breakpoint.can_resume && breakpoint.has_incomplete && !taskState.isResuming) {
+                // Found incomplete work - auto-enable resume option
+                setTaskState(prev => ({ ...prev, isResuming: true }));
+                addLog(`[SYSTEM] Detected incomplete translation: ${breakpoint.project_name} (${breakpoint.completed_line}/${breakpoint.total_line} lines, ${breakpoint.progress}%)`, 'info');
+            }
+        } catch (e) {
+            console.error("Failed to check breakpoint status", e);
+        }
+    };
+    if (config) {
+        checkBreakpoint();
+    }
   }, [config]);
 
   // Initial sync on mount to recover state after refresh
