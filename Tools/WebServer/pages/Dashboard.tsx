@@ -1,13 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Settings, FileOutput, ArrowRight, FileText, Folder } from 'lucide-react';
+import { Play, Settings, FileOutput, ArrowRight, FileText, Folder, AlertCircle } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
 import { useGlobal } from '../contexts/GlobalContext';
+import { DataService } from '../services/DataService';
 
 export const Dashboard: React.FC = () => {
   const { t } = useI18n();
   const { version, config, setTaskState, activeTheme } = useGlobal(); // Use global state
   const [recentProjects, setRecentProjects] = useState<string[]>([]);
-  
+  const [breakpointStatus, setBreakpointStatus] = useState<{
+    can_resume: boolean;
+    has_incomplete: boolean;
+    project_name?: string;
+    progress?: number;
+    total_line?: number;
+    completed_line?: number;
+    message: string;
+  } | null>(null);
+
   const elysiaActive = activeTheme === 'elysia';
 
   const getCharacterBlessing = () => {
@@ -60,6 +70,27 @@ export const Dashboard: React.FC = () => {
         setRecentProjects([...(config.recent_projects || [])]);
     }
   }, [config]);
+
+  // Check for incomplete translation tasks on mount
+  useEffect(() => {
+    const checkBreakpoint = async () => {
+      try {
+        const status = await DataService.getBreakpointStatus();
+        setBreakpointStatus(status);
+      } catch (error) {
+        console.error("Failed to check breakpoint status:", error);
+      }
+    };
+    checkBreakpoint();
+  }, []);
+
+  const handleResumeBreakpoint = () => {
+    setTaskState(prev => ({
+      ...prev,
+      isResuming: true,
+    }));
+    navigate('/task');
+  };
 
   const navigate = (path: string) => {
     window.location.hash = path;
@@ -118,6 +149,50 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Breakpoint Resume Alert */}
+      {breakpointStatus && breakpointStatus.has_incomplete && (
+        <div className={`relative overflow-hidden rounded-xl border p-4 animate-in slide-in-from-top-2 duration-300 ${
+          elysiaActive
+            ? 'bg-pink-500/10 border-pink-500/30'
+            : 'bg-amber-500/10 border-amber-500/30'
+        }`}>
+          <div className="flex items-start gap-3">
+            <AlertCircle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+              elysiaActive ? 'text-pink-400' : 'text-amber-400'
+            }`} />
+            <div className="flex-1">
+              <h3 className={`font-semibold text-sm ${
+                elysiaActive ? 'text-pink-300' : 'text-amber-300'
+              }`}>
+                检测到未完成的翻译任务
+              </h3>
+              <p className="text-slate-400 text-xs mt-1">
+                {breakpointStatus.project_name} - {breakpointStatus.completed_line}/{breakpointStatus.total_line} 行 ({breakpointStatus.progress?.toFixed(1)}%)
+              </p>
+            </div>
+            <button
+              onClick={handleResumeBreakpoint}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                elysiaActive
+                  ? 'bg-pink-500 hover:bg-pink-400 text-white'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-900'
+              }`}
+            >
+              继续翻译
+            </button>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-3 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                elysiaActive ? 'bg-pink-500' : 'bg-amber-500'
+              }`}
+              style={{ width: `${breakpointStatus.progress || 0}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
