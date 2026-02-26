@@ -677,6 +677,113 @@ export const DataService = {
         }
     },
 
+    // --- Scheduler ---
+
+    async getSchedulerStatus(): Promise<{ running: boolean; task_count: number }> {
+        try {
+            const res = await fetch(`${API_BASE}/scheduler/status`);
+            if (!res.ok) throw new Error('Failed to fetch scheduler status');
+            return await res.json();
+        } catch (error) {
+            console.error("API Error: getSchedulerStatus", error);
+            return { running: false, task_count: 0 };
+        }
+    },
+
+    async getSchedulerTasks(): Promise<any[]> {
+        try {
+            const res = await fetch(`${API_BASE}/scheduler/tasks`);
+            if (!res.ok) throw new Error('Failed to fetch scheduler tasks');
+            return await res.json();
+        } catch (error) {
+            console.error("API Error: getSchedulerTasks", error);
+            return [];
+        }
+    },
+
+    async addSchedulerTask(task: {
+        task_id: string;
+        name: string;
+        schedule: string;
+        input_path: string;
+        profile: string;
+        task_type: string;
+        enabled?: boolean;
+    }): Promise<{ success: boolean; message?: string }> {
+        const res = await fetch(`${API_BASE}/scheduler/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(task)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || 'Failed to add scheduler task');
+        }
+        return data;
+    },
+
+    async updateSchedulerTask(taskId: string, updates: {
+        enabled?: boolean;
+        schedule?: string;
+        input_path?: string;
+        profile?: string;
+    }): Promise<{ success: boolean; message?: string }> {
+        const res = await fetch(`${API_BASE}/scheduler/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates)
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || 'Failed to update scheduler task');
+        }
+        return data;
+    },
+
+    async deleteSchedulerTask(taskId: string): Promise<{ success: boolean; message?: string }> {
+        const res = await fetch(`${API_BASE}/scheduler/tasks/${taskId}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || 'Failed to delete scheduler task');
+        }
+        return data;
+    },
+
+    async startScheduler(): Promise<{ success: boolean; message?: string }> {
+        const res = await fetch(`${API_BASE}/scheduler/start`, {
+            method: 'POST'
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || 'Failed to start scheduler');
+        }
+        return data;
+    },
+
+    async stopScheduler(): Promise<{ success: boolean; message?: string }> {
+        const res = await fetch(`${API_BASE}/scheduler/stop`, {
+            method: 'POST'
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || 'Failed to stop scheduler');
+        }
+        return data;
+    },
+
+    async getSchedulerLogs(): Promise<any[]> {
+        try {
+            const res = await fetch(`${API_BASE}/scheduler/logs`);
+            if (!res.ok) throw new Error('Failed to fetch scheduler logs');
+            return await res.json();
+        } catch (error) {
+            console.error("API Error: getSchedulerLogs", error);
+            return [];
+        }
+    },
+
     async uploadFile(file: File, policy: 'default' | 'buffer' | 'overwrite' = 'default'): Promise<any> {
         const formData = new FormData();
         formData.append('file', file);

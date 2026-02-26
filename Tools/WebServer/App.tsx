@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, PlayCircle, Settings as SettingsIcon, Archive, Terminal as TerminalIcon, BookOpen, Puzzle, Menu, X as CloseIcon, Sparkles, ListPlus, Database } from 'lucide-react';
+import { LayoutDashboard, PlayCircle, Settings as SettingsIcon, Archive, Terminal as TerminalIcon, BookOpen, Puzzle, Menu, X as CloseIcon, Sparkles, ListPlus, Database, Clock } from 'lucide-react';
 import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
 import { Rules } from './pages/Rules';
@@ -9,6 +9,7 @@ import { TaskRunner } from './pages/TaskRunner';
 import { Prompts } from './pages/Prompts';
 import { Monitor } from './pages/Monitor';
 import { CacheEditor } from './pages/CacheEditor';
+import { Scheduler } from './pages/Scheduler';
 import { DataService } from './services/DataService';
 import { I18nProvider, useI18n } from './contexts/I18nContext';
 import { GlobalProvider, useGlobal } from './contexts/GlobalContext';
@@ -376,6 +377,8 @@ const MainLayout: React.FC = () => {
       content = <Plugins />;
     } else if (pathname === '/queue') {
       content = <TaskQueue />;
+    } else if (pathname === '/scheduler') {
+      content = <Scheduler />;
     } else if (pathname === '/settings') {
       content = <Settings />;
     } else if (pathname === '/monitor') {
@@ -490,6 +493,7 @@ const MainLayout: React.FC = () => {
               <SidebarItem to="/rules" icon={BookOpen} labelKey="menu_glossary_rules" currentPath={pathname} activeTheme={activeTheme} />
               <SidebarItem to="/plugins" icon={Puzzle} labelKey="menu_plugin_settings" currentPath={pathname} activeTheme={activeTheme} />
               <SidebarItem to="/queue" icon={ListPlus} labelKey="menu_task_queue" currentPath={pathname} activeTheme={activeTheme} />
+              <SidebarItem to="/scheduler" icon={Clock} labelKey="menu_scheduler" currentPath={pathname} activeTheme={activeTheme} />
               <SidebarItem to="/settings" icon={SettingsIcon} labelKey="menu_settings" currentPath={pathname} activeTheme={activeTheme} />
               <SidebarItem to="/export" icon={Archive} labelKey="menu_export_only" currentPath={pathname} activeTheme={activeTheme} />
               <SidebarItem to="/logs" icon={TerminalIcon} labelKey="setting_session_logging" currentPath={pathname} activeTheme={activeTheme} />

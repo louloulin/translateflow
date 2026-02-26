@@ -3009,6 +3009,156 @@ async def reorder_queue(request: QueueReorderRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# --- Scheduler API Endpoints ---
+
+# Global scheduler manager instance
+_scheduler_manager = None
+
+def get_scheduler_manager():
+    """Get or create the scheduler manager instance."""
+    global _scheduler_manager
+    if _scheduler_manager is None:
+        from ModuleFolders.Infrastructure.Automation.SchedulerManager import SchedulerManager
+        _scheduler_manager = SchedulerManager()
+        # Load from config
+        _scheduler_manager.load_from_config(app.config)
+    return _scheduler_manager
+
+
+class ScheduledTaskItem(BaseModel):
+    task_id: str
+    name: str
+    schedule: str
+    input_path: str
+    profile: str
+    task_type: str
+    enabled: bool = True
+
+
+@app.get("/api/scheduler/status", response_model=dict)
+async def get_scheduler_status():
+    """Get scheduler status."""
+    try:
+        sm = get_scheduler_manager()
+        return sm.get_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/scheduler/tasks", response_model=List[dict])
+async def get_scheduler_tasks():
+    """Get all scheduled tasks."""
+    try:
+        sm = get_scheduler_manager()
+        tasks = sm.get_all_tasks()
+        return [task.to_dict() for task in tasks]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/scheduler/tasks")
+async def add_scheduler_task(task: ScheduledTaskItem):
+    """Add a new scheduled task."""
+    try:
+        sm = get_scheduler_manager()
+        from ModuleFolders.Infrastructure.Automation.SchedulerManager import ScheduledTask
+
+        new_task = ScheduledTask(
+            task_id=task.task_id,
+            name=task.name,
+            schedule=task.schedule,
+            input_path=task.input_path,
+            profile=task.profile,
+            task_type=task.task_type,
+            enabled=task.enabled
+        )
+
+        if sm.add_task(new_task):
+            sm.save_to_config(app.config)
+            return {"success": True, "message": "Task added successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Task ID already exists")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/scheduler/tasks/{task_id}")
+async def update_scheduler_task(task_id: str, enabled: bool = None, schedule: str = None, input_path: str = None, profile: str = None):
+    """Update a scheduled task."""
+    try:
+        sm = get_scheduler_manager()
+        update_data = {}
+        if enabled is not None:
+            update_data["enabled"] = enabled
+        if schedule is not None:
+            update_data["schedule"] = schedule
+        if input_path is not None:
+            update_data["input_path"] = input_path
+        if profile is not None:
+            update_data["profile"] = profile
+
+        if sm.update_task(task_id, **update_data):
+            sm.save_to_config(app.config)
+            return {"success": True, "message": "Task updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Task not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/scheduler/tasks/{task_id}")
+async def delete_scheduler_task(task_id: str):
+    """Delete a scheduled task."""
+    try:
+        sm = get_scheduler_manager()
+        if sm.remove_task(task_id):
+            sm.save_to_config(app.config)
+            return {"success": True, "message": "Task deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Task not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/scheduler/start")
+async def start_scheduler():
+    """Start the scheduler."""
+    try:
+        sm = get_scheduler_manager()
+        sm.start()
+        sm.save_to_config(app.config)
+        return {"success": True, "message": "Scheduler started"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/scheduler/stop")
+async def stop_scheduler():
+    """Stop the scheduler."""
+    try:
+        sm = get_scheduler_manager()
+        sm.stop()
+        sm.save_to_config(app.config)
+        return {"success": True, "message": "Scheduler stopped"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/scheduler/logs", response_model=List[dict])
+async def get_scheduler_logs():
+    """Get scheduler execution logs."""
+    try:
+        sm = get_scheduler_manager()
+        return sm.get_logs()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # --- Static File Serving for the React Frontend ---
 
 # This will serve the built React app (index.html, JS, CSS files)
