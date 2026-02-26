@@ -255,10 +255,10 @@ class PromptBuilderPolishing(Base):
         extra_log = []
 
         # 基础系统提示词
-        if config.polishing_prompt_selection["last_selected_id"]  == PromptBuilderEnum.POLISH_COMMON:
+        if config.polishing_prompt_selection.get("last_selected_id", PromptBuilderEnum.POLISH_COMMON) == PromptBuilderEnum.POLISH_COMMON:
             system = PromptBuilderPolishing.build_system(config)
         else:
-            system = config.polishing_prompt_selection["prompt_content"]  # 自定义提示词
+            system = config.polishing_prompt_selection.get("prompt_content", "")  # 自定义提示词
 
 
         # 如果开启术语表

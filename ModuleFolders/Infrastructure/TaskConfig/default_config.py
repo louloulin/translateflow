@@ -668,6 +668,10 @@ DEFAULT_CONFIG = {
     "api_settings": {"translate": "sakura", "polish": "sakura"},
     "label_input_path": "",
     "interactive_mode": True,
-    "translation_prompt_selection": {},
-    "polishing_prompt_selection": {},
+    "translation_prompt_selection": {
+        "last_selected_id": 100
+    },
+    "polishing_prompt_selection": {
+        "last_selected_id": 10001
+    },
 }

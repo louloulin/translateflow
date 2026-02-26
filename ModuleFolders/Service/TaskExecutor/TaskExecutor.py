@@ -611,10 +611,10 @@ class TaskExecutor(Base):
                         system = PromptBuilderLocal.build_system(self.config, s_lang)
                     elif self.config.target_platform == "sakura":
                         system = PromptBuilderSakura.build_system(self.config, s_lang)
-                    elif self.config.translation_prompt_selection["last_selected_id"] in (PromptBuilderEnum.COMMON, PromptBuilderEnum.COT, PromptBuilderEnum.THINK):
+                    elif self.config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) in (PromptBuilderEnum.COMMON, PromptBuilderEnum.COT, PromptBuilderEnum.THINK):
                         system = PromptBuilder.build_system(self.config, s_lang)
                     else:
-                        system = self.config.translation_prompt_selection["prompt_content"]
+                        system = self.config.translation_prompt_selection.get("prompt_content", "")
                     
                     self.info(f"并发请求 - {self.config.actual_thread_counts} 线程")
 
@@ -873,10 +873,10 @@ class TaskExecutor(Base):
 
                     # 根据提示词规则打印基础指令
                     system = ""
-                    if self.config.polishing_prompt_selection["last_selected_id"] == PromptBuilderEnum.POLISH_COMMON:
+                    if self.config.polishing_prompt_selection.get("last_selected_id", PromptBuilderEnum.POLISH_COMMON) == PromptBuilderEnum.POLISH_COMMON:
                         system = PromptBuilderPolishing.build_system(self.config)
                     else:
-                        system = self.config.polishing_prompt_selection["prompt_content"]
+                        system = self.config.polishing_prompt_selection.get("prompt_content", "")
                     self.print("")
                     if system:
                         self.info(f"本次任务使用以下基础提示词：\n{system}\n") 

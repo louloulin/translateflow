@@ -67,21 +67,21 @@ class PromptBuilder(Base):
         # 构造结果
         if config == None:
             result = PromptBuilder.common_system_zh
-        elif config.translation_prompt_selection["last_selected_id"] == PromptBuilderEnum.COMMON and config.target_language in ("chinese_simplified", "chinese_traditional"):
+        elif config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) == PromptBuilderEnum.COMMON and config.target_language in ("chinese_simplified", "chinese_traditional"):
             result = PromptBuilder.common_system_zh
-        elif config.translation_prompt_selection["last_selected_id"] == PromptBuilderEnum.COMMON and config.target_language not in ("chinese_simplified", "chinese_traditional"):
+        elif config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) == PromptBuilderEnum.COMMON and config.target_language not in ("chinese_simplified", "chinese_traditional"):
             result = PromptBuilder.common_system_en
             source_language = en_sl
             target_language = en_tl
-        elif config.translation_prompt_selection["last_selected_id"] == PromptBuilderEnum.COT and config.target_language in ("chinese_simplified", "chinese_traditional"):
+        elif config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) == PromptBuilderEnum.COT and config.target_language in ("chinese_simplified", "chinese_traditional"):
             result = PromptBuilder.cot_system_zh
-        elif config.translation_prompt_selection["last_selected_id"] == PromptBuilderEnum.COT and config.target_language not in ("chinese_simplified", "chinese_traditional"):
+        elif config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) == PromptBuilderEnum.COT and config.target_language not in ("chinese_simplified", "chinese_traditional"):
             result = PromptBuilder.cot_system_en
             source_language = en_sl
             target_language = en_tl
-        elif config.translation_prompt_selection["last_selected_id"] == PromptBuilderEnum.THINK and config.target_language in ("chinese_simplified", "chinese_traditional"):
+        elif config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) == PromptBuilderEnum.THINK and config.target_language in ("chinese_simplified", "chinese_traditional"):
             result = PromptBuilder.think_system_zh
-        elif config.translation_prompt_selection["last_selected_id"] == PromptBuilderEnum.THINK and config.target_language not in ("chinese_simplified", "chinese_traditional"):
+        elif config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) == PromptBuilderEnum.THINK and config.target_language not in ("chinese_simplified", "chinese_traditional"):
             result = PromptBuilder.think_system_en
             source_language = en_sl
             target_language = en_tl
@@ -800,7 +800,7 @@ class PromptBuilder(Base):
             profile_cot = "I have fully understood the steps and principles of translation. I will follow your instructions to perform the translation and provide in-depth thinking and explanations:"
 
         # 根据cot开关进行选择
-        if config.translation_prompt_selection["last_selected_id"] == PromptBuilderEnum.COT:
+        if config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) == PromptBuilderEnum.COT:
             the_profile = profile_cot
         else:
             the_profile = profile
@@ -816,10 +816,10 @@ class PromptBuilder(Base):
         extra_log = []
 
         # 基础系统提示词
-        if config.translation_prompt_selection["last_selected_id"] in (PromptBuilderEnum.COMMON, PromptBuilderEnum.COT, PromptBuilderEnum.THINK):
+        if config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) in (PromptBuilderEnum.COMMON, PromptBuilderEnum.COT, PromptBuilderEnum.THINK):
             system = PromptBuilder.build_system(config, source_lang)
         else:
-            custom_prompt = config.translation_prompt_selection["prompt_content"]
+            custom_prompt = config.translation_prompt_selection.get("prompt_content", "")
             system = PromptBuilder._replace_language_placeholders(custom_prompt, config, source_lang)
 
         # 如果有 RAG 上下文，注入到系统中
@@ -875,7 +875,7 @@ class PromptBuilder(Base):
 
         # 构建动态few-shot
         switch_A = config.few_shot_and_example_switch # 打开动态示例开关时
-        switch_B = config.translation_prompt_selection["last_selected_id"] == PromptBuilderEnum.COMMON #仅在通用提示词
+        switch_B = config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) == PromptBuilderEnum.COMMON #仅在通用提示词
         if switch_A and switch_B:
 
             # 获取默认示例前置文本
@@ -924,7 +924,7 @@ class PromptBuilder(Base):
         )
 
         # 构建预输入回复信息
-        switch_C = config.translation_prompt_selection["last_selected_id"] in (PromptBuilderEnum.COT, PromptBuilderEnum.COMMON)
+        switch_C = config.translation_prompt_selection.get("last_selected_id", PromptBuilderEnum.COMMON) in (PromptBuilderEnum.COT, PromptBuilderEnum.COMMON)
         if switch_A and switch_C:
             fol_prompt = PromptBuilder.build_modelResponsePrefix(config)
             messages.append({"role": "assistant", "content": fol_prompt})

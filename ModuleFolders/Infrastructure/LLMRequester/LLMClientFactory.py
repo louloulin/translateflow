@@ -149,8 +149,17 @@ class LLMClientFactory:
 
     # 各种客户端创建函数
     def _create_openai_client(self, config, api_key, trust_env=True):
+        # OpenAI SDK 会自动在 base_url 后追加 /chat/completions
+        # 如果配置的 URL 已经包含了这个后缀，需要先移除它
+        base_url = config.get("api_url", "").rstrip('/')
+        # 移除可能已经存在的 /chat/completions, /completions, /chat 后缀
+        for suffix in ['/chat/completions', '/completions', '/chat']:
+            if base_url.endswith(suffix):
+                base_url = base_url[:-len(suffix)].rstrip('/')
+                break
+
         return OpenAI(
-            base_url=config.get("api_url"),
+            base_url=base_url,
             api_key=api_key,
             http_client=create_httpx_client(trust_env=trust_env),
             default_headers=self._get_browser_headers() # 注入伪装头

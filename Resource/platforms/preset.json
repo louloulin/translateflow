@@ -488,7 +488,7 @@
             "tag": "zhipu",
             "group": "online",
             "name": "智谱清言",
-            "api_url": "https://open.bigmodel.cn/api/paas/v4",
+            "api_url": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
             "api_key": "",
             "api_format": "OpenAI",
             "icon": "zhipu",
