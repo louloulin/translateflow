@@ -2,6 +2,10 @@
 
 ## Patterns
 
+### mem-1772148314-302c
+> Web断点续传检测实现：后端已有/api/task/breakpoint-status接口，前端Dashboard页面通过DataService.getBreakpointStatus()调用，页面加载时自动检测并显示恢复翻译横幅
+<!-- tags: web, breakpoint, translation | created: 2026-02-26 -->
+
 ## Decisions
 
 ## Fixes

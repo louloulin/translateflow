@@ -29,9 +29,17 @@
   - 已提交: abaf7a4
 
 ### P1 (高优先级)
-- [ ] TUI 添加搜索对话框
+- [x] TUI 添加搜索对话框 - ✅ 已完成
+  - 在 TUIEditor 中添加 '/' 快捷键触发搜索
+  - SearchDialog 已实现完整搜索功能
+  - 更新 i18n 文件添加搜索快捷键提示
+  - 已提交: 84fa1ab
 - [ ] Web 添加在线编辑器 (Monaco Editor)
-- [ ] Web 添加断点续传检测
+- [x] Web 添加断点续传检测 - ✅ 已完成
+  - 在 Dashboard 页面添加断点检测横幅
+  - 使用后端 /api/task/breakpoint-status 接口
+  - 显示项目名称、进度和继续按钮
+  - 已提交: 11b8777
 
 ### P2 (中优先级)
 - [ ] TUI 添加定时任务 UI
