@@ -126,7 +126,7 @@
     "editor_session_completed": "Editor session completed successfully!",
     "editor_failed_start": "Failed to start editor. Check if translation data exists.",
     "editor_error_start": "Error starting editor",
-    "editor_shortcuts_view": "[W/S] Move [A/D] Page [Enter] Edit [Q] Quit",
+    "editor_shortcuts_view": "[W/S] Move [A/D] Page [Enter] Edit [Q] Quit [/?] Search",
     "editor_shortcuts_edit": "[Arrow Keys] Move Cursor [Home/End] Line Start/End [R] Save [Esc] Cancel | Editing...",
     "editor_page_size": "Page Size",
     "editor_saved_line": "✓ Saved changes to line {0}",

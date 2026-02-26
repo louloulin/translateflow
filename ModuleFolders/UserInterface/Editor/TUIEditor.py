@@ -251,6 +251,8 @@ class TUIEditor:
             self._next_page()
         elif key == '\r' or key == '\n':  # Enter
             self._enter_edit_mode()
+        elif key == '/':
+            self._search()
         elif key == 'q':
             self._quit_editor()
 

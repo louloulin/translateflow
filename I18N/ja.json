@@ -126,7 +126,7 @@
     "editor_session_completed": "エディターセッションが正常に完了しました！",
     "editor_failed_start": "エディターの開始に失敗しました。翻訳データが存在するか確認してください。",
     "editor_error_start": "エディター開始時にエラー",
-    "editor_shortcuts_view": "[W/S] 移動 [A/D] ページ [Enter] 編集 [Q] 終了",
+    "editor_shortcuts_view": "[W/S] 移動 [A/D] ページ [Enter] 編集 [Q] 終了 [/?] 検索",
     "editor_shortcuts_edit": "[矢印キー] カーソル移動 [Home/End] 行頭末 [R] 保存 [Esc] キャンセル | 編集中...",
     "editor_page_size": "ページサイズ",
     "editor_saved_line": "✓ {0} 行目の変更を保存しました",

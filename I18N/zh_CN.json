@@ -142,7 +142,7 @@
     "editor_session_completed": "编辑会话成功完成！",
     "editor_failed_start": "启动编辑器失败，请检查翻译数据是否存在",
     "editor_error_start": "启动编辑器时出错",
-    "editor_shortcuts_view": "[W/S] 移动 [A/D] 翻页 [Enter] 编辑 [Q] 退出",
+    "editor_shortcuts_view": "[W/S] 移动 [A/D] 翻页 [Enter] 编辑 [Q] 退出 [/?] 搜索",
     "editor_shortcuts_edit": "[方向键] 移动光标 [Home/End] 行首末 [R] 保存 [Esc] 取消 | 正在编辑...",
     "editor_page_size": "页面大小",
     "editor_saved_line": "✓ 已保存第 {0} 行的修改",
