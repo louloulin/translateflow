@@ -39,3 +39,10 @@
 2026-02-26T16:08:42.737933Z  INFO ralph::loop_runner: Completion event LOOP_COMPLETE detected.
 2026-02-26T16:08:42.737945Z  INFO ralph_core::event_loop: Wrapping up: completed. 6 iterations in 41m 2s. reason=completed iterations=6 duration=41m 2s
 2026-02-26T16:08:42.748845Z  INFO ralph_core::landing: Beginning landing sequence loop_id=primary
+2026-02-26T16:08:42.862816Z  INFO ralph_core::landing: Auto-committed changes during landing loop_id=primary commit=Some("66ff3718fc9d92b3f8c30ba6a0dbb263a96c4dac") files=13
+2026-02-26T16:09:59.977128Z  WARN ralph_core::landing: Failed to prune remote refs loop_id=primary error=Git command failed: Failed to prune remote refs: 致命错误：无法访问 'https://github.com/ShadowLoveElysia/AiNiee-Next.git/'：Failed to connect to github.com port 443 after 77058 ms: Couldn't connect to server
+
+2026-02-26T16:10:00.033228Z  INFO ralph_core::landing: Generated handoff file loop_id=primary path=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md completed=8 open=0
+2026-02-26T16:10:00.061958Z  INFO ralph_core::loop_completion: Landing completed with auto-commit commit=Some("66ff3718fc9d92b3f8c30ba6a0dbb263a96c4dac") handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md
+2026-02-26T16:10:00.061976Z  INFO ralph::loop_runner: Primary loop landed successfully committed=true handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md open_tasks=0
+2026-02-26T16:14:32.865203Z  INFO ralph_tui::app: Ctrl+C detected, signaling main loop
