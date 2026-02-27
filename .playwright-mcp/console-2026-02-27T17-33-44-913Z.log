@@ -1,0 +1,8 @@
+[      54ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[      54ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[      66ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[      66ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
