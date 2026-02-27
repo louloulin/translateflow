@@ -202,8 +202,14 @@ class TaskConfig(Base):
             return key
 
     # 读取配置文件
-    def initialize(self, config_dict: dict) -> None:
-        self.load_config_from_dict(config_dict)
+    def initialize(self, config_dict: dict = None) -> None:
+        # 如果传入了 config_dict，则直接使用
+        if config_dict is not None:
+            self.load_config_from_dict(config_dict)
+        else:
+            # 否则从配置文件加载（保持向后兼容性）
+            config = self.load_config()
+            self.load_config_from_dict(config)
         
         # 确保关键配置有合理的默认值，防止因配置文件缺失导致逻辑错误
         if not hasattr(self, 'request_timeout') or self.request_timeout <= 0:
