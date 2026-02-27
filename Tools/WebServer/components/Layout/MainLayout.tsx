@@ -210,7 +210,7 @@ export const MainLayout: React.FC = () => {
             <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(true)} className="mr-2 text-muted-foreground">
                 <Menu className="h-5 w-5" />
             </Button>
-            <span className="font-semibold text-foreground">AiNiee</span>
+            <span className="font-semibold text-foreground">TranslateFlow</span>
          </header>
 
          {/* Main Content Scrollable */}

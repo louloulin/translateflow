@@ -79,7 +79,7 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "label_report_efficiency": "平均效率",
     "label_report_success_rate": "请求成功率",
     "label_current_file": "当前文件",
-    "msg_notification_title": "AiNiee 任务完成",
+    "msg_notification_title": "TranslateFlow 任务完成",
     "msg_notification_body": "您的翻译任务 [{}] 已成功完成！",
     "msg_cache_corrupted": "警告: 主缓存文件损坏! 正在尝试从备份恢复...",
     "msg_cache_healed": "成功: 已从备份恢复数据 ({})",
@@ -256,7 +256,7 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     
     // UI Specific Extras
     "ui_dashboard_welcome": "欢迎回来，旅行者。",
-    "ui_dashboard_subtitle": "AiNiee 随时准备处理您的语言数据。",
+    "ui_dashboard_subtitle": "TranslateFlow 随时准备处理您的语言数据。",
     "ui_system_online": "系统在线",
     "ui_new_task_desc": "开始新的小说、游戏或字幕翻译/润色任务。",
     "ui_config_desc": "管理 API 密钥、Prompt 模板、故障转移池及微调参数。",
@@ -341,7 +341,7 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "ui_plugins_disabled": "已禁用",
     "ui_plugins_applying": "应用中...",
     "ui_plugins_about_title": "关于插件",
-    "ui_plugins_about_desc_part1": "插件允许您在不修改核心逻辑的情况下扩展 AiNiee 的功能。启用 ",
+    "ui_plugins_about_desc_part1": "插件允许您在不修改核心逻辑的情况下扩展 TranslateFlow 的功能。启用 ",
     "ui_plugins_about_desc_part2": "RAG 上下文插件",
     "ui_plugins_about_desc_part3": " 可利用历史翻译记忆库来提高长文本的一致性。此处的更改会全局保存并应用于所有配置文件。",
     "ui_plugins_arch_title": "模块化架构",
@@ -775,7 +775,7 @@ export const EN_LOCALE: Record<string, string> = {
     "msg_online_features_warning": "Warning: Local API in use. Advanced features like Characterization/World Building will be ignored.",
     "label_online_only": "Online API Only",
     "ui_dashboard_welcome": "Welcome back, Traveler.",
-    "ui_dashboard_subtitle": "AiNiee is ready to process your linguistic data.",
+    "ui_dashboard_subtitle": "TranslateFlow is ready to process your linguistic data.",
     "ui_system_online": "System Online",
     "ui_new_task_desc": "Start a new translation or polishing session.",
     "ui_config_desc": "Manage API keys, templates, and fine-tune parameters.",
@@ -861,7 +861,7 @@ export const EN_LOCALE: Record<string, string> = {
     "ui_plugins_disabled": "Disabled",
     "ui_plugins_applying": "Applying...",
     "ui_plugins_about_title": "About Plugins",
-    "ui_plugins_about_desc_part1": "Plugins allow you to extend AiNiee's functionality without modifying core logic. Enable the ",
+    "ui_plugins_about_desc_part1": "Plugins allow you to extend TranslateFlow's functionality without modifying core logic. Enable the ",
     "ui_plugins_about_desc_part2": "RAG Context Plugin",
     "ui_plugins_about_desc_part3": " to improve long-text consistency using historical translation memory. Changes are saved globally and apply to all profiles.",
     "ui_plugins_arch_title": "Modular Architecture",
@@ -1331,7 +1331,7 @@ export const PROJECT_TYPES = [
 ];
 
 export const MOCK_LOGS = [
-  "[SYSTEM] AiNiee Control Center initialized.",
+  "[SYSTEM] TranslateFlow Control Center initialized.",
   "[INFO] Loading configuration profile 'Default'...",
   "[INFO] Plugin manager loaded 12 plugins.",
   "[READY] System ready. Waiting for task input.",

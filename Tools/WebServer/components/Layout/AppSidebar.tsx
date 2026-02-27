@@ -84,11 +84,11 @@ export function AppSidebar({ className, activePath, activeTheme, onNavigate, onT
               "h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center shadow-lg shadow-primary/20 shrink-0",
               activeTheme === 'elysia' && "from-pink-500 to-pink-300 shadow-pink-500/20"
             )}>
-              <span className="text-primary-foreground font-bold font-mono">Ai</span>
+              <span className="text-primary-foreground font-bold font-mono">TF</span>
             </div>
             {!isCollapsed && (
               <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                AiNiee <span className={cn("text-primary text-xs ml-1", isElysia && "text-pink-400")}>{isElysia ? 'Elysia' : 'UI'}</span>
+                TranslateFlow <span className={cn("text-primary text-xs ml-1", isElysia && "text-pink-400")}>{isElysia ? 'Elysia' : 'UI'}</span>
               </h2>
             )}
           </div>
