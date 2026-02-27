@@ -14,6 +14,7 @@
 2026-02-27T08:19:15.112617Z  INFO ralph_core::event_loop: Successfully loaded 2 memories from store
 2026-02-27T08:19:15.112629Z  INFO ralph_core::event_loop: Injecting 2 memories (612 chars) into prompt
 2026-02-27T08:19:15.112923Z  INFO ralph_core::event_loop: Injecting ready tasks (0 ready, 0 open, 2 closed) into prompt
+<<<<<<< HEAD
 2026-02-27T08:25:21.612240Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl"
 2026-02-27T08:25:21.612278Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl/.ralph/agent/memories.md" (exists: true)
 2026-02-27T08:25:21.612655Z  INFO ralph_core::event_loop: Successfully loaded 3 memories from store
@@ -36,3 +37,5 @@
 2026-02-27T08:37:59.354861Z  INFO ralph_core::loop_completion: Loop completed - worktree preserved for manual merge (--no-auto-merge) loop_id=able-owl worktree=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl
 2026-02-27T08:37:59.354865Z  INFO ralph::loop_runner: Loop completed. To merge manually: cd /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl && git merge loop_id=able-owl
 2026-02-27T08:38:28.488220Z  INFO ralph_tui::app: Ctrl+C detected, signaling main loop
+=======
+>>>>>>> ralph/chipper-crane

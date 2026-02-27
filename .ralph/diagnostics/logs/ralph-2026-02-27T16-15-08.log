@@ -22,6 +22,7 @@
 2026-02-27T08:20:33.175192Z  INFO ralph_core::event_loop: Injecting 1 memories (346 chars) into prompt
 2026-02-27T08:20:33.175230Z  INFO ralph_core::event_loop: Injecting scratchpad (1176 chars) into prompt
 2026-02-27T08:20:33.175294Z  INFO ralph_core::event_loop: Injecting ready tasks (0 ready, 0 open, 2 closed) into prompt
+<<<<<<< HEAD
 2026-02-27T08:24:09.705107Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
 2026-02-27T08:24:09.705190Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
 2026-02-27T08:24:09.705296Z  INFO ralph_core::event_loop: Successfully loaded 1 memories from store
@@ -79,3 +80,5 @@
 2026-02-27T08:54:40.121647Z  INFO ralph_core::landing: Generated handoff file loop_id=primary path=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md completed=3 open=0
 2026-02-27T08:54:40.149712Z  INFO ralph_core::loop_completion: Landing completed with auto-commit commit=Some("22285797176d8c377f8ceb797901dc082aef7889") handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md
 2026-02-27T08:54:40.149732Z  INFO ralph::loop_runner: Primary loop landed successfully committed=true handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md open_tasks=0
+=======
+>>>>>>> ralph/chipper-crane

@@ -3,6 +3,7 @@
 
 ## 重要
 实现相关的功能，更新标记相关的实), spawning parallel loop in worktree
+<<<<<<< HEAD
 2026-02-27T08:23:15.753649Z  INFO ralph: Created worktree at /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/chipper-crane on branch ralph/chipper-crane
 2026-02-27T08:23:15.862574Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/chipper-crane"
 2026-02-27T08:23:15.862600Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/chipper-crane/.ralph/agent/memories.md" (exists: true)
@@ -20,3 +21,5 @@
 2026-02-27T08:29:18.020354Z  INFO ralph_core::loop_completion: Loop completed - worktree preserved for manual merge (--no-auto-merge) loop_id=chipper-crane worktree=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/chipper-crane
 2026-02-27T08:29:18.020358Z  INFO ralph::loop_runner: Loop completed. To merge manually: cd /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/chipper-crane && git merge loop_id=chipper-crane
 2026-02-27T08:30:31.046080Z  INFO ralph_tui::app: Ctrl+C detected, signaling main loop
+=======
+>>>>>>> ralph/chipper-crane
