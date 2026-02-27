@@ -122,6 +122,9 @@ export const MainLayout: React.FC = () => {
   const isMonitorMode = systemMode === 'monitor';
   const isMonitorPath = pathname === '/monitor';
 
+  // Check if we should hide the sidebar (for auth pages)
+  const isAuthPage = pathname === '/login' || pathname === '/register';
+
   let content;
   if (isMonitorMode && !isMonitorPath) {
       content = (
@@ -187,7 +190,8 @@ export const MainLayout: React.FC = () => {
       <ThemeManager />
       <ElysiaGuide />
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - Hide on auth pages */}
+      {!isAuthPage && (
       <div className={cn(
         "hidden md:block h-full shrink-0 transition-all duration-300",
         uiPrefs.sidebarCollapsed ? "w-16" : "w-64"
@@ -201,28 +205,33 @@ export const MainLayout: React.FC = () => {
             onToggleCollapse={toggleSidebar}
          />
       </div>
+      )}
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar - Hide on auth pages */}
+      {!isAuthPage && (
       <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
         <SheetContent side="left" className="p-0 w-72 bg-card border-r-border text-foreground">
-             <AppSidebar 
-                activePath={pathname} 
-                activeTheme={activeTheme} 
-                onNavigate={handleNavigate} 
+             <AppSidebar
+                activePath={pathname}
+                activeTheme={activeTheme}
+                onNavigate={handleNavigate}
                 onThemeToggle={handleThemeToggle}
              />
         </SheetContent>
       </Sheet>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-         {/* Mobile Header */}
+         {/* Mobile Header - Hide on auth pages */}
+         {!isAuthPage && (
          <header className="md:hidden flex items-center h-14 px-4 border-b bg-card border-border">
             <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(true)} className="mr-2 text-muted-foreground">
                 <Menu className="h-5 w-5" />
             </Button>
             <span className="font-semibold text-foreground">TranslateFlow</span>
          </header>
+         )}
 
          {/* Main Content Scrollable */}
          <main className={cn(
