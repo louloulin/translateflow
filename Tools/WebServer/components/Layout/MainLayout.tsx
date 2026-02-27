@@ -27,6 +27,8 @@ import { DataService } from '@/services/DataService';
 import { ProjectDetails } from '@/pages/ProjectDetails';
 import { Editor } from '@/pages/Editor';
 import { Teams } from '@/pages/Teams';
+import { Login } from '@/pages/Login';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Custom hook to track hash based location for navigation
 const useLocation = () => {
@@ -144,6 +146,7 @@ export const MainLayout: React.FC = () => {
           case '/scheduler': content = <Scheduler />; break;
           case '/stev': content = <StevExtraction />; break;
           case '/server': content = <Server />; break;
+          case '/login': content = <Login />; break;
           case '/settings': content = <Settings />; break;
           case '/teams': content = <Teams />; break;
           case '/monitor': content = <Monitor />; break;

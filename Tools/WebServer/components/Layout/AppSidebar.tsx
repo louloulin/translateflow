@@ -3,7 +3,7 @@ import {
   LayoutDashboard, PlayCircle, Settings, Archive, Terminal,
   BookOpen, Puzzle, ListPlus, Database, Clock, Sparkles,
   Menu, X, Paintbrush, Wand2, FileText, Server, ChevronLeft, ChevronRight,
-  Users
+  Users, LogIn, LogOut
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/contexts/I18nContext"
 import { useGlobal } from "@/contexts/GlobalContext"
+import { useAuth } from "@/contexts/AuthContext"
 import { ModeToggle } from "@/components/ModeToggle"
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -75,6 +76,7 @@ const navGroups: { title: string, items: NavItem[] }[] = [
 export function AppSidebar({ className, activePath, activeTheme, onNavigate, onThemeToggle, isCollapsed, onToggleCollapse }: SidebarProps) {
   const { t } = useI18n()
   const { uiPrefs } = useGlobal()
+  const { isAuthenticated, user, logout } = useAuth()
   const isElysia = activeTheme === 'elysia'
   const isCompact = uiPrefs.density === 'compact'
 
@@ -163,6 +165,27 @@ export function AppSidebar({ className, activePath, activeTheme, onNavigate, onT
            </Button>
         )}
         <div className={cn("flex items-center gap-1", isCollapsed ? "flex-col" : "")}>
+          {isAuthenticated ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent"
+              onClick={logout}
+              title={t("auth_logout") || "Logout"}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent"
+              onClick={() => onNavigate('/login')}
+              title={t("auth_login") || "Login"}
+            >
+              <LogIn className="h-4 w-4" />
+            </Button>
+          )}
           <ModeToggle />
           {onToggleCollapse && (
             <Button
