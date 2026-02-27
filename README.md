@@ -1,4 +1,4 @@
-# AiNiee-Next
+# TranslateFlow
 
 <div align="center">
   <img src="https://img.shields.io/badge/Interface-CLI%20%2F%20TUI-0078D4?style=for-the-badge&logo=windows-terminal&logoColor=white" alt="CLI">
@@ -10,7 +10,7 @@
 
 [English](README_EN.md) | [简体中文](README.md)
 
-**AiNiee-Next** 是针对 [AiNiee](https://github.com/NEKOparapa/AiNiee) 核心逻辑进行工程化重构的命令行版本。
+**TranslateFlow** (formerly AiNiee-Next) 是针对 [AiNiee](https://github.com/NEKOparapa/AiNiee) 核心逻辑进行工程化重构的命令行版本。
 
 本项目引入了现代化的 Python 包管理工具 **uv**，并对底层运行时进行了多项稳定性优化。通过接管底层 IO 流与异常处理，构建了一个适合长时间挂机、服务器部署及自动化工作流的高健壮性 TUI 环境。
 
@@ -96,8 +96,8 @@
 
 **1. 获取代码**
 ```bash
-git clone https://github.com/ShadowLoveElysia/AiNiee-Next.git
-cd AiNiee-Next
+git clone https://github.com/ShadowLoveElysia/TranslateFlow.git
+cd TranslateFlow
 ```
 
 **2. 环境准备（首次运行）**
@@ -149,8 +149,8 @@ pip install uv
 
 **2. 获取代码并启动**
 ```bash
-git clone https://github.com/ShadowLoveElysia/AiNiee-Next.git
-cd AiNiee-Next
+git clone https://github.com/ShadowLoveElysia/TranslateFlow.git
+cd TranslateFlow
 uv run ainiee_cli.py
 ```
 

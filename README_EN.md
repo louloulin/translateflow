@@ -1,4 +1,4 @@
-# AiNiee-Next
+# TranslateFlow
 
 <div align="center">
   <img src="https://img.shields.io/badge/Interface-CLI%20%2F%20TUI-0078D4?style=for-the-badge&logo=windows-terminal&logoColor=white" alt="CLI">
@@ -10,7 +10,7 @@
 
 [English](README_EN.md) | [简体中文](README.md)
 
-**AiNiee-Next** is an engineering-focused refactor of the [AiNiee](https://github.com/NEKOparapa/AiNiee) core logic, designed for command-line environments.
+**TranslateFlow** (formerly AiNiee-Next) is an engineering-focused refactor of the [AiNiee](https://github.com/NEKOparapa/AiNiee) core logic, designed for command-line environments.
 
 This project introduces **uv**, a modern Python package manager, and implements significant stability optimizations for the underlying runtime. By taking control of IO streams and exception handling, we have built a robust TUI environment perfect for long-running tasks, headless server deployments, and automated workflows.
 
@@ -96,8 +96,8 @@ The screenshot below demonstrates a ~20,000 line file being translated in approx
 
 **1. Get the Code**
 ```bash
-git clone https://github.com/ShadowLoveElysia/AiNiee-Next.git
-cd AiNiee-Next
+git clone https://github.com/ShadowLoveElysia/TranslateFlow.git
+cd TranslateFlow
 ```
 
 **2. Environment Setup (First Run)**
@@ -149,8 +149,8 @@ pip install uv
 
 **2. Get the Code and Launch**
 ```bash
-git clone https://github.com/ShadowLoveElysia/AiNiee-Next.git
-cd AiNiee-Next
+git clone https://github.com/ShadowLoveElysia/TranslateFlow.git
+cd TranslateFlow
 uv run ainiee_cli.py
 ```
 
