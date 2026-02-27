@@ -1,7 +1,7 @@
 [project]
-name = "ainiee-cli"
+name = "translateflow-cli"
 version = "0.1.0"
-description = "A CLI-based hard fork of AiNiee for batch translation."
+description = "TranslateFlow - High-performance AI translation CLI tool (formerly AiNiee-Next)"
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
@@ -75,7 +75,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ainiee = "ainiee_cli:main"
+translateflow = "ainiee_cli:main"
 
 [build-system]
 requires = ["hatchling"]
