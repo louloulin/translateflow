@@ -327,6 +327,51 @@ class RefreshToken(_db.Model):
         return f"<RefreshToken {self.user.username}>"
 
 
+class OAuthAccount(_db.Model):
+    """OAuth account linkage model for third-party login."""
+
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    user = ForeignKeyField(User, backref="oauth_accounts", on_delete="CASCADE")
+
+    # OAuth provider info
+    provider = CharField(max_length=50, index=True)  # github, google
+    oauth_id = CharField(max_length=255, index=True)  # Provider's user ID
+
+    # OAuth tokens
+    access_token = CharField(max_length=500)
+    refresh_token = CharField(max_length=500, null=True)
+    token_expires_at = DateTimeField(null=True)
+
+    # OAuth account info
+    account_email = CharField(max_length=255, null=True)
+    account_username = CharField(max_length=255, null=True)
+    account_data = TextField(null=True)  # JSON string
+
+    # Timestamps
+    linked_at = DateTimeField(default=datetime.utcnow)
+    last_login_at = DateTimeField(default=datetime.utcnow)
+
+    class Meta:
+        table_name = "oauth_accounts"
+        indexes = (
+            (("user_id", "provider"), True),  # Unique constraint per user+provider
+            (("provider", "oauth_id"), True),  # Unique constraint per provider+oauth_id
+        )
+
+    def __str__(self):
+        return f"<OAuthAccount {self.provider} - {self.account_email}>"
+
+    @property
+    def account_data_dict(self):
+        """Parse account_data JSON."""
+        if not self.account_data:
+            return {}
+        try:
+            return json.loads(self.account_data)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+
 # Database initialization function
 def init_database():
     """Initialize database tables."""
@@ -339,6 +384,7 @@ def init_database():
         PasswordReset,
         EmailVerification,
         RefreshToken,
+        OAuthAccount,
     ], safe=True)
     return _db
 

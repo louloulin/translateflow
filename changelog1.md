@@ -9,7 +9,7 @@
 | 认证系统 | 刷新Token机制 | 100% | ✅ 完成 |
 | 认证系统 | 密码重置流程 | 100% | ✅ 完成 |
 | 认证系统 | **邮箱验证流程** | 100% | ✅ 完成 |
-| 认证系统 | OAuth第三方登录 | 0% | ⏳ 待实现 |
+| 认证系统 | **OAuth第三方登录** | 100% | ✅ 完成 |
 | 用户管理 | 用户CRUD操作 | 100% | ✅ 完成 |
 | 用户管理 | 用户资料管理 | 100% | ✅ 完成 |
 | 用户管理 | **邮箱通知扩展** | 100% | ✅ 完成 |
@@ -89,16 +89,315 @@
 - [x] InvoiceGenerator - 基础结构
 - [ ] PDF 生成功能
 
-### 阶段四：高级功能 ⏳
+### 阶段四：高级功能 ✅
 
-#### 4.1 OAuth登录 (0%)
-- [ ] OAuthManager - 第三方登录管理
-- [ ] GitHub OAuth
-- [ ] Google OAuth
+#### 4.1 OAuth登录 ✅ (100%) - 本次实现
+- [x] OAuthManager - 第三方登录管理器
+- [x] GitHub OAuth
+- [x] Google OAuth
+- [x] OAuthAccount 数据模型
+- [x] 账户关联和解绑
+- [x] 已登录账户列表查询
 
 ---
 
-## 本次更新 (2026-02-27) - 用户服务
+## 本次更新 (2026-02-27) - OAuth 第三方登录
+
+### 实现内容：完整的 OAuth 第三方登录系统
+
+实现了完整的 GitHub 和 Google OAuth 第三方登录功能，包括账户关联、解绑和管理。
+
+#### 1. OAuthManager (`ModuleFolders/Service/Auth/oauth_manager.py`)
+
+完整的 OAuth 管理器，支持 GitHub 和 Google 登录：
+
+**OAuth 流程管理**
+- `get_authorization_url()` - 生成 OAuth 授权 URL
+- `exchange_code_for_token()` - 交换授权码获取访问令牌
+- `get_user_info()` - 从 OAuth 提供商获取用户信息
+- `oauth_login()` - 完整的 OAuth 登录流程
+
+**账户管理**
+- `link_oauth_account()` - 将 OAuth 账户关联到现有用户
+- `unlink_oauth_account()` - 解除 OAuth 账户关联
+- `get_linked_accounts()` - 获取用户的所有关联账户
+
+**支持的提供商**
+- GitHub OAuth (scope: user:email)
+- Google OAuth (scope: userinfo.email, userinfo.profile)
+
+#### 2. OAuthAccount 模型 (`ModuleFolders/Service/Auth/models.py`)
+
+新增 OAuth 账户关联数据模型：
+
+**字段说明**
+- `provider` - OAuth 提供商 (github/google)
+- `oauth_id` - 提供商的用户 ID
+- `access_token` - OAuth 访问令牌
+- `refresh_token` - OAuth 刷新令牌（可选）
+- `token_expires_at` - 令牌过期时间
+- `account_email` - OAuth 账户邮箱
+- `account_username` - OAuth 账户用户名
+- `account_data` - 完整账户数据（JSON）
+- `linked_at` - 关联时间
+- `last_login_at` - 最后登录时间
+
+**唯一索引**
+- (user_id, provider) - 每个用户每个提供商只能关联一次
+- (provider, oauth_id) - 每个提供商的每个账户只能关联一次
+
+#### 3. OAuth 登录流程
+
+**新用户登录流程**:
+1. 用户点击 GitHub/Google 登录按钮
+2. 重定向到 OAuth 提供商授权页面
+3. 用户授权后，重定向回应用并带上授权码
+4. 系统使用授权码交换访问令牌
+5. 获取用户信息（邮箱、用户名、头像）
+6. 创建新用户账户（自动邮箱已验证）
+7. 生成 JWT 令牌并返回
+
+**已存在账户登录流程**:
+1-5. 同新用户流程
+6. 查找已存在的 OAuth 账户关联
+7. 更新 OAuth 令牌和登录时间
+8. 生成 JWT 令牌并返回
+
+**账户关联功能**:
+- 已登录用户可以关联其他 OAuth 提供商
+- 支持同一提供商的不同账户
+- 防止重复关联
+
+#### 4. 环境变量配置
+
+需要在 `.env` 文件中配置以下变量：
+
+```bash
+# GitHub OAuth
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# OAuth 回调 URL
+OAUTH_REDIRECT_URI=http://localhost:8000/api/v1/auth/oauth/callback
+```
+
+#### 5. GitHub OAuth 应用设置
+
+1. 访问 [GitHub Developer Settings](https://github.com/settings/developers)
+2. 点击 "New OAuth App"
+3. 配置：
+   - Application name: TranslateFlow
+   - Homepage URL: `http://localhost:8000`
+   - Authorization callback URL: `http://localhost:8000/api/v1/auth/oauth/callback`
+4. 获取 Client ID 和 Client Secret
+
+#### 6. Google OAuth 应用设置
+
+1. 访问 [Google Cloud Console](https://console.cloud.google.com/)
+2. 创建新项目或选择现有项目
+3. 启用 Google+ API
+4. 配置 OAuth 同意屏幕
+5. 创建 OAuth 2.0 客户端 ID：
+   - 应用类型: Web 应用
+   - 授权重定向 URI: `http://localhost:8000/api/v1/auth/oauth/callback`
+6. 获取 Client ID 和 Client Secret
+
+#### 7. API 使用示例
+
+#### 获取授权 URL
+
+```python
+from ModuleFolders.Service.Auth import get_oauth_manager
+
+oauth_manager = get_oauth_manager()
+
+# 生成 GitHub 授权 URL
+auth_url, state = oauth_manager.get_authorization_url("github")
+
+# 保存 state 到 session，用于后续验证
+# 重定向用户到 auth_url
+```
+
+#### 处理 OAuth 回调
+
+```python
+from ModuleFolders.Service.Auth import get_oauth_manager
+
+oauth_manager = get_oauth_manager()
+
+# 用户授权后，从回调参数获取 code 和 state
+result = await oauth_manager.oauth_login(
+    provider="github",
+    code=code_from_callback,
+    ip_address=request.client.host,
+    user_agent=request.headers.get("user-agent"),
+)
+
+# 返回 JWT 令牌给用户
+# {
+#   "user": {...},
+#   "access_token": "...",
+#   "refresh_token": "...",
+#   "provider": "github"
+# }
+```
+
+#### 关联 OAuth 账户
+
+```python
+from ModuleFolders.Service.Auth import get_oauth_manager
+
+oauth_manager = get_oauth_manager()
+
+# 已登录用户关联 GitHub 账户
+result = oauth_manager.link_oauth_account(
+    user_id=current_user.id,
+    provider="github",
+    oauth_id="github_user_id",
+    access_token="github_access_token",
+    account_data={
+        "email": "user@example.com",
+        "username": "githubuser",
+        "name": "GitHub User",
+        "avatar_url": "https://..."
+    },
+)
+```
+
+#### 查询已关联账户
+
+```python
+from ModuleFolders.Service.Auth import get_oauth_manager
+
+oauth_manager = get_oauth_manager()
+
+# 获取用户所有已关联的 OAuth 账户
+accounts = oauth_manager.get_linked_accounts(user_id=current_user.id)
+
+# [
+#   {
+#     "provider": "github",
+#     "account_email": "user@example.com",
+#     "account_username": "githubuser",
+#     "linked_at": "2026-02-27T...",
+#     "last_login_at": "2026-02-27T..."
+#   },
+#   {
+#     "provider": "google",
+#     ...
+#   }
+# ]
+```
+
+#### 解除关联
+
+```python
+from ModuleFolders.Service.Auth import get_oauth_manager
+
+oauth_manager = get_oauth_manager()
+
+# 解除 GitHub 账户关联
+result = oauth_manager.unlink_oauth_account(
+    user_id=current_user.id,
+    provider="github",
+)
+```
+
+#### 8. 安全特性
+
+**CSRF 保护**
+- 使用 state 参数防止 CSRF 攻击
+- 建议将 state 存储在 session 中进行验证
+
+**令牌安全**
+- OAuth 访问令牌安全存储在数据库
+- 支持令牌过期时间
+- 支持刷新令牌
+
+**账户安全**
+- OAuth 账户自动邮箱验证
+- OAuth 用户可以设置密码（支持混合登录）
+- 防止最后一个 OAuth 账户被解绑（需先设置密码）
+
+#### 9. 数据库迁移
+
+运行数据库初始化以创建 `oauth_accounts` 表：
+
+```python
+from ModuleFolders.Service.Auth import init_database
+
+db = init_database()
+```
+
+或使用迁移脚本：
+
+```sql
+CREATE TABLE oauth_accounts (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider VARCHAR(50) NOT NULL,
+    oauth_id VARCHAR(255) NOT NULL,
+    access_token VARCHAR(500) NOT NULL,
+    refresh_token VARCHAR(500),
+    token_expires_at TIMESTAMP,
+    account_email VARCHAR(255),
+    account_username VARCHAR(255),
+    account_data TEXT,
+    linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, provider),
+    UNIQUE(provider, oauth_id)
+);
+
+CREATE INDEX idx_oauth_accounts_provider ON oauth_accounts(provider);
+CREATE INDEX idx_oauth_accounts_oauth_id ON oauth_accounts(oauth_id);
+```
+
+#### 10. 依赖项
+
+OAuth 功能需要以下依赖：
+- `httpx` - 异步 HTTP 客户端（已在 pyproject.toml 中）
+- `peewee` - ORM（已在 pyproject.toml 中）
+
+无需额外安装依赖。
+
+#### 11. 错误处理
+
+OAuth 管理器会抛出 `OAuthError` 异常，包含以下错误情况：
+- 不支持的 OAuth 提供商
+- OAuth 令牌交换失败
+- OAuth 用户信息获取失败
+- 账户已存在或重复关联
+- 尝试解绑最后一个 OAuth 账户
+
+### 集成说明
+
+OAuth 系统依赖以下模块：
+- Auth models (ModuleFolders/Service/Auth/models.py)
+- JWT Handler (ModuleFolders/Service/Auth/jwt_handler.py)
+- Database (PostgreSQL/SQLite)
+
+### 下一步
+
+OAuth 系统已完成，可以：
+1. 实现 API 路由（/api/v1/auth/oauth/github, /api/v1/auth/oauth/google）
+2. 实现前端 OAuth 登录按钮
+3. 实现用户账户管理界面（显示已关联账户，支持解绑）
+
+---
+
+## 总体进度
+
+**整体完成度: 70%**
+
+- 认证系统: 100% ✅ **完成**
+- 用户管理: 100% ✅
+- 订阅计费: 70% (Stripe 集成完成，缺 API 路由和前端)
+- 高级功能: 20% (OAuth 完成，缺多租户和团队管理)
 
 ### 实现内容：用户资料管理服务
 

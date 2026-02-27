@@ -11,6 +11,7 @@ from .models import (
     PasswordReset,
     EmailVerification,
     RefreshToken,
+    OAuthAccount,
     UserRole,
     UserStatus,
     SubscriptionPlan,
@@ -22,6 +23,7 @@ from .models import (
 from .auth_manager import AuthManager, get_auth_manager, AuthError
 from .jwt_handler import JWTHandler
 from .password_manager import PasswordManager
+from .oauth_manager import OAuthManager, get_oauth_manager, OAuthError, OAuthProvider
 from .auth_middleware import (
     JWTAuthMiddleware,
     get_jwt_middleware,
@@ -39,6 +41,7 @@ __all__ = [
     "PasswordReset",
     "EmailVerification",
     "RefreshToken",
+    "OAuthAccount",
     "UserRole",
     "UserStatus",
     "SubscriptionPlan",
@@ -50,6 +53,10 @@ __all__ = [
     "AuthError",
     "JWTHandler",
     "PasswordManager",
+    "OAuthManager",
+    "get_oauth_manager",
+    "OAuthError",
+    "OAuthProvider",
     "JWTAuthMiddleware",
     "get_jwt_middleware",
     "jwt_middleware",
