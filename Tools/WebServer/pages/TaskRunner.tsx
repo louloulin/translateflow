@@ -404,7 +404,7 @@ export const TaskRunner: React.FC = () => {
                         <button 
                             disabled={taskState.isRunning}
                             onClick={() => setTaskType(TaskType.POLISH)} 
-                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.POLISH ? 'bg-purple-500 text-white font-bold' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.POLISH ? 'bg-accent text-accent-foreground font-bold' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
                         >
                             {t('ui_task_polish')}
                         </button>
@@ -554,10 +554,10 @@ export const TaskRunner: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-zinc-950 border border-border rounded-lg p-3 font-mono text-xs text-slate-400 flex items-start gap-3 overflow-x-auto whitespace-nowrap">
+      <div className="bg-muted border border-border rounded-lg p-3 font-mono text-xs text-muted-foreground flex items-start gap-3 overflow-x-auto whitespace-nowrap">
         <TerminalIcon size={14} className="mt-0.5 text-primary shrink-0" />
-        <span className="text-slate-500 select-none">$</span>
-        <span className="text-emerald-400">{generateCLIPreview()}</span>
+        <span className="text-muted-foreground select-none">$</span>
+        <span className="text-primary">{generateCLIPreview()}</span>
       </div>
 
       {/* Tabs */}
@@ -602,12 +602,12 @@ export const TaskRunner: React.FC = () => {
                 <div className="h-full min-h-0 overflow-y-auto">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
                       {/* Source Pane */}
-                      <div className="flex flex-col bg-card/40 border border-magenta/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-magenta/5 min-h-[300px]">
-                          <div className="px-4 py-2 bg-magenta/10 border-b border-magenta/20 flex justify-between items-center">
-                              <span className="text-[10px] font-bold text-magenta uppercase tracking-widest">{t('label_original_source')}</span>
+                      <div className="flex flex-col bg-card/40 border border-accent/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-accent/5 min-h-[300px]">
+                          <div className="px-4 py-2 bg-accent/10 border-b border-accent/20 flex justify-between items-center">
+                              <span className="text-[10px] font-bold text-accent uppercase tracking-widest">{t('label_original_source')}</span>
                               <span className="text-[10px] text-muted-foreground font-mono">{(taskState.comparison?.source?.split('\n').length || 0)} {t('label_lines')}</span>
                           </div>
-                          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-foreground leading-relaxed scrollbar-thin scrollbar-thumb-magenta/20 whitespace-pre-wrap">
+                          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-foreground leading-relaxed scrollbar-thin scrollbar-thumb-accent/20 whitespace-pre-wrap">
                               {taskState.comparison?.source || <span className="text-muted-foreground italic">{t('msg_waiting_text')}</span>}
                           </div>
                       </div>

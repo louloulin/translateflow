@@ -43,6 +43,16 @@ export interface ChartDataPoint {
   tpm: number;
 }
 
+export interface TaskStatusResponse {
+  stats: TaskStats;
+  logs: LogEntry[];
+  chart_data: ChartDataPoint[];
+  comparison?: {
+    source: string;
+    translation: string;
+  };
+}
+
 export enum TaskType {
   TRANSLATE = 'translate',
   POLISH = 'polish',

@@ -256,16 +256,30 @@ export const GlobalProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setUiPrefsState(prev => normalizeUiPreferences(prev));
   }, []);
 
-  // Apply Theme Mode (Light/Dark)
   useEffect(() => {
+    // Force re-apply theme on initial mount to fix FOUC or mismatched state
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-
     const mode = uiPrefs.themeMode;
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     const effectiveTheme = mode === 'system' ? systemTheme : mode;
-
+    
+    root.classList.remove('light', 'dark');
     root.classList.add(effectiveTheme);
+  }, [uiPrefs.themeMode]);
+
+  // Listen for system theme changes if mode is 'system'
+  useEffect(() => {
+    if (uiPrefs.themeMode !== 'system') return;
+    
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+        const root = window.document.documentElement;
+        root.classList.remove('light', 'dark');
+        root.classList.add(e.matches ? 'dark' : 'light');
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, [uiPrefs.themeMode]);
 
   const resetTaskState = () => {

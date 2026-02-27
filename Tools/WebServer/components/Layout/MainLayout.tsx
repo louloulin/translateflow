@@ -115,7 +115,7 @@ export const MainLayout: React.FC = () => {
              <LayoutDashboard size={48} />
           </div>
           <h1 className="text-2xl md:text-4xl font-black text-white uppercase tracking-tighter">监控模式下此页面不可用</h1>
-          <p className="text-slate-500 max-w-md">当前系统正处于独立监控模式，所有的交互功能已被禁用。请切换至监控面板查看实时任务进度。</p>
+          <p className="text-muted-foreground max-w-md">当前系统正处于独立监控模式，所有的交互功能已被禁用。请切换至监控面板查看实时任务进度。</p>
           <Button onClick={() => window.location.hash = '/monitor'} variant="default" size="lg">
             立即跳转至监控面板
           </Button>
@@ -135,8 +135,8 @@ export const MainLayout: React.FC = () => {
           case '/server': content = <Server />; break;
           case '/settings': content = <Settings />; break;
           case '/monitor': content = <Monitor />; break;
-          case '/export': content = <div className="text-slate-500 text-center mt-20">{t('menu_export_only')} (Placeholder)</div>; break;
-          case '/logs': content = <div className="text-slate-500 text-center mt-20">System Logs (Placeholder)</div>; break;
+          case '/export': content = <div className="text-muted-foreground text-center mt-20">{t('menu_export_only')} (Placeholder)</div>; break;
+          case '/logs': content = <div className="text-muted-foreground text-center mt-20">System Logs (Placeholder)</div>; break;
           default: 
             // Simple router matching for projects
             if (pathname.startsWith('/editor/')) {
