@@ -2212,7 +2212,7 @@ async def load_cache(request: CacheLoadRequest):
         raise HTTPException(status_code=500, detail=f"Failed to load cache: {e}")
 
 @app.get("/api/cache/items")
-async def get_cache_items(page: int = 1, page_size: Optional[int] = None, search: str = None):
+async def get_cache_items(page: int = 1, page_size: Optional[int] = None, search: str = None, file_path: str = None):
     """Get paginated cache items"""
     try:
         cache_manager = get_cache_manager()
@@ -2231,7 +2231,11 @@ async def get_cache_items(page: int = 1, page_size: Optional[int] = None, search
         # Extract items (similar to TUI's _extract_cache_items)
         items = []
         with cache_manager.file_lock:
-            for file_path, cache_file in cache_manager.project.files.items():
+            for f_path, cache_file in cache_manager.project.files.items():
+                # Filter by file_path if provided
+                if file_path and f_path != file_path:
+                    continue
+                    
                 for idx, item in enumerate(cache_file.items):
                     if item.source_text and item.source_text.strip():
                         translation = ""
@@ -2243,7 +2247,7 @@ async def get_cache_items(page: int = 1, page_size: Optional[int] = None, search
                         # Include all items with source text (translated or not)
                         items.append({
                             'id': len(items),
-                            'file_path': file_path,
+                            'file_path': f_path,
                             'text_index': item.text_index,
                             'source': item.source_text,
                             'translation': translation,

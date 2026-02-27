@@ -1,20 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Settings, FileOutput, ArrowRight, FileText, Folder, AlertCircle, PlayCircle } from 'lucide-react';
+import { Play, Settings, FileOutput, ArrowRight, FileText, Folder, AlertCircle, PlayCircle, Plus } from 'lucide-react';
 import { useI18n } from '@/contexts/I18nContext';
 import { useGlobal } from '@/contexts/GlobalContext';
 import { DataService } from '@/services/DataService';
+import { ProjectService } from '@/services/ProjectService';
+import { Project } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
+import { ProjectCard } from '@/components/ProjectCard';
+import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 import { cn } from '@/lib/utils';
 
 export const Dashboard: React.FC = () => {
   const { t } = useI18n();
   const { version, config, setTaskState, activeTheme } = useGlobal();
-  const [recentProjects, setRecentProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const handleProjectCreated = (newProject: Project) => {
+    setProjects(prev => [newProject, ...prev]);
+  };
   const [breakpointStatus, setBreakpointStatus] = useState<{
     can_resume: boolean;
     has_incomplete: boolean;
@@ -71,22 +77,23 @@ export const Dashboard: React.FC = () => {
   const characterQuote = getCharacterBlessing();
   
   useEffect(() => {
-    if (config) {
-        setRecentProjects([...(config.recent_projects || [])]);
-    }
-  }, [config]);
-
-  useEffect(() => {
-    const checkBreakpoint = async () => {
-      try {
-        const status = await DataService.getBreakpointStatus();
-        setBreakpointStatus(status);
-      } catch (error) {
-        console.error("Failed to check breakpoint status:", error);
-      }
-    };
+    loadProjects();
     checkBreakpoint();
   }, []);
+
+  const loadProjects = async () => {
+    const list = await ProjectService.listProjects();
+    setProjects(list);
+  };
+
+  const checkBreakpoint = async () => {
+    try {
+      const status = await DataService.getBreakpointStatus();
+      setBreakpointStatus(status);
+    } catch (error) {
+      console.error("Failed to check breakpoint status:", error);
+    }
+  };
 
   const handleResumeBreakpoint = () => {
     setTaskState(prev => ({
@@ -100,48 +107,15 @@ export const Dashboard: React.FC = () => {
     window.location.hash = path;
   };
 
-  const handleResume = async (project: any) => {
-      const path = typeof project === 'string' ? project : project.path;
-      const profile = typeof project === 'object' ? project.profile : null;
-      const rulesProfile = typeof project === 'object' ? project.rules_profile : null;
-
-      try {
-          if (profile && profile !== config?.active_profile) {
-              await DataService.switchProfile(profile);
-          }
-          if (rulesProfile && rulesProfile !== config?.active_rules_profile) {
-              await DataService.switchRulesProfile(rulesProfile);
-          }
-
-          setTaskState(prev => ({
-              ...prev, 
-              customInputPath: path,
-              isResuming: true,
-          }));
-
-          navigate('/task');
-      } catch (error) {
-          console.error("Failed to resume project with specific profiles", error);
-          setTaskState(prev => ({ ...prev, customInputPath: path, isResuming: true }));
-          navigate('/task');
-      }
+  const handleOpenProject = (id: string) => {
+    navigate(`/projects/${id}`);
   };
 
-  const getProjectInfo = (path: string) => {
-      const normalized = path.replace(/\\/g, '/');
-      const parts = normalized.split('/');
-      const name = parts.pop() || path;
-      
-      let type = "FOLDER";
-      let icon = <Folder size={16} className="text-blue-400" />;
-      
-      if (name.includes('.')) {
-          const ext = name.split('.').pop()?.toUpperCase();
-          type = ext || "FILE";
-          icon = <FileText size={16} className="text-slate-400" />;
-      }
-
-      return { name, type, icon, fullPath: path };
+  const handleDeleteProject = async (id: string) => {
+    if (confirm('Are you sure you want to delete this project?')) {
+      await ProjectService.deleteProject(id);
+      loadProjects();
+    }
   };
 
   return (
@@ -183,47 +157,48 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
-           <Badge variant="outline" className={cn(
-             "transition-all duration-500",
-             activeTheme === 'herrscher_of_human' 
-               ? 'bg-pink-400/20 text-pink-500 border-pink-400/40' 
-               : (elysiaActive ? 'bg-pink-500/10 text-pink-400 border-pink-500/30' : '')
-           )}>
-             {activeTheme === 'herrscher_of_human' ? '人之律者 · 爱与希望' : (elysiaActive ? '完美无瑕' : t('ui_system_online'))}
-           </Badge>
-           <Badge variant="secondary" className="font-mono">
-             {activeTheme === 'herrscher_of_human' ? `∞ ${version}` : version}
-           </Badge>
+          {/* @ts-ignore */}
+          <Badge variant="outline" className={cn(
+            "transition-all duration-500",
+            activeTheme === 'herrscher_of_human' 
+              ? 'bg-pink-400/20 text-pink-500 border-pink-400/40' 
+              : (elysiaActive ? 'bg-pink-500/10 text-pink-400 border-pink-500/30' : '')
+          )}>
+            {activeTheme === 'herrscher_of_human' ? '人之律者 · 爱与希望' : (elysiaActive ? '完美无瑕' : t('ui_system_online'))}
+          </Badge>
+          {/* @ts-ignore */}
+          <Badge variant="secondary" className="font-mono">
+            {activeTheme === 'herrscher_of_human' ? `∞ ${version}` : version}
+          </Badge>
         </div>
       </div>
 
       {/* Action Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        <Card 
-            className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 group relative overflow-hidden"
-            onClick={() => navigate('/task')}
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Play size={100} />
-          </div>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <PlayCircle className="text-primary" />
-                {t('menu_start_translation')}
-            </CardTitle>
-            <CardDescription>{t('ui_new_task_desc')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {elysiaActive && (
-              <Badge className="absolute top-4 right-4 bg-pink-500 animate-pulse">MAGIC</Badge>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Button variant="ghost" className="p-0 text-primary hover:text-primary hover:bg-transparent group-hover:translate-x-1 transition-transform">
-                {t('ui_btn_start')} <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardFooter>
-        </Card>
+        <CreateProjectDialog 
+          onProjectCreated={handleProjectCreated}
+          trigger={
+            <Card 
+                className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 group relative overflow-hidden bg-primary/5 border-primary/20"
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                <Play size={100} />
+              </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Plus className="text-primary" />
+                    {t('menu_start_translation')}
+                </CardTitle>
+                <CardDescription>{t('ui_new_task_desc')}</CardDescription>
+              </CardHeader>
+              <CardFooter>
+                <Button variant="ghost" className="p-0 text-primary hover:text-primary hover:bg-transparent group-hover:translate-x-1 transition-transform">
+                    Create Project <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </CardFooter>
+            </Card>
+          }
+        />
 
         <Card 
             className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 group relative overflow-hidden"
@@ -268,68 +243,31 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Recent Projects */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('menu_recent_projects')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-            {!config ? (
-                <div className="text-muted-foreground text-sm animate-pulse py-4">Loading configuration...</div>
-            ) : recentProjects.length === 0 ? (
-                <div className="text-muted-foreground text-sm italic py-4">No recent projects found.</div>
-            ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>{t('ui_recent_proj_header')}</TableHead>
-                            <TableHead>{t('ui_recent_type')}</TableHead>
-                            <TableHead className="hidden md:table-cell">{t('label_input')}</TableHead>
-                            <TableHead className="text-right">{t('ui_recent_action')}</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {recentProjects.map((project, i) => {
-                            const path = typeof project === 'string' ? project : project.path;
-                            const info = getProjectInfo(path);
-                            const profileStr = typeof project === 'object' ? `${project.profile} / ${project.rules_profile}` : 'legacy';
+      {/* Projects Grid */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold tracking-tight">{t('menu_recent_projects')}</h2>
+        </div>
         
-                            return (
-                                <TableRow key={i} className="group">
-                                    <TableCell className="font-medium flex items-center gap-3">
-                                        {info.icon}
-                                        <div className="flex flex-col">
-                                            <span>{info.name}</span>
-                                            <span className="text-[10px] text-muted-foreground md:hidden">{profileStr}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                            <Badge variant="secondary" className="w-fit text-[10px]">{info.type}</Badge>
-                                            <span className="text-[10px] text-muted-foreground hidden md:block">{profileStr}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-xs font-mono hidden md:table-cell truncate max-w-[200px]" title={info.fullPath}>
-                                        {info.fullPath}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm" 
-                                            onClick={() => handleResume(project)}
-                                            className="h-7 text-xs"
-                                        >
-                                            {t('ui_resume')}
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            )}
-        </CardContent>
-      </Card>
+        {projects.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed rounded-lg">
+                <Folder className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                <h3 className="mt-2 text-sm font-semibold text-muted-foreground">No projects</h3>
+                <p className="text-sm text-muted-foreground/80">Get started by creating a new project.</p>
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projects.map(project => (
+                    <ProjectCard 
+                        key={project.id} 
+                        project={project} 
+                        onOpen={handleOpenProject}
+                        onDelete={handleDeleteProject}
+                    />
+                ))}
+            </div>
+        )}
+      </div>
     </div>
   );
 };

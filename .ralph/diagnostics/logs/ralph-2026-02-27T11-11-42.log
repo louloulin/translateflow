@@ -11,3 +11,8 @@
 2026-02-27T03:20:50.159173Z  INFO ralph_core::event_loop: Wrapping up: completed. 1 iterations in 9m 8s. reason=completed iterations=1 duration=9m 8s
 2026-02-27T03:20:50.175447Z  INFO ralph_core::landing: Beginning landing sequence loop_id=primary
 2026-02-27T03:20:50.175521Z  WARN ralph_core::landing: Landing with 5 open tasks loop_id=primary open_tasks=["task-1772153791-9ee5", "task-1772153794-17b3", "task-1772153798-98db", "task-1772153801-fefc", "task-1772153803-ad7e"]
+2026-02-27T03:20:50.288736Z  INFO ralph_core::landing: Auto-committed changes during landing loop_id=primary commit=Some("4ed99ee4e7d0e0477cac3ee6a13ea77c3c2e66a6") files=20
+2026-02-27T03:20:57.798859Z  INFO ralph_core::landing: Generated handoff file loop_id=primary path=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md completed=18 open=5
+2026-02-27T03:20:57.826081Z  INFO ralph_core::loop_completion: Landing completed with auto-commit commit=Some("4ed99ee4e7d0e0477cac3ee6a13ea77c3c2e66a6") handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md
+2026-02-27T03:20:57.826105Z  INFO ralph::loop_runner: Primary loop landed successfully committed=true handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md open_tasks=5
+2026-02-27T04:47:45.205368Z  WARN ralph::loop_runner: SIGHUP received (terminal closed), terminating immediately...

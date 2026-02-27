@@ -23,6 +23,8 @@ import { Scheduler } from '@/pages/Scheduler';
 import { StevExtraction } from '@/pages/StevExtraction';
 import { Server } from '@/pages/Server';
 import { DataService } from '@/services/DataService';
+import { ProjectDetails } from '@/pages/ProjectDetails';
+import { Editor } from '@/pages/Editor';
 
 // Custom hook to track hash based location for navigation
 const useLocation = () => {
@@ -94,7 +96,7 @@ export const MainLayout: React.FC = () => {
           <ThemeManager />
           <div className="flex flex-col items-center gap-4">
             <div className={cn("w-12 h-12 border-4 rounded-full animate-spin border-primary/20 border-t-primary", elysiaActive && "border-pink-500/20 border-t-pink-500 shadow-[0_0_15px_#ff8fa3]")}></div>
-            <span className={cn("font-mono text-xs uppercase tracking-widest text-slate-500", elysiaActive && "text-pink-500 font-bold")}>
+            <span className={cn("font-mono text-xs uppercase tracking-widest text-muted-foreground", elysiaActive && "text-pink-500 font-bold")}>
               {elysiaActive ? 'Connecting to Elysium...' : 'Initializing System...'}
             </span>
           </div>
@@ -135,7 +137,19 @@ export const MainLayout: React.FC = () => {
           case '/monitor': content = <Monitor />; break;
           case '/export': content = <div className="text-slate-500 text-center mt-20">{t('menu_export_only')} (Placeholder)</div>; break;
           case '/logs': content = <div className="text-slate-500 text-center mt-20">System Logs (Placeholder)</div>; break;
-          default: content = <Dashboard />;
+          default: 
+            // Simple router matching for projects
+            if (pathname.startsWith('/editor/')) {
+              const parts = pathname.split('/');
+              const projectId = parts[2];
+              const fileId = parts[3];
+              content = <Editor projectId={projectId} fileId={fileId} />;
+            } else if (pathname.startsWith('/projects/')) {
+              const projectId = pathname.split('/projects/')[1];
+              content = <ProjectDetails projectId={projectId} />;
+            } else {
+              content = <Dashboard />;
+            }
       }
   }
 
@@ -165,7 +179,7 @@ export const MainLayout: React.FC = () => {
 
       {/* Mobile Sidebar */}
       <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
-        <SheetContent side="left" className="p-0 w-72 bg-slate-900 border-r-slate-800 text-slate-100">
+        <SheetContent side="left" className="p-0 w-72 bg-card border-r-border text-foreground">
              <AppSidebar 
                 activePath={pathname} 
                 activeTheme={activeTheme} 
@@ -178,11 +192,11 @@ export const MainLayout: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
          {/* Mobile Header */}
-         <header className="md:hidden flex items-center h-14 px-4 border-b bg-slate-900 border-slate-800">
-            <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(true)} className="mr-2 text-slate-400">
+         <header className="md:hidden flex items-center h-14 px-4 border-b bg-card border-border">
+            <Button variant="ghost" size="icon" onClick={() => setIsMobileOpen(true)} className="mr-2 text-muted-foreground">
                 <Menu className="h-5 w-5" />
             </Button>
-            <span className="font-semibold text-slate-100">AiNiee</span>
+            <span className="font-semibold text-foreground">AiNiee</span>
          </header>
 
          {/* Main Content Scrollable */}

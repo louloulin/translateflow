@@ -256,6 +256,18 @@ export const GlobalProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setUiPrefsState(prev => normalizeUiPreferences(prev));
   }, []);
 
+  // Apply Theme Mode (Light/Dark)
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+
+    const mode = uiPrefs.themeMode;
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const effectiveTheme = mode === 'system' ? systemTheme : mode;
+
+    root.classList.add(effectiveTheme);
+  }, [uiPrefs.themeMode]);
+
   const resetTaskState = () => {
       setTaskState(DEFAULT_TASK_STATE);
   };

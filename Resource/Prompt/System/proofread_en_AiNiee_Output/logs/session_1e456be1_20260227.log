@@ -4569,3 +4569,131 @@ Model: qwen2.5:7b] ... Connection error.
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/Resource/Prompt/Syst
 em/proofread_en_AiNiee_Output 目录 ...
 
+[11:21:28] [LanguageFilter] 开始执行预处理 ...
+
+[11:21:28] [LanguageFilter] 使用指定语言模式...
+
+[11:21:28] [LanguageFilter] 项目主要使用语言: en
+
+[11:21:28]   0%|          | 0/9 [00:00<?, ?it/s]
+[11:21:28] 100%|##########| 9/9 [00:00<00:00, 76260.07it/s]
+[11:21:28] [LanguageFilter] 语言过滤已完成，共过滤 9 个不包含目标语言的条目 ...
+
+[11:21:28] [INFO] 正在生成翻译任务 ...
+
+[11:21:28] [INFO] 已经生成全部翻译任务 ...
+
+[11:21:28] [INFO] 检测到断点续传：正在恢复 proofread_en.txt 的任务状态...
+
+[11:21:28] [INFO] 即将开始执行任务，预计任务总数为 11，请注意保持网络通畅 ...
+
+[11:21:33] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:21:33] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[11:21:36] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:21:36] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[11:21:41] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:21:42] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:21:42] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[11:21:46] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:21:46] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[11:21:51] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:21:53] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:21:53] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[11:21:56] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:21:56] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[11:22:01] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:03] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:03] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[11:22:06] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:06] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[11:22:11] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:12] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:12] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[11:22:16] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:16] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[11:22:21] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:22] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:22] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[11:22:26] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:26] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[11:22:31] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:33] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:33] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[11:22:36] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:36] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[11:22:41] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:43] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:43] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[11:22:46] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:46] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[11:22:52] [ERROR] Request error (SOFT_ERROR) [URL: http://127.0.0.1:11434/v1, Model: qwen2.5:7b] 
+... Connection error.
+
+[11:22:52] 
+Stopping task... (Press Ctrl+C again to force quit)
+
+[11:22:52] 
+Force quitting immediately...
+

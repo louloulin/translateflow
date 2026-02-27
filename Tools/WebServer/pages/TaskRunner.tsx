@@ -386,32 +386,32 @@ export const TaskRunner: React.FC = () => {
   return (
     <div className="space-y-3 h-[calc(100vh-140px)] flex flex-col">
       {/* Header Controls */}
-      <div className="bg-surface border border-slate-800 p-4 rounded-xl space-y-4">
+      <div className="bg-card border border-border p-4 rounded-xl space-y-4 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-4 w-full md:w-auto flex-1">
-                <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center border border-slate-700 shrink-0">
-                    <FileText size={24} className="text-slate-400" />
+                <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center border border-border shrink-0">
+                    <FileText size={24} className="text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-[300px] space-y-2">
                     <div className="flex gap-2">
                         <button 
                             disabled={taskState.isRunning}
                             onClick={() => setTaskType(TaskType.TRANSLATE)} 
-                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.TRANSLATE ? 'bg-primary text-slate-900 font-bold' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}
+                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.TRANSLATE ? 'bg-primary text-primary-foreground font-bold' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
                         >
                             {t('ui_task_translate')}
                         </button>
                         <button 
                             disabled={taskState.isRunning}
                             onClick={() => setTaskType(TaskType.POLISH)} 
-                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.POLISH ? 'bg-purple-500 text-slate-900 font-bold' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}
+                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.POLISH ? 'bg-purple-500 text-white font-bold' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
                         >
                             {t('ui_task_polish')}
                         </button>
                         <button 
                             disabled={taskState.isRunning}
                             onClick={() => setTaskType(TaskType.EXPORT)} 
-                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.EXPORT ? 'bg-emerald-500 text-slate-900 font-bold' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`}
+                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.EXPORT ? 'bg-emerald-500 text-white font-bold' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
                         >
                             {t('ui_task_export')}
                         </button>
@@ -422,35 +422,35 @@ export const TaskRunner: React.FC = () => {
                             placeholder={t('prompt_input_path')} 
                             value={taskState.customInputPath}
                             onChange={(e) => setCustomInputPath(e.target.value)}
-                            className="bg-transparent border-b border-slate-700 p-1 text-white font-semibold focus:ring-0 focus:border-primary placeholder:text-slate-600 w-full outline-none transition-colors pr-8"
+                            className="bg-transparent border-b border-border p-1 text-foreground font-semibold focus:ring-0 focus:border-primary placeholder:text-muted-foreground w-full outline-none transition-colors pr-8"
                         />
                          <div className="absolute right-0 top-0">
                             <button 
                                 onClick={() => setShowTempFileList(!showTempFileList)}
-                                className={`text-slate-500 hover:text-white p-1 transition-transform ${showTempFileList ? 'rotate-180 text-primary' : ''}`}
+                                className={`text-muted-foreground hover:text-foreground p-1 transition-transform ${showTempFileList ? 'rotate-180 text-primary' : ''}`}
                             >
                                 <ChevronDown size={14} />
                             </button>
                              {showTempFileList && (
-                                 <div className="absolute right-0 top-full mt-1 w-80 bg-slate-900 border border-slate-700 rounded shadow-xl z-20 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                                     <div className="px-3 py-2 text-xs font-bold text-slate-500 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
+                                 <div className="absolute right-0 top-full mt-1 w-80 bg-popover border border-border rounded shadow-xl z-20 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                                     <div className="px-3 py-2 text-xs font-bold text-muted-foreground border-b border-border bg-muted flex justify-between items-center">
                                          <span>{t('ui_task_temp_uploaded')}</span>
-                                         <button onClick={() => setShowTempFileList(false)} className="hover:text-white transition-colors"><X size={12} /></button>
+                                         <button onClick={() => setShowTempFileList(false)} className="hover:text-foreground transition-colors"><X size={12} /></button>
                                      </div>
                                      {tempFiles.length === 0 ? (
-                                         <div className="p-3 text-xs text-slate-500 text-center italic">{t('msg_no_files_found')}</div>
+                                         <div className="p-3 text-xs text-muted-foreground text-center italic">{t('msg_no_files_found')}</div>
                                      ) : (
                                          tempFiles.map((f, i) => (
                                              <div 
                                                 key={i} 
-                                                className="px-3 py-2 hover:bg-slate-800 cursor-pointer text-xs text-slate-300 truncate border-b border-slate-800/50 last:border-0"
+                                                className="px-3 py-2 hover:bg-accent cursor-pointer text-xs text-foreground truncate border-b border-border/50 last:border-0"
                                                 onClick={() => {
                                                     setCustomInputPath(f.path);
                                                     setShowTempFileList(false);
                                                 }}
                                                 title={f.path}
                                              >
-                                                 {f.name} <span className="text-slate-600 ml-1">({(f.size/1024).toFixed(1)} KB)</span>
+                                                 {f.name} <span className="text-muted-foreground ml-1">({(f.size/1024).toFixed(1)} KB)</span>
                                              </div>
                                          ))
                                      )}
@@ -465,9 +465,9 @@ export const TaskRunner: React.FC = () => {
                                 type="checkbox" 
                                 checked={taskState.isResuming}
                                 onChange={(e) => setTaskState(prev => ({ ...prev, isResuming: e.target.checked }))}
-                                className="w-4 h-4 rounded border-slate-700 text-primary focus:ring-primary bg-slate-900"
+                                className="w-4 h-4 rounded border-input text-primary focus:ring-primary bg-background"
                             />
-                            <span className="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">{t('ui_resume')} / {t('option_resume')}</span>
+                            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{t('ui_resume')} / {t('option_resume')}</span>
                         </label>
                     </div>
                 </div>
@@ -486,14 +486,14 @@ export const TaskRunner: React.FC = () => {
                     <div className="flex gap-2">
                         <button 
                             onClick={() => handleStart(false)}
-                            className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all bg-accent/10 text-accent border border-accent/50 hover:bg-accent/20 hover:shadow-lg hover:shadow-accent/10"
+                            className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all bg-accent/10 text-accent-foreground border border-accent/50 hover:bg-accent/20 hover:shadow-lg hover:shadow-accent/10"
                         >
                             <Play size={18} /> {t('ui_task_start')} {taskState.taskType.toUpperCase()}
                         </button>
                         
                         <button 
                             onClick={() => handleStart(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all bg-green-500/10 text-green-400 border border-green-500/50 hover:bg-green-500/20 hover:shadow-lg"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/50 hover:bg-green-500/20 hover:shadow-lg"
                             title={t('menu_start_all_in_one')}
                         >
                             <Sparkles size={18} /> {t('menu_start_all_in_one')?.split('【')[0]}
@@ -501,7 +501,7 @@ export const TaskRunner: React.FC = () => {
 
                         <button 
                             onClick={() => window.location.hash = '/queue'}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all bg-blue-500/10 text-blue-400 border border-blue-500/50 hover:bg-blue-500/20"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/50 hover:bg-blue-500/20"
                             title={t('menu_task_queue')}
                         >
                             <ListPlus size={18} /> {t('ui_process_queue') || 'Queue'}
@@ -510,7 +510,7 @@ export const TaskRunner: React.FC = () => {
                 ) : (
                     <button 
                         onClick={handleStop}
-                        className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all bg-red-500/10 text-red-500 border border-red-500/50 hover:bg-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
+                        className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all bg-red-500/10 text-red-600 dark:text-red-500 border border-red-500/50 hover:bg-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
                     >
                         <Square size={18} fill="currentColor" /> {t('ui_task_stop')}
                     </button>
@@ -521,7 +521,7 @@ export const TaskRunner: React.FC = () => {
         {/* Upload Drag & Drop Area */}
         {showUploadArea && (
             <div 
-                className={`border-2 border-dashed rounded-xl p-8 transition-all text-center cursor-pointer ${isUploading ? 'border-primary bg-primary/5' : 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/30'}`}
+                className={`border-2 border-dashed rounded-xl p-8 transition-all text-center cursor-pointer ${isUploading ? 'border-primary bg-primary/5' : 'border-border hover:border-foreground/50 hover:bg-accent/30'}`}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
@@ -540,12 +540,12 @@ export const TaskRunner: React.FC = () => {
                         </>
                     ) : (
                         <>
-                            <div className="p-3 bg-slate-800 rounded-full text-slate-400">
+                            <div className="p-3 bg-secondary rounded-full text-muted-foreground">
                                 <Upload size={24} />
                             </div>
                             <div>
-                                <p className="text-slate-200 font-medium">{t('msg_drag_drop_title') || 'Drag & Drop files here, or click to browse'}</p>
-                                <p className="text-slate-500 text-sm mt-1">{t('msg_drag_drop_subtitle') || 'Files will be uploaded to project temp folder'}</p>
+                                <p className="text-foreground font-medium">{t('msg_drag_drop_title') || 'Drag & Drop files here, or click to browse'}</p>
+                                <p className="text-muted-foreground text-sm mt-1">{t('msg_drag_drop_subtitle') || 'Files will be uploaded to project temp folder'}</p>
                             </div>
                         </>
                     )}
@@ -554,7 +554,7 @@ export const TaskRunner: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-slate-400 flex items-start gap-3 overflow-x-auto whitespace-nowrap">
+      <div className="bg-zinc-950 border border-border rounded-lg p-3 font-mono text-xs text-slate-400 flex items-start gap-3 overflow-x-auto whitespace-nowrap">
         <TerminalIcon size={14} className="mt-0.5 text-primary shrink-0" />
         <span className="text-slate-500 select-none">$</span>
         <span className="text-emerald-400">{generateCLIPreview()}</span>
@@ -562,17 +562,17 @@ export const TaskRunner: React.FC = () => {
 
       {/* Tabs */}
       {config?.show_detailed_logs && (
-        <div className="flex gap-2 border-b border-slate-800 px-2 mt-2">
+        <div className="flex gap-2 border-b border-border px-2 mt-2">
           <button 
             onClick={() => setActiveTab('console')}
-            className={`px-4 py-2 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${activeTab === 'console' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+            className={`px-4 py-2 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${activeTab === 'console' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             <TerminalIcon size={14} />
             {t('ui_tab_console') || 'CONSOLE'}
           </button>
           <button 
             onClick={() => setActiveTab('comparison')}
-            className={`px-4 py-2 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${activeTab === 'comparison' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+            className={`px-4 py-2 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${activeTab === 'comparison' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             <FileText size={14} />
             {t('ui_tab_comparison') || 'COMPARISON'}
@@ -602,24 +602,24 @@ export const TaskRunner: React.FC = () => {
                 <div className="h-full min-h-0 overflow-y-auto">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
                       {/* Source Pane */}
-                      <div className="flex flex-col bg-slate-900/40 border border-magenta/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-magenta/5 min-h-[300px]">
+                      <div className="flex flex-col bg-card/40 border border-magenta/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-magenta/5 min-h-[300px]">
                           <div className="px-4 py-2 bg-magenta/10 border-b border-magenta/20 flex justify-between items-center">
                               <span className="text-[10px] font-bold text-magenta uppercase tracking-widest">{t('label_original_source')}</span>
-                              <span className="text-[10px] text-slate-500 font-mono">{(taskState.comparison?.source?.split('\n').length || 0)} {t('label_lines')}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">{(taskState.comparison?.source?.split('\n').length || 0)} {t('label_lines')}</span>
                           </div>
-                          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-slate-300 leading-relaxed scrollbar-thin scrollbar-thumb-magenta/20 whitespace-pre-wrap">
-                              {taskState.comparison?.source || <span className="text-slate-600 italic">{t('msg_waiting_text')}</span>}
+                          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-foreground leading-relaxed scrollbar-thin scrollbar-thumb-magenta/20 whitespace-pre-wrap">
+                              {taskState.comparison?.source || <span className="text-muted-foreground italic">{t('msg_waiting_text')}</span>}
                           </div>
                       </div>
 
                       {/* Translation Pane */}
-                      <div className="flex flex-col bg-slate-900/40 border border-primary/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-primary/5 min-h-[300px]">
+                      <div className="flex flex-col bg-card/40 border border-primary/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-primary/5 min-h-[300px]">
                           <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex justify-between items-center">
                               <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t('label_translation_output')}</span>
-                              <span className="text-[10px] text-slate-500 font-mono">{(taskState.comparison?.translation?.split('\n').length || 0)} {t('label_lines')}</span>
+                              <span className="text-[10px] text-muted-foreground font-mono">{(taskState.comparison?.translation?.split('\n').length || 0)} {t('label_lines')}</span>
                           </div>
                           <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-primary-light leading-relaxed scrollbar-thin scrollbar-thumb-primary/20 whitespace-pre-wrap">
-                              {taskState.comparison?.translation || <span className="text-slate-600 italic animate-pulse">{t('msg_processing_batch')}</span>}
+                              {taskState.comparison?.translation || <span className="text-muted-foreground italic animate-pulse">{t('msg_processing_batch')}</span>}
                           </div>
                       </div>
                   </div>
@@ -629,7 +629,7 @@ export const TaskRunner: React.FC = () => {
         )}
 
         {taskState.isRunning && (
-            <div className="absolute top-4 right-4 flex items-center gap-2 bg-slate-900/80 backdrop-blur px-3 py-1 rounded-full border border-primary/20 text-primary text-xs font-mono animate-pulse">
+            <div className="absolute top-4 right-4 flex items-center gap-2 bg-card/80 backdrop-blur px-3 py-1 rounded-full border border-primary/20 text-primary text-xs font-mono animate-pulse">
                 <Loader2 size={12} className="animate-spin" />
                 {t('msg_processing')}
             </div>

@@ -802,163 +802,11 @@ export const DataService = {
         }
     },
 
-    // --- Web Editor API ---
+    // --- Cache Management (Real Backend) ---
 
-    async getEditorFiles(): Promise<any[]> {
+    async getCacheStatus(): Promise<{ loaded: boolean; file_count: number; total_items: number; project_name: string | null }> {
         try {
-            const res = await fetch(`${API_BASE}/editor/files`);
-            if (!res.ok) throw new Error('Failed to fetch editor files');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: getEditorFiles", error);
-            throw error;
-        }
-    },
-
-    async getEditorStats(): Promise<any> {
-        try {
-            const res = await fetch(`${API_BASE}/editor/stats`);
-            if (!res.ok) throw new Error('Failed to fetch editor stats');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: getEditorStats", error);
-            throw error;
-        }
-    },
-
-    async getParallelEditorData(filePath: string, page: number = 0, pageSize: number = 15): Promise<any> {
-        try {
-            const encodedPath = encodeURIComponent(filePath);
-            const res = await fetch(`${API_BASE}/parallel-editor/${encodedPath}?page=${page}&page_size=${pageSize}`);
-            if (!res.ok) throw new Error('Failed to fetch parallel editor data');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: getParallelEditorData", error);
-            throw error;
-        }
-    },
-
-    async updateParallelEditorItem(filePath: string, updateData: { text_index: number; new_translation: string }): Promise<any> {
-        try {
-            const encodedPath = encodeURIComponent(filePath);
-            const res = await fetch(`${API_BASE}/parallel-editor/${encodedPath}/update`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
-            });
-            if (!res.ok) throw new Error('Failed to update editor item');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: updateParallelEditorItem", error);
-            throw error;
-        }
-    },
-
-    async searchParallelEditorFile(filePath: string, searchParams: {
-        query: string;
-        scope: string;
-        is_regex?: boolean;
-        search_flagged?: boolean;
-    }): Promise<any[]> {
-        try {
-            const encodedPath = encodeURIComponent(filePath);
-            const res = await fetch(`${API_BASE}/parallel-editor/${encodedPath}/search`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(searchParams)
-            });
-            if (!res.ok) throw new Error('Failed to search in file');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: searchParallelEditorFile", error);
-            throw error;
-        }
-    },
-
-    async gotoParallelEditorLine(filePath: string, lineIndex: number, pageSize: number = 15): Promise<any> {
-        try {
-            const encodedPath = encodeURIComponent(filePath);
-            const res = await fetch(`${API_BASE}/parallel-editor/${encodedPath}/goto/${lineIndex}?page_size=${pageSize}`);
-            if (!res.ok) throw new Error('Failed to calculate page for line');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: gotoParallelEditorLine", error);
-            throw error;
-        }
-    },
-
-    async clearFileModifications(filePath: string): Promise<any> {
-        try {
-            const encodedPath = encodeURIComponent(filePath);
-            const res = await fetch(`${API_BASE}/parallel-editor/${encodedPath}/modifications`, {
-                method: 'DELETE'
-            });
-            if (!res.ok) throw new Error('Failed to clear file modifications');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: clearFileModifications", error);
-            throw error;
-        }
-    },
-
-    async clearAllModifications(): Promise<any> {
-        try {
-            const res = await fetch(`${API_BASE}/parallel-editor/modifications`, {
-                method: 'DELETE'
-            });
-            if (!res.ok) throw new Error('Failed to clear all modifications');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: clearAllModifications", error);
-            throw error;
-        }
-    },
-
-    async getFileModifications(filePath: string): Promise<any> {
-        try {
-            const encodedPath = encodeURIComponent(filePath);
-            const res = await fetch(`${API_BASE}/parallel-editor/${encodedPath}/modifications`);
-            if (!res.ok) throw new Error('Failed to get file modifications');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: getFileModifications", error);
-            throw error;
-        }
-    },
-
-    // --- Cache File Management ---
-
-    async loadCacheFile(filePath: string): Promise<any> {
-        try {
-            const res = await fetch(`${API_BASE}/parallel-editor/load-cache`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_path: filePath })
-            });
-            if (!res.ok) throw new Error('Failed to load cache file');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: loadCacheFile", error);
-            throw error;
-        }
-    },
-
-    async openFileDialog(): Promise<any> {
-        try {
-            const res = await fetch(`${API_BASE}/parallel-editor/open-file-dialog`, {
-                method: 'POST'
-            });
-            if (!res.ok) throw new Error('Failed to open file dialog');
-            return await res.json();
-        } catch (error) {
-            console.error("API Error: openFileDialog", error);
-            throw error;
-        }
-    },
-
-    async getCacheStatus(): Promise<any> {
-        try {
-            const res = await fetch(`${API_BASE}/parallel-editor/upload-status`);
+            const res = await fetch(`${API_BASE}/cache/status`);
             if (!res.ok) throw new Error('Failed to get cache status');
             return await res.json();
         } catch (error) {
@@ -967,15 +815,93 @@ export const DataService = {
         }
     },
 
-    async browseDirectory(path: string = '.'): Promise<any> {
+    async loadCache(projectPath: string): Promise<any> {
         try {
-            const encodedPath = encodeURIComponent(path);
-            const res = await fetch(`${API_BASE}/parallel-editor/browse-directory?path=${encodedPath}`);
-            if (!res.ok) throw new Error('Failed to browse directory');
+            const res = await fetch(`${API_BASE}/cache/load`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project_path: projectPath })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || 'Failed to load cache');
+            }
             return await res.json();
         } catch (error) {
-            console.error("API Error: browseDirectory", error);
+            console.error("API Error: loadCache", error);
             throw error;
+        }
+    },
+
+    async getCacheItems(page: number = 1, pageSize: number = 15, search: string = "", filePath?: string): Promise<{ items: any[]; pagination: any }> {
+        try {
+            const params: any = {
+                page: page.toString(),
+                page_size: pageSize.toString(),
+                search: search
+            };
+            if (filePath) {
+                params.file_path = filePath;
+            }
+            const query = new URLSearchParams(params);
+            const res = await fetch(`${API_BASE}/cache/items?${query.toString()}`);
+            if (!res.ok) throw new Error('Failed to fetch cache items');
+            return await res.json();
+        } catch (error) {
+            console.error("API Error: getCacheItems", error);
+            throw error;
+        }
+    },
+
+    async updateCacheItem(itemId: number, translation: string, projectPath: string): Promise<any> {
+        try {
+            const res = await fetch(`${API_BASE}/cache/items/${itemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    item_id: itemId,
+                    translation: translation,
+                    project_path: projectPath 
+                })
+            });
+            if (!res.ok) throw new Error('Failed to update cache item');
+            return await res.json();
+        } catch (error) {
+            console.error("API Error: updateCacheItem", error);
+            throw error;
+        }
+    },
+
+    async checkSingleLine(projectPath: string, filePath: string, textIndex: number, translation?: string): Promise<any> {
+        try {
+            const res = await fetch(`${API_BASE}/proofread/single_check`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    project_path: projectPath,
+                    file_path: filePath,
+                    text_index: textIndex,
+                    translation: translation
+                })
+            });
+            if (!res.ok) throw new Error('Failed to check single line');
+            return await res.json();
+        } catch (error) {
+            console.error("API Error: checkSingleLine", error);
+            throw error;
+        }
+    },
+
+    async searchCacheItems(query: string, scope: string = "all", isRegex: boolean = false): Promise<any> {
+        try {
+            const res = await fetch(`${API_BASE}/cache/search?query=${encodeURIComponent(query)}&scope=${scope}&is_regex=${isRegex}`, {
+                method: 'POST'
+            });
+             if (!res.ok) throw new Error('Failed to search cache items');
+            return await res.json();
+        } catch (error) {
+             console.error("API Error: searchCacheItems", error);
+             throw error;
         }
     },
 

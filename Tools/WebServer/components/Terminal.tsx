@@ -19,11 +19,11 @@ export const Terminal: React.FC<TerminalProps> = ({ logs, height = "h-64" }) => 
 
   const getColor = (type: LogEntry['type']) => {
     switch (type) {
-      case 'error': return 'text-red-400';
-      case 'warning': return 'text-yellow-400';
-      case 'success': return 'text-green-400';
+      case 'error': return 'text-red-600 dark:text-red-400';
+      case 'warning': return 'text-yellow-600 dark:text-yellow-400';
+      case 'success': return 'text-green-600 dark:text-green-400';
       case 'system': return 'text-primary';
-      default: return 'text-slate-300';
+      default: return 'text-slate-700 dark:text-slate-300';
     }
   };
 
@@ -33,9 +33,9 @@ export const Terminal: React.FC<TerminalProps> = ({ logs, height = "h-64" }) => 
     }
   };
   return (
-    <div className={`w-full ${height} bg-slate-950 border border-slate-800 rounded-lg overflow-hidden flex flex-col font-mono text-sm shadow-inner`}>
-      <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between">
-        <span className="text-slate-400 text-xs">{t('ui_task_console')}</span>
+    <div className={`w-full ${height} bg-slate-50 dark:bg-slate-950 border border-border rounded-lg overflow-hidden flex flex-col font-mono text-sm shadow-inner`}>
+      <div className="bg-slate-100 dark:bg-slate-900 px-4 py-2 border-b border-border flex items-center justify-between">
+        <span className="text-muted-foreground text-xs">{t('ui_task_console')}</span>
         <div className="flex gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50 cursor-pointer hover:bg-red-500/40" onClick={(e) => triggerRipple(e.clientX, e.clientY, 'kalpas')}></div>
           <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
@@ -46,10 +46,10 @@ export const Terminal: React.FC<TerminalProps> = ({ logs, height = "h-64" }) => 
         {logs.map((log) => (
           <div 
             key={log.id} 
-            className={`flex gap-3 min-w-0 hover:bg-white/5 p-0.5 rounded px-2 transition-colors ${log.type === 'error' ? 'cursor-pointer' : ''}`}
+            className={`flex gap-3 min-w-0 hover:bg-black/5 dark:hover:bg-white/5 p-0.5 rounded px-2 transition-colors ${log.type === 'error' ? 'cursor-pointer' : ''}`}
             onClick={(e) => handleLogClick(e, log.type)}
           >
-            <span className="text-slate-500 min-w-[80px] select-none">[{log.timestamp}]</span>
+            <span className="text-muted-foreground min-w-[80px] select-none">[{log.timestamp}]</span>
             <span className={`${getColor(log.type)} min-w-0 whitespace-pre-wrap break-words`}>{log.message}</span>
           </div>
         ))}

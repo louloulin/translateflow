@@ -11,9 +11,12 @@ export type ContentWidthMode = 'fluid' | 'contained';
 
 export type UiDensityMode = 'comfortable' | 'compact';
 
+export type UiThemeMode = 'light' | 'dark' | 'system';
+
 export interface UiPreferences {
   contentWidthMode: ContentWidthMode;
   density: UiDensityMode;
+  themeMode: UiThemeMode;
   taskConsole: {
     splitRatio: number;
     minTerminalPx: number;
@@ -223,6 +226,53 @@ export interface TaskRunnerState {
     source: string;
     translation: string;
   };
+}
+
+export interface ProjectFile {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  sourceLang: string;
+  targetLang: string;
+  progress: number;
+  status: 'pending' | 'translating' | 'completed' | 'error';
+  lastModified: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  rootPath: string;
+  description?: string;
+  sourceLang: string;
+  targetLang: string;
+  createdAt: number;
+  updatedAt: number;
+  files: ProjectFile[];
+  status: 'active' | 'completed' | 'archived';
+  progress: number;
+  profile?: string;
+  rulesProfile?: string;
+}
+
+export interface Segment {
+  id: string;
+  index: number;
+  source: string;
+  target: string;
+  status: 'draft' | 'translated' | 'approved' | 'locked';
+  locked?: boolean;
+  comments?: string[];
+}
+
+export interface EditorState {
+  projectId: string;
+  fileId: string;
+  segments: Segment[];
+  activeSegmentId: string | null;
+  filter: 'all' | 'untranslated' | 'draft' | 'approved';
+  searchQuery: string;
 }
 
 export interface AppConfig {
