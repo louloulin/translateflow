@@ -1,6 +1,10 @@
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md
 ## Patterns
 
+### mem-1772202583-f1c6
+> 团队管理功能实现：创建了 Team 和 TeamMember 数据模型、TeamRepository 数据访问层、TeamManager 业务逻辑层。支持三层角色(OWNER/ADMIN/MEMBER)、成员邀请流程、权限控制。订阅配额: Free(5人)、Starter(10人)、Pro(50人)、Enterprise(无限制)。依赖 User/Tenant 模型、SubscriptionManager。文件: ModuleFolders/Service/Team/、ModuleFolders/Service/Auth/models.py
+<!-- tags: team, collaboration, rbac | created: 2026-02-27 -->
+
 ### mem-1772199328-f198
 > Stripe支付集成完成：实现了StripeWebhookHandler处理7种Webhook事件(payment_intent.*, customer.subscription.*, invoice.*, checkout.session.*)，PaymentProcessor扩展支持支付方式管理(get/attach/detach/set_default)、订阅生命周期(create/cancel/update/get)、发票管理(get/list)。新增3个邮件模板(支付/订阅/发票通知)。需要stripe包，环境变量:STRIPE_API_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_*。依赖数据库表:payments, subscription_events, checkout_sessions。
 <!-- tags: billing, stripe, payment | created: 2026-02-27 -->
