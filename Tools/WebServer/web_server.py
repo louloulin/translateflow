@@ -624,6 +624,20 @@ class RegisterRequest(BaseModel):
     password: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    reset_url_base: Optional[str] = "https://translateflow.example.com/reset-password"
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class PasswordResetResponse(BaseModel):
+    message: str
+
+
 class LoginResponse(BaseModel):
     user: Dict[str, Any]
     access_token: str
@@ -760,6 +774,50 @@ async def logout(refresh_token: str = Body(..., embed=True)):
         auth_manager.logout(refresh_token)
 
         return {"message": "Successfully logged out"}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/auth/forgot-password", response_model=PasswordResetResponse)
+async def forgot_password(request: ForgotPasswordRequest, background_tasks: BackgroundTasks):
+    """Request a password reset email."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        result = auth_manager.forgot_password(
+            email=request.email,
+            reset_url_base=request.reset_url_base,
+        )
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/auth/reset-password", response_model=PasswordResetResponse)
+async def reset_password(request: ResetPasswordRequest):
+    """Reset password using the reset token."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        result = auth_manager.reset_password(
+            token=request.token,
+            new_password=request.new_password,
+        )
+        return {"message": result.get("message", "Password reset successfully")}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

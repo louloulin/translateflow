@@ -307,6 +307,147 @@ class AuthManager:
 
         return User.get_or_none(User.id == payload.get("sub"))
 
+    def forgot_password(
+        self,
+        email: str,
+        reset_url_base: str = "https://translateflow.example.com/reset-password",
+    ) -> Dict[str, Any]:
+        """
+        Initiate password reset process.
+        Sends a password reset email to the user.
+        """
+        # Find user by email
+        user = User.get_or_none(User.email == email)
+
+        # For security, always return success even if user doesn't exist
+        # This prevents email enumeration attacks
+        if not user:
+            return {
+                "message": "If an account exists with this email, a password reset link has been sent."
+            }
+
+        # Check if user has a password (OAuth users may not)
+        if not user.password_hash:
+            return {
+                "message": "If an account exists with this email, a password reset link has been sent."
+            }
+
+        # Generate reset token
+        import secrets
+        reset_token = secrets.token_urlsafe(32)
+        token_hash = self.jwt_handler.get_token_hash(reset_token)
+
+        from datetime import timedelta
+        expires_at = datetime.utcnow() + timedelta(hours=1)
+
+        # Store token in database
+        PasswordReset.create(
+            id=uuid4(),
+            user=user,
+            token=reset_token,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+
+        # Also store token on user for quick lookup
+        user.reset_token = reset_token
+        user.reset_token_expires = expires_at
+        user.save()
+
+        # Send password reset email
+        try:
+            from ModuleFolders.Service.Email.email_service import get_email_service
+
+            email_service = get_email_service()
+            reset_url = f"{reset_url_base}?token={reset_token}"
+            email_service.send_password_reset_email(
+                to=user.email,
+                username=user.username,
+                reset_url=reset_url,
+            )
+        except Exception as e:
+            # Log error but don't expose to user
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send password reset email: {e}")
+
+        return {
+            "message": "If an account exists with this email, a password reset link has been sent."
+        }
+
+    def reset_password(
+        self,
+        token: str,
+        new_password: str,
+    ) -> Dict[str, Any]:
+        """
+        Reset user password using the reset token.
+        """
+        # Validate new password
+        is_valid, error_msg = self.validate_password(new_password)
+        if not is_valid:
+            raise AuthError(error_msg)
+
+        # Find user by reset token
+        user = User.get_or_none(User.reset_token == token)
+
+        if not user:
+            raise AuthError("Invalid or expired reset token")
+
+        # Check if token has expired
+        if user.reset_token_expires and user.reset_token_expires < datetime.utcnow():
+            raise AuthError("Reset token has expired")
+
+        # Verify token hash in PasswordReset table
+        token_hash = self.jwt_handler.get_token_hash(token)
+        password_reset = PasswordReset.get_or_none(
+            PasswordReset.token_hash == token_hash,
+            PasswordReset.used == False,
+        )
+
+        if not password_reset:
+            raise AuthError("Invalid or expired reset token")
+
+        # Update password
+        user.password_hash = self.password_manager.hash_password(new_password)
+        user.reset_token = None
+        user.reset_token_expires = None
+
+        # Reset security-related fields
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        user.save()
+
+        # Mark reset token as used
+        password_reset.used = True
+        password_reset.save()
+
+        # Revoke all refresh tokens for security
+        RefreshToken.update(is_revoked=True).where(
+            RefreshToken.user == user,
+            RefreshToken.is_revoked == False,
+        ).execute()
+
+        return {
+            "message": "Password has been reset successfully",
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "username": user.username,
+            },
+        }
+
+    def verify_reset_token(self, token: str) -> Optional[User]:
+        """Verify if a reset token is valid and return the user."""
+        user = User.get_or_none(User.reset_token == token)
+
+        if not user:
+            return None
+
+        if user.reset_token_expires and user.reset_token_expires < datetime.utcnow():
+            return None
+
+        return user
+
 
 # Global auth manager instance
 _auth_manager: Optional[AuthManager] = None
