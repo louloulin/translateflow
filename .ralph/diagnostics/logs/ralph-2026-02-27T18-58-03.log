@@ -4,3 +4,4 @@
 2026-02-27T10:58:03.548686Z  INFO ralph_core::event_loop: Successfully loaded 1 memories from store
 2026-02-27T10:58:03.548699Z  INFO ralph_core::event_loop: Injecting 1 memories (239 chars) into prompt
 2026-02-27T10:58:03.548787Z  INFO ralph_core::event_loop: Injecting ready tasks (6 ready, 6 open, 10 closed) into prompt
+2026-02-27T11:12:39.732261Z  INFO ralph_tui::app: Ctrl+C detected, signaling main loop
