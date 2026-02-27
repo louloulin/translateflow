@@ -19,6 +19,10 @@ from .models import (
     close_database,
 )
 
+from .auth_manager import AuthManager, get_auth_manager, AuthError
+from .jwt_handler import JWTHandler
+from .password_manager import PasswordManager
+
 __all__ = [
     "User",
     "Tenant",
@@ -33,4 +37,9 @@ __all__ = [
     "TenantStatus",
     "init_database",
     "close_database",
+    "AuthManager",
+    "get_auth_manager",
+    "AuthError",
+    "JWTHandler",
+    "PasswordManager",
 ]

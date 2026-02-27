@@ -13,10 +13,12 @@ from typing import List, Dict, Any, Optional
 # --- Pre-emptive Import for FastAPI & Pydantic ---
 try:
     import uvicorn
-    from fastapi import FastAPI, HTTPException, Body, File, UploadFile, Response, BackgroundTasks
+    from fastapi import FastAPI, HTTPException, Body, File, UploadFile, Response, BackgroundTasks, Depends, Header
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
+    from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
     from pydantic import BaseModel
+    from typing import Optional
 except ImportError:
     # This error will be caught and handled in ainiee_cli.py
     raise ImportError("Required packages are missing. Please run 'uv add fastapi uvicorn[standard] pydantic python-multipart'.,Or run 'uv sync'")
@@ -612,6 +614,183 @@ async def restart_system():
     
     threading.Thread(target=restart).start()
     return {"message": "Server is restarting..."}
+
+
+# --- Auth Models ---
+
+class RegisterRequest(BaseModel):
+    email: str
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    user: Dict[str, Any]
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    username: str
+    role: str
+    status: str
+
+
+# --- Auth Dependencies ---
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+def get_client_ip(request):
+    """Get client IP from request."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+# --- Auth Routes ---
+
+@app.post("/api/v1/auth/register", response_model=LoginResponse)
+async def register(request: RegisterRequest, background_tasks: BackgroundTasks):
+    """Register a new user account."""
+    try:
+        # Import here to avoid circular imports
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        # Initialize database if needed
+        try:
+            init_database()
+        except Exception:
+            pass  # Database might already be initialized
+
+        auth_manager = get_auth_manager()
+
+        # Get client info
+        ip_address = "127.0.0.1"  # Will be updated with actual IP in production
+        user_agent = "Web UI"
+
+        result = auth_manager.register(
+            email=request.email,
+            username=request.username,
+            password=request.password,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/auth/login", response_model=LoginResponse)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Login with email and password."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+
+        # Get client info
+        ip_address = "127.0.0.1"  # Will be updated with actual IP in production
+        user_agent = "Web UI"
+
+        result = auth_manager.login(
+            email=form_data.username,  # OAuth2 uses username field for email
+            password=form_data.password,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.post("/api/v1/auth/refresh", response_model=RefreshResponse)
+async def refresh_token(refresh_token: str = Body(..., embed=True)):
+    """Refresh access token using refresh token."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+
+        result = auth_manager.refresh_access_token(refresh_token)
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.post("/api/v1/auth/logout")
+async def logout(refresh_token: str = Body(..., embed=True)):
+    """Logout user and revoke refresh token."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        auth_manager.logout(refresh_token)
+
+        return {"message": "Successfully logged out"}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/v1/auth/me", response_model=UserResponse)
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    """Get current user information."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        user = auth_manager.get_current_user(token)
+
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+        return {
+            "id": str(user.id),
+            "email": user.email,
+            "username": user.username,
+            "role": user.role,
+            "status": user.status,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 @app.get("/api/version")
