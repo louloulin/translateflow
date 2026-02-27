@@ -19,11 +19,7 @@ from peewee import (
     ForeignKeyField,
     Field,
     SQL,
-    PostgresqlDatabase,
-    SqliteDatabase,
 )
-
-from playhouse.pool import PooledPostgresqlDatabase
 
 
 class JSONField(TextField):
@@ -44,13 +40,8 @@ class JSONField(TextField):
         except (json.JSONDecodeError, TypeError):
             return value
 
-# Try to import database backend
-try:
-    from pgsql import database as db_instance
-    _db = db_instance
-except ImportError:
-    # Fallback to SQLite if PostgreSQL not available
-    _db = SqliteDatabase('ainiee_users.db')
+# Import database backend from Infrastructure module
+from ModuleFolders.Infrastructure.Database.pgsql import database as _db
 
 
 class UserRole(str, Enum):

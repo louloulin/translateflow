@@ -1,34 +1,75 @@
-# Ralph Scratchpad
+# Scratchpad - User Management & Monetization System
 
-## 2026-02-27 19:13 - Brand Transition Task Execution
+## 2026-02-27 20:35 - Initial Assessment
 
-### Context
-Working on brand transition from AiNiee to TranslateFlow as part of user management and commercialization feature plan.
+### Project Analysis
 
-### Current Session Work
-**Completed Task:** [P1] Update version.json brand string (task-1772189648-cc75)
+**Current Status:**
+- ✅ Auth service exists (ModuleFolders/Service/Auth/)
+- ✅ Database models: User, Tenant, ApiKey, LoginHistory, PasswordReset, EmailVerification, RefreshToken
+- ✅ Auth manager: register, login, refresh, logout
+- ✅ JWT handler and password manager
+- ✅ Auth middleware
+- ✅ Auth API endpoints in web_server.py
 
-**Changes Made:**
-1. Updated `Resource/Version/version.json`: "AiNiee-Next V2.4.5B" → "TranslateFlow V2.4.5B"
-2. Updated `source/AiNiee/Resource/Version/version.json`: "AiNiee 7.1.1 dev" → "TranslateFlow 7.1.1 dev"
-3. Committed changes (commit 7011f321)
+**Missing Components:**
 
-**Findings:**
-- Only `Resource/Version/version.json` is tracked in git
-- `source/AiNiee/Resource/Version/version.json` appears to be a generated/build file
-- Multiple version.json files exist in worktrees but only main one needed updating
+#### Phase 1 - Core User System (Partial)
+- ❌ OAuth manager (GitHub, Google login)
+- ❌ Email service for verification/reset
+- ❌ User service for profile management
+- ❌ Password reset flow implementation
+- ❌ Email verification flow implementation
 
-### Previous Work Context
-From memories:
-- Web UI brand already updated (index.html, metadata.json, AppSidebar.tsx, MainLayout.tsx, Monitor.tsx, constants.ts, package.json)
-- pyproject.toml updated (package=translateflow-cli, cmd=translateflow)
+#### Phase 2 - RBAC (Missing)
+- ❌ Permission verification middleware
+- ❌ Role assignment functionality
+- ❌ API key management endpoints
 
-### Remaining Tasks
-From ready-tasks list:
-- [P2] Update I18N files (en.json, zh_CN.json, ja.json)
-- [P2] Update README.md and README_EN.md
-- [P3] Update cache and output folder names
-- [P3] Update UpdateManager.py GitHub URLs
+#### Phase 3 - Billing/Subscription (Not Started)
+- ❌ Billing service folder (doesn't exist)
+- ❌ Usage tracker
+- ❌ Subscription manager
+- ❌ Stripe integration
+- ❌ Payment processor
+- ❌ Invoice generator
+- ❌ Quota enforcer
+- ❌ Stripe webhook handler
 
-### Next Steps
-Next iteration should pick up one of the P2 tasks (I18N files or README files).
+#### Phase 4 - Advanced Features (Missing)
+- ❌ Tenant service
+- ❌ Team management
+- ❌ SSO enterprise login
+
+### Technical Notes
+
+**Database:**
+- Uses Peewee ORM
+- Falls back to SQLite if PostgreSQL unavailable
+- Models reference `pgsql.database` which doesn't exist
+- Need to create proper database configuration
+
+**Web Server:**
+- FastAPI based
+- Auth endpoints implemented: `/api/v1/auth/*`
+- Need to add billing endpoints: `/api/v1/subscriptions/*`, `/api/v1/usage/*`
+
+**Frontend:**
+- React + TypeScript + Vite
+- Located in Tools/WebServer/
+- No auth UI pages yet (login, register, settings)
+
+### Implementation Plan
+
+1. **Fix database configuration** - Create proper pgsql.py module
+2. **Complete Phase 1** - OAuth, email service, password reset flows
+3. **Build Phase 2** - RBAC middleware, permissions
+4. **Build Phase 3** - Entire billing system
+5. **Add Phase 4** - Tenant service, team management
+
+### Next Actions
+
+1. Create database configuration module
+2. Implement email service
+3. Build OAuth manager
+4. Create billing service structure
