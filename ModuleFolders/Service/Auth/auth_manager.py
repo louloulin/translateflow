@@ -64,7 +64,8 @@ class AuthManager:
         username: str,
         password: str,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
+        send_verification: bool = True,
     ) -> Tuple[Dict[str, Any], str]:
         """
         Register a new user.
@@ -136,6 +137,15 @@ class AuthManager:
         user.last_login_at = datetime.utcnow()
         user.save()
 
+        # Send verification email if requested
+        if send_verification:
+            try:
+                self.send_verification_email(user)
+            except Exception:
+                # Log error but don't fail registration
+                import logging
+                logging.getLogger(__name__).warning("Failed to send verification email during registration")
+
         return {
             "user": {
                 "id": str(user.id),
@@ -143,6 +153,7 @@ class AuthManager:
                 "username": user.username,
                 "role": user.role,
                 "status": user.status,
+                "email_verified": user.email_verified,
             },
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -444,6 +455,216 @@ class AuthManager:
             return None
 
         if user.reset_token_expires and user.reset_token_expires < datetime.utcnow():
+            return None
+
+        return user
+
+    def send_verification_email(
+        self,
+        user: User,
+        verification_url_base: str = "https://translateflow.example.com/verify-email",
+    ) -> Dict[str, Any]:
+        """
+        Send email verification email to user.
+
+        Args:
+            user: User to send verification email to
+            verification_url_base: Base URL for verification
+
+        Returns:
+            Dict with send result
+        """
+        import secrets
+        from datetime import timedelta
+
+        # Generate verification token
+        verification_token = secrets.token_urlsafe(32)
+        token_hash = self.jwt_handler.get_token_hash(verification_token)
+        expires_at = datetime.utcnow() + timedelta(hours=24)
+
+        # Store token in database
+        EmailVerification.create(
+            id=uuid4(),
+            user=user,
+            token=verification_token,
+            token_hash=token_hash,
+            expires_at=expires_at,
+        )
+
+        # Also store token on user for quick lookup
+        user.verification_token = verification_token
+        user.save()
+
+        # Send verification email
+        try:
+            from ModuleFolders.Service.Email.email_service import get_email_service
+
+            email_service = get_email_service()
+            verification_url = f"{verification_url_base}?token={verification_token}"
+            email_service.send_verification_email(
+                to=user.email,
+                username=user.username,
+                verification_url=verification_url,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send verification email: {e}")
+            raise AuthError("Failed to send verification email")
+
+        return {
+            "message": "Verification email sent successfully",
+            "expires_at": expires_at.isoformat(),
+        }
+
+    def verify_email(self, token: str) -> Dict[str, Any]:
+        """
+        Verify user's email using the verification token.
+
+        Args:
+            token: Verification token from email
+
+        Returns:
+            Dict with verification result
+        """
+        # Find user by verification token
+        user = User.get_or_none(User.verification_token == token)
+
+        if not user:
+            raise AuthError("Invalid verification token")
+
+        # Check if already verified
+        if user.email_verified:
+            return {
+                "message": "Email already verified",
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "username": user.username,
+                    "email_verified": user.email_verified,
+                },
+            }
+
+        # Verify token in EmailVerification table
+        token_hash = self.jwt_handler.get_token_hash(token)
+        email_verification = EmailVerification.get_or_none(
+            EmailVerification.token_hash == token_hash,
+            EmailVerification.verified == False,
+        )
+
+        if not email_verification:
+            raise AuthError("Invalid or expired verification token")
+
+        # Check if token has expired
+        if email_verification.expires_at < datetime.utcnow():
+            raise AuthError("Verification token has expired")
+
+        # Mark email as verified
+        user.email_verified = True
+        user.verification_token = None
+        user.save()
+
+        # Mark verification token as used
+        email_verification.verified = True
+        email_verification.verified_at = datetime.utcnow()
+        email_verification.save()
+
+        # Send welcome email
+        try:
+            from ModuleFolders.Service.Email.email_service import get_email_service
+
+            email_service = get_email_service()
+            email_service.send_welcome_email(
+                to=user.email,
+                username=user.username,
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send welcome email: {e}")
+
+        return {
+            "message": "Email verified successfully",
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "username": user.username,
+                "email_verified": user.email_verified,
+            },
+        }
+
+    def resend_verification_email(
+        self,
+        email: str,
+        verification_url_base: str = "https://translateflow.example.com/verify-email",
+    ) -> Dict[str, Any]:
+        """
+        Resend verification email to user.
+
+        Args:
+            email: User's email address
+            verification_url_base: Base URL for verification
+
+        Returns:
+            Dict with send result
+        """
+        # Find user by email
+        user = User.get_or_none(User.email == email)
+
+        # For security, always return success even if user doesn't exist
+        # This prevents email enumeration attacks
+        if not user:
+            return {
+                "message": "If an account exists and is not verified, a verification email has been sent."
+            }
+
+        # Check if already verified
+        if user.email_verified:
+            return {
+                "message": "Email is already verified"
+            }
+
+        # Check if there's an existing unexpired verification token
+        if user.verification_token:
+            # Check if token is still valid by looking it up
+            token_hash = self.jwt_handler.get_token_hash(user.verification_token)
+            existing_verification = EmailVerification.get_or_none(
+                EmailVerification.token_hash == token_hash,
+                EmailVerification.verified == False,
+            )
+
+            if existing_verification and existing_verification.expires_at > datetime.utcnow():
+                return {
+                    "message": "A verification email has already been sent. Please check your inbox or try again later."
+                }
+
+        # Generate new verification token
+        return self.send_verification_email(user, verification_url_base)
+
+    def verify_verification_token(self, token: str) -> Optional[User]:
+        """
+        Verify if a verification token is valid and return the user.
+
+        Args:
+            token: Verification token from email
+
+        Returns:
+            User if token is valid, None otherwise
+        """
+        user = User.get_or_none(User.verification_token == token)
+
+        if not user:
+            return None
+
+        # Check token in database
+        token_hash = self.jwt_handler.get_token_hash(token)
+        email_verification = EmailVerification.get_or_none(
+            EmailVerification.token_hash == token_hash,
+            EmailVerification.verified == False,
+        )
+
+        if not email_verification:
+            return None
+
+        if email_verification.expires_at < datetime.utcnow():
             return None
 
         return user
