@@ -4,3 +4,13 @@
 2026-02-27T08:04:23.164620Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: false)
 2026-02-27T08:04:23.164629Z  INFO ralph_core::event_loop: Successfully loaded 0 memories from store
 2026-02-27T08:04:23.164634Z  INFO ralph_core::event_loop: Memory store is empty - no memories to inject
+2026-02-27T08:07:01.995539Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-27T08:07:01.995574Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: false)
+2026-02-27T08:07:01.995581Z  INFO ralph_core::event_loop: Successfully loaded 0 memories from store
+2026-02-27T08:07:01.995587Z  INFO ralph_core::event_loop: Memory store is empty - no memories to inject
+2026-02-27T08:13:59.826737Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-27T08:13:59.826764Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-27T08:13:59.828198Z  INFO ralph_core::event_loop: Successfully loaded 1 memories from store
+2026-02-27T08:13:59.828210Z  INFO ralph_core::event_loop: Injecting 1 memories (346 chars) into prompt
+2026-02-27T08:13:59.828252Z  INFO ralph_core::event_loop: Injecting scratchpad (1182 chars) into prompt
+2026-02-27T08:13:59.828325Z  INFO ralph_core::event_loop: Injecting ready tasks (0 ready, 0 open, 2 closed) into prompt
