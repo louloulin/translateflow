@@ -658,6 +658,48 @@ class UserResponse(BaseModel):
     status: str
 
 
+# --- User Management Request/Response Models ---
+
+class UpdateProfileRequest(BaseModel):
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class UpdateEmailRequest(BaseModel):
+    new_email: str
+    password: str
+
+
+class UpdatePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class DeleteAccountRequest(BaseModel):
+    password: Optional[str] = None
+
+
+class UpdateUserRoleRequest(BaseModel):
+    new_role: str
+
+
+class UpdateUserStatusRequest(BaseModel):
+    new_status: str
+    reason: Optional[str] = None
+
+
+class UserListResponse(BaseModel):
+    users: List[Dict[str, Any]]
+    pagination: Dict[str, Any]
+
+
+class LoginHistoryResponse(BaseModel):
+    records: List[Dict[str, Any]]
+    pagination: Dict[str, Any]
+
+
 # --- Auth Dependencies ---
 
 # Import JWT middleware from Auth module
@@ -3568,6 +3610,378 @@ async def get_scheduler_logs():
     try:
         sm = get_scheduler_manager()
         return sm.get_logs()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- User Management API Routes ---
+
+@app.get("/api/v1/users/me", response_model=Dict[str, Any])
+async def get_my_profile(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户资料
+
+    返回完整的用户资料信息，包括：
+    - 基本信息（邮箱、用户名、角色、状态）
+    - 资料数据（全名、简介、头像）
+    - 账户状态（邮箱验证、最后登录时间）
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+        profile = user_manager.get_profile(str(user.id))
+
+        return profile
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/me", response_model=Dict[str, Any])
+async def update_my_profile(
+    request: UpdateProfileRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前用户资料
+
+    允许更新：
+    - username（必须唯一）
+    - full_name
+    - bio（最多500字符）
+    - avatar_url（必须是有效URL）
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        # Build update dict with only provided fields
+        update_data = {}
+        if request.username is not None:
+            update_data['username'] = request.username
+        if request.full_name is not None:
+            update_data['full_name'] = request.full_name
+        if request.bio is not None:
+            update_data['bio'] = request.bio
+        if request.avatar_url is not None:
+            update_data['avatar_url'] = request.avatar_url
+
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        profile = user_manager.update_profile(str(user.id), **update_data)
+
+        return profile
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/me/email", response_model=Dict[str, Any])
+async def update_my_email(
+    request: UpdateEmailRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前用户邮箱
+
+    需要密码验证以确保安全
+    新邮箱必须唯一且需要验证
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        profile = user_manager.update_email(
+            user_id=str(user.id),
+            new_email=request.new_email,
+            password=request.password,
+        )
+
+        return profile
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/me/password", response_model=Dict[str, Any])
+async def update_my_password(
+    request: UpdatePasswordRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前用户密码
+
+    需要当前密码验证
+    密码更改后将撤销所有刷新令牌
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.update_password(
+            user_id=str(user.id),
+            current_password=request.current_password,
+            new_password=request.new_password,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/users/me")
+async def delete_my_account(
+    request: DeleteAccountRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    删除当前用户账户
+
+    如果用户有密码，需要密码确认
+    此操作不可撤销
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.delete_account(
+            user_id=str(user.id),
+            password=request.password,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/users/me/login-history", response_model=LoginHistoryResponse)
+async def get_my_login_history(
+    page: int = 1,
+    per_page: int = 20,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户登录历史
+
+    返回登录尝试的分页列表，包括：
+    - IP地址
+    - User Agent
+    - 成功/失败状态
+    - 时间戳
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.get_login_history(
+            user_id=str(user.id),
+            page=page,
+            per_page=per_page,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/users/me/preferences", response_model=Dict[str, Any])
+async def get_my_preferences(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户偏好设置
+
+    返回用户的自定义偏好/设置
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        preferences = user_manager.get_preferences(str(user.id))
+
+        return preferences
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/me/preferences", response_model=Dict[str, Any])
+async def update_my_preferences(
+    preferences: Dict[str, Any] = Body(...),
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前用户偏好设置
+
+    允许存储自定义用户设置
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.update_preferences(
+            user_id=str(user.id),
+            preferences=preferences,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- 管理员用户管理路由 ---
+
+@app.get("/api/v1/users", response_model=UserListResponse)
+async def list_users(
+    page: int = 1,
+    per_page: int = 20,
+    search: Optional[str] = None,
+    role: Optional[str] = None,
+    status: Optional[str] = None,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    获取所有用户列表，支持过滤和分页（仅管理员）
+
+    支持过滤：
+    - search: 在用户名和邮箱中搜索
+    - role: 按用户角色过滤
+    - status: 按账户状态过滤
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.list_users(
+            page=page,
+            per_page=per_page,
+            search=search,
+            role=role,
+            status=status,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/users/{user_id}", response_model=Dict[str, Any])
+async def get_user(
+    user_id: str,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    根据ID获取用户详情（仅管理员）
+
+    返回完整的用户资料信息
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+        profile = user_manager.get_profile(user_id)
+
+        return profile
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/{user_id}/role", response_model=Dict[str, Any])
+async def update_user_role(
+    user_id: str,
+    request: UpdateUserRoleRequest,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    更新用户角色（仅管理员）
+
+    可用角色：
+    - super_admin: 完整平台访问权限
+    - tenant_admin: 租户级管理
+    - team_admin: 团队管理
+    - translation_admin: 翻译任务管理
+    - developer: API访问
+    - user: 基础翻译功能
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.update_user_role(
+            admin_id=str(user.id),
+            user_id=user_id,
+            new_role=request.new_role,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/{user_id}/status", response_model=Dict[str, Any])
+async def update_user_status(
+    user_id: str,
+    request: UpdateUserStatusRequest,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    更新用户状态（仅管理员）
+
+    可用状态：
+    - active: 正常激活账户
+    - inactive: 暂时禁用
+    - suspended: 永久暂停
+
+    可选原因字段用于审计跟踪
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.update_user_status(
+            admin_id=str(user.id),
+            user_id=user_id,
+            new_status=request.new_status,
+            reason=request.reason,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
