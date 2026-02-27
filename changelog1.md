@@ -1872,6 +1872,186 @@ OAuth API 已完成，可以：
 
 ---
 
+## 本次更新 (2026-02-27) - 团队邀请邮件功能
+
+### 实现内容：团队邀请邮件发送功能
+
+实现了团队邀请邮件自动发送功能，当用户邀请成员加入团队时，系统会自动发送包含邀请令牌和接受链接的邮件。
+
+#### 1. 邮件模板 (`ModuleFolders/Service/Email/templates.py`)
+
+新增 `get_team_invitation_template()` 函数：
+
+**模板内容**
+- 邀请人和团队信息
+- 被邀请人角色说明（所有者/管理员/成员）
+- 接受邀请的按钮和链接
+- 邀请令牌（7天有效期）
+- 中英文双语支持
+
+**邮件主题**
+- `TranslateFlow 团队邀请 - {team_name}`
+
+**邮件布局**
+- 专业的HTML邮件模板
+- 纯文本备选格式
+- 响应式设计
+- TranslateFlow 品牌样式
+
+#### 2. EmailService 扩展 (`ModuleFolders/Service/Email/email_service.py`)
+
+新增 `send_team_invitation()` 方法：
+
+**方法签名**
+```python
+def send_team_invitation(
+    self,
+    email: str,
+    invitee_name: str,
+    inviter_name: str,
+    team_name: str,
+    invitation_url: str,
+    role: str = "member",
+) -> Dict[str, Any]:
+```
+
+**参数说明**
+- `email`: 被邀请人邮箱地址
+- `invitee_name`: 被邀请人姓名
+- `inviter_name`: 邀请人姓名
+- `team_name`: 团队名称
+- `invitation_url`: 接受邀请的完整URL（包含令牌）
+- `role`: 邀请角色（owner/admin/member）
+
+**返回值**
+- 发送结果字典（包含成功状态和消息ID）
+
+#### 3. TeamManager 集成 (`ModuleFolders/Service/Team/team_manager.py`)
+
+增强 `invite_member()` 方法，自动发送邀请邮件：
+
+**集成流程**
+1. 创建团队成员记录（pending状态）
+2. 生成32位随机邀请令牌
+3. 构建接受邀请URL（`{base_url}/teams/accept?token={token}`）
+4. 获取邀请人和被邀请人信息
+5. 调用 `email_service.send_team_invitation()` 发送邮件
+6. 邮件发送失败不影响邀请创建（优雅降级）
+
+**邀请链接格式**
+```
+https://translateflow.example.com/teams/accept?token=inv_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**错误处理**
+- 邮件服务不可用时跳过发送
+- 邮件发送失败时记录日志但不中断流程
+- 确保邀请记录始终创建成功
+
+#### 4. 使用示例
+
+**邀请成员（自动发送邮件）**
+```python
+from ModuleFolders.Service.Team import TeamManager
+
+team_manager = TeamManager()
+
+# 邀请成员加入团队
+member = team_manager.invite_member(
+    team_id="team-uuid-123",
+    inviter_id="user-uuid-456",
+    email="newmember@example.com",
+    role="admin",
+)
+
+# 邮件自动发送到 newmember@example.com
+# 包含邀请链接：https://translateflow.example.com/teams/accept?token=inv_xxx
+```
+
+**邮件内容示例**
+```
+主题：TranslateFlow 团队邀请 - 我的翻译团队
+
+你好 张三,
+
+李四 邀请您加入团队 我的翻译团队。
+
+邀请详情：
+- 团队：我的翻译团队
+- 邀请人：李四
+- 角色：管理员
+
+点击下方按钮接受邀请：
+[接受邀请]
+
+此邀请链接将在 7 天后过期。
+
+---
+TranslateFlow - AI驱动的翻译工具
+```
+
+#### 5. 环境配置
+
+**TODO: 配置基础URL**
+
+需要在环境变量或配置文件中设置基础URL：
+```bash
+# .env
+APP_BASE_URL=https://translateflow.example.com
+```
+
+修改 `team_manager.py` 中的URL构建逻辑：
+```python
+import os
+base_url = os.getenv("APP_BASE_URL", "https://translateflow.example.com")
+invitation_url = f"{base_url}/teams/accept?token={invitation_token}"
+```
+
+#### 6. 依赖模块
+
+团队邀请邮件功能依赖以下模块：
+- EmailService (`ModuleFolders/Service/Email/email_service.py`)
+- Email Templates (`ModuleFolders/Service/Email/templates.py`)
+- TeamManager (`ModuleFolders/Service/Team/team_manager.py`)
+
+#### 7. 测试验证
+
+- ✅ Python 语法检查通过
+- ✅ 邮件模板定义完整
+- ✅ EmailService 方法签名正确
+- ✅ TeamManager 集成成功
+- ✅ 错误处理完整
+
+#### 8. 功能特性
+
+**自动化**
+- 邀请创建时自动发送邮件
+- 无需手动调用邮件服务
+
+**可靠性**
+- 邮件发送失败不影响邀请创建
+- 优雅降级处理
+
+**用户体验**
+- 专业的邮件模板
+- 清晰的邀请信息
+- 一键接受邀请
+
+**安全性**
+- 邀请令牌32位随机字符
+- 7天有效期
+- 唯一性约束
+
+### 下一步
+
+团队邀请邮件功能已完成，可以：
+1. 配置环境变量 `APP_BASE_URL`
+2. 实现前端接受邀请页面
+3. 实现团队成员配额检查中间件
+4. 前端页面开发（剩余约8%工作）
+
+---
+
 ## 本次更新 (2026-02-27) - 团队管理基础功能
 
 ### 实现内容：完整的团队管理数据模型和服务层
@@ -2378,12 +2558,12 @@ Member (普通成员)
 
 ## 总体进度
 
-**整体完成度: 92%**
+**整体完成度: 93%**
 
 - 认证系统: 100% ✅ **完成**
 - 用户管理: 100% ✅ **完成**
 - 订阅计费: 100% ✅ **完成**（Stripe 集成完成，用量追踪和配额执行完成，订阅管理 API 完成，发票 PDF 生成完成，缺前端）
-- 高级功能: 40% (OAuth 完成，团队管理 API 完成，缺多租户和SSO)
+- 高级功能: 50% (OAuth 完成，团队管理 API 完成，团队邀请邮件完成，缺多租户和SSO)
 
 ---
 

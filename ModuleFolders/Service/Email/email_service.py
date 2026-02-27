@@ -310,6 +310,37 @@ class EmailService:
         )
         return self.send_email(email, template)
 
+    def send_team_invitation(
+        self,
+        email: str,
+        invitee_name: str,
+        inviter_name: str,
+        team_name: str,
+        invitation_url: str,
+        role: str = "member",
+    ) -> Dict[str, Any]:
+        """发送团队邀请邮件
+        
+        Args:
+            email: 被邀请人邮箱
+            invitee_name: 被邀请人姓名
+            inviter_name: 邀请人姓名
+            team_name: 团队名称
+            invitation_url: 接受邀请的URL
+            role: 邀请角色 (owner/admin/member)
+            
+        Returns:
+            发送结果字典
+        """
+        template = get_team_invitation_template(
+            invitee_name=invitee_name,
+            inviter_name=inviter_name,
+            team_name=team_name,
+            invitation_url=invitation_url,
+            role=role,
+        )
+        return self.send_email(email, template)
+
 
 # Global instance for convenience
 _email_service: Optional[EmailService] = None

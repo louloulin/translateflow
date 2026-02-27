@@ -20,6 +20,7 @@ from ModuleFolders.Service.Auth.models import (
 )
 from ModuleFolders.Service.Team.team_repository import TeamRepository
 from ModuleFolders.Service.Billing.SubscriptionManager import SubscriptionManager
+from ModuleFolders.Service.Email.email_service import get_email_service
 
 
 class TeamError(Exception):
@@ -289,6 +290,35 @@ class TeamManager:
         )
         member.invitation_token = invitation_token
         member.save()
+
+        # 发送邀请邮件
+        try:
+            email_service = get_email_service()
+            if email_service.is_available():
+                # 构建接受邀请的URL
+                # TODO: 从环境变量或配置中获取基础URL
+                base_url = "https://translateflow.example.com"
+                invitation_url = f"{base_url}/teams/accept?token={invitation_token}"
+                
+                # 获取邀请人信息
+                inviter = User.get_by_id(inviter_id)
+                inviter_name = inviter.full_name or inviter.username or inviter.email.split("@")[0]
+                
+                # 获取被邀请人信息
+                invitee_name = invitee.full_name or invitee.username or invitee.email.split("@")[0]
+                
+                # 发送邀请邮件
+                email_service.send_team_invitation(
+                    email=invitee.email,
+                    invitee_name=invitee_name,
+                    inviter_name=inviter_name,
+                    team_name=team.name,
+                    invitation_url=invitation_url,
+                    role=role,
+                )
+        except Exception as e:
+            # 邮件发送失败不影响邀请创建
+            print(f"Failed to send invitation email: {e}")
 
         return member
 

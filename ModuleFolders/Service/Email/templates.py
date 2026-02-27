@@ -811,3 +811,65 @@ TranslateFlow - AI驱动的翻译工具
         html=_render_base_html("发票通知", "<p>您有一张新的发票。</p>"),
         text="您有一张新的发票。"
     )
+
+
+def get_team_invitation_template(
+    invitee_name: str,
+    inviter_name: str,
+    team_name: str,
+    invitation_url: str,
+    role: str = "member"
+) -> EmailTemplate:
+    """获取团队邀请邮件模板"""
+    role_names = {
+        "owner": "所有者",
+        "admin": "管理员",
+        "member": "成员",
+    }
+    role_name = role_names.get(role, "成员")
+    
+    html_content = f"""
+        <h2>团队邀请</h2>
+        <p>你好 <strong>{invitee_name}</strong>,</p>
+        <p><strong>{inviter_name}</strong> 邀请您加入团队 <strong>{team_name}</strong>。</p>
+        <h3>邀请详情</h3>
+        <ul>
+            <li>团队：{team_name}</li>
+            <li>邀请人：{inviter_name}</li>
+            <li>角色：{role_name}</li>
+        </ul>
+        <p>点击下方按钮接受邀请：</p>
+        <p><a href="{invitation_url}" class="button">接受邀请</a></p>
+        <p>如果按钮无法点击，请复制以下链接到浏览器地址栏：</p>
+        <p class="code">{invitation_url}</p>
+        <p>此邀请链接将在 7 天后过期。</p>
+        <p>如果这不是您期望的邀请，请忽略此邮件。</p>
+    """
+
+    text_content = f"""团队邀请
+
+你好 {invitee_name},
+
+{inviter_name} 邀请您加入团队 {team_name}。
+
+邀请详情：
+- 团队：{team_name}
+- 邀请人：{inviter_name}
+- 角色：{role_name}
+
+点击下方链接接受邀请：
+{invitation_url}
+
+此邀请链接将在 7 天后过期。
+
+如果这不是您期望的邀请，请忽略此邮件。
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+    return EmailTemplate(
+        subject=f"TranslateFlow 团队邀请 - {team_name}",
+        html=_render_base_html("团队邀请", html_content),
+        text=text_content
+    )
