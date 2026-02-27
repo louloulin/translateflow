@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,11 @@ export const Login: React.FC<LoginProps> = ({ registerMode = false }) => {
   const { t } = useI18n();
   const { login, register, error, clearError, isLoading } = useAuth();
   const [isRegisterMode, setIsRegisterMode] = useState(registerMode);
+
+  // Sync state with prop when prop changes
+  useEffect(() => {
+    setIsRegisterMode(registerMode);
+  }, [registerMode]);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
