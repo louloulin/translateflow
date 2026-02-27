@@ -163,6 +163,23 @@ class Base():
     # 配置文件路径
     CONFIG_PATH = os.path.join(".", "Resource", "config.json")
 
+    # 获取profile配置文件路径
+    @classmethod
+    def get_profile_config_path(cls) -> str:
+        """获取当前profile的配置文件路径"""
+        config_path = cls.CONFIG_PATH
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    active_profile = config.get("active_profile", "default")
+                    profile_path = os.path.join(".", "Resource", "profiles", f"{active_profile}.json")
+                    if os.path.exists(profile_path):
+                        return profile_path
+            except:
+                pass
+        return None
+
     # 类线程锁
     CONFIG_FILE_LOCK = threading.Lock()
     
@@ -294,14 +311,17 @@ class Base():
     def load_config(self) -> dict:
         config = {}
 
+        # 首先尝试从profile加载
+        profile_path = Base.get_profile_config_path()
+
         with Base.CONFIG_FILE_LOCK:
-            if os.path.exists(Base.CONFIG_PATH):
+            # 优先使用profile配置
+            if profile_path and os.path.exists(profile_path):
+                with open(profile_path, "r", encoding="utf-8") as reader:
+                    config = json.load(reader)
+            elif os.path.exists(Base.CONFIG_PATH):
                 with open(Base.CONFIG_PATH, "r", encoding = "utf-8") as reader:
                     config = json.load(reader)
-            else:
-                # Silently ignore if config doesn't exist, or warn lightly
-                # self.warning("配置文件不存在 ...")
-                pass
 
         return config
 
@@ -309,10 +329,14 @@ class Base():
     def save_config(self, new: dict) -> None:
         old = {}
 
+        # 优先保存到profile
+        profile_path = Base.get_profile_config_path()
+        save_path = profile_path if profile_path else Base.CONFIG_PATH
+
         # 读取配置文件
         with Base.CONFIG_FILE_LOCK:
-            if os.path.exists(Base.CONFIG_PATH):
-                with open(Base.CONFIG_PATH, "r", encoding = "utf-8") as reader:
+            if os.path.exists(save_path):
+                with open(save_path, "r", encoding = "utf-8") as reader:
                     old = json.load(reader)
 
         # 对比新旧数据是否一致
@@ -329,8 +353,8 @@ class Base():
         # 写入配置文件
         with Base.CONFIG_FILE_LOCK:
             # Ensure directory exists
-            os.makedirs(os.path.dirname(Base.CONFIG_PATH), exist_ok=True)
-            with open(Base.CONFIG_PATH, "w", encoding = "utf-8") as writer:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            with open(save_path, "w", encoding = "utf-8") as writer:
                 writer.write(json.dumps(old, indent = 4, ensure_ascii = False))
 
         return old

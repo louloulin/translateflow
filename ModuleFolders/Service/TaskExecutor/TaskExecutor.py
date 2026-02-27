@@ -34,6 +34,7 @@ class TaskExecutor(Base):
         self.file_reader = file_reader
         self.file_writer = file_writer
         self.config = TaskConfig()
+        self.config.initialize()  # 初始化TaskConfig，加载配置文件
         self.request_limiter = RequestLimiter()
 
         # 注册事件
