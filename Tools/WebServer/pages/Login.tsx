@@ -5,10 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useI18n } from '@/contexts/I18nContext';
 
-export const Login: React.FC = () => {
+interface LoginProps {
+  registerMode?: boolean;
+}
+
+export const Login: React.FC<LoginProps> = ({ registerMode = false }) => {
   const { t } = useI18n();
   const { login, register, error, clearError, isLoading } = useAuth();
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(registerMode);
   const [formData, setFormData] = useState({
     username: '',
     email: '',

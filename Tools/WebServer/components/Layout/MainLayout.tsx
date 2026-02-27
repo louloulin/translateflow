@@ -28,6 +28,8 @@ import { ProjectDetails } from '@/pages/ProjectDetails';
 import { Editor } from '@/pages/Editor';
 import { Teams } from '@/pages/Teams';
 import { Login } from '@/pages/Login';
+import { Profile } from '@/pages/Profile';
+import { Subscription } from '@/pages/Subscription';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Custom hook to track hash based location for navigation
@@ -147,8 +149,11 @@ export const MainLayout: React.FC = () => {
           case '/stev': content = <StevExtraction />; break;
           case '/server': content = <Server />; break;
           case '/login': content = <Login />; break;
+          case '/register': content = <Login registerMode={true} />; break;
           case '/settings': content = <Settings />; break;
           case '/teams': content = <Teams />; break;
+          case '/profile': content = <Profile />; break;
+          case '/subscription': content = <Subscription />; break;
           case '/monitor': content = <Monitor />; break;
           case '/export': content = <div className="text-muted-foreground text-center mt-20">{t('menu_export_only')} (Placeholder)</div>; break;
           case '/logs': content = <div className="text-muted-foreground text-center mt-20">System Logs (Placeholder)</div>; break;
