@@ -75,6 +75,13 @@ class TenantStatus(str, Enum):
     SUSPENDED = "suspended"
 
 
+class TeamRole(str, Enum):
+    """Team member role enumeration."""
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"
+
+
 class BaseModel:
     """Base model with common fields."""
 
@@ -327,6 +334,70 @@ class RefreshToken(_db.Model):
         return f"<RefreshToken {self.user.username}>"
 
 
+class Team(_db.Model, BaseModel):
+    """Team model for collaborative translation projects."""
+
+    name = CharField(max_length=255)
+    slug = CharField(max_length=100, index=True)
+
+    # Team belongs to a tenant
+    tenant = ForeignKeyField(Tenant, backref="teams", on_delete="CASCADE", null=True)
+
+    # Team owner (user who created the team)
+    owner = ForeignKeyField(User, backref="owned_teams", on_delete="CASCADE")
+
+    # Team settings
+    description = TextField(null=True)
+    settings = JSONField(default=dict)
+
+    # Member limits (based on subscription plan)
+    max_members = IntegerField(default=5)
+
+    # Status
+    is_active = BooleanField(default=True)
+
+    class Meta:
+        table_name = "teams"
+        indexes = (
+            (("tenant_id", "slug"), True),  # Unique slug per tenant
+        )
+
+    def __str__(self):
+        return f"<Team {self.name}>"
+
+
+class TeamMember(_db.Model):
+    """Team member relationship model."""
+
+    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    team = ForeignKeyField(Team, backref="members", on_delete="CASCADE")
+    user = ForeignKeyField(User, backref="team_memberships", on_delete="CASCADE")
+
+    # Member role within the team
+    role = CharField(
+        max_length=20,
+        default=TeamRole.MEMBER.value,
+        choices=[(r.value, r.name) for r in TeamRole]
+    )
+
+    # Invitation status
+    invitation_status = CharField(max_length=20, default="pending")  # pending, accepted, declined
+    invitation_token = CharField(max_length=255, null=True, unique=True)
+
+    # Timestamps
+    invited_at = DateTimeField(default=datetime.utcnow)
+    joined_at = DateTimeField(null=True)
+
+    class Meta:
+        table_name = "team_members"
+        indexes = (
+            (("team_id", "user_id"), True),  # Unique membership
+        )
+
+    def __str__(self):
+        return f"<TeamMember {self.user.username} in {self.team.name}>"
+
+
 class OAuthAccount(_db.Model):
     """OAuth account linkage model for third-party login."""
 
@@ -379,6 +450,8 @@ def init_database():
     _db.create_tables([
         User,
         Tenant,
+        Team,
+        TeamMember,
         ApiKey,
         LoginHistory,
         PasswordReset,

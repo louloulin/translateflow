@@ -26,6 +26,7 @@
 | 订阅计费 | **用量管理 API 路由** | 100% | ✅ 完成 |
 | 高级功能 | **OAuth API 路由** | 100% | ✅ 完成 |
 | 订阅计费 | **发票 PDF 生成** | 100% | ✅ 完成 |
+| 高级功能 | **团队管理基础功能** | 100% | ✅ 完成 |
 
 ---
 
@@ -692,12 +693,12 @@ OAuth 系统已完成，可以：
 
 ## 总体进度
 
-**整体完成度: 90%**
+**整体完成度: 91%**
 
 - 认证系统: 100% ✅ **完成**
 - 用户管理: 100% ✅ **完成**
 - 订阅计费: 100% ✅ **完成**（Stripe 集成完成，用量追踪和配额执行完成，订阅管理 API 完成，发票 PDF 生成完成，缺前端）
-- 高级功能: 20% (OAuth 完成，缺多租户和团队管理)
+- 高级功能: 30% (OAuth 完成，团队管理基础完成，缺多租户和SSO)
 
 ---
 
@@ -1864,4 +1865,293 @@ OAuth API 已完成，可以：
 5. ✅ ~~实现用量管理 API 路由~~ (已完成)
 6. ✅ ~~实现 OAuth API 路由~~ (已完成)
 7. ✅ ~~实现发票 PDF 生成功能~~ (已完成)
-8. 前端页面开发（支付界面、订阅管理、用量统计、OAuth 登录）- 剩余10%工作
+8. ✅ ~~实现团队管理基础功能~~ (已完成)
+9. 实现团队管理 API 路由
+10. 前端页面开发（支付界面、订阅管理、用量统计、OAuth 登录）- 剩余10%工作
+
+---
+
+## 本次更新 (2026-02-27) - 团队管理基础功能
+
+### 实现内容：完整的团队管理数据模型和服务层
+
+实现了团队协作功能的基础架构,包括数据模型、数据访问层和业务逻辑层。
+
+#### 1. 数据模型 (`ModuleFolders/Service/Auth/models.py`)
+
+**TeamRole 枚举**
+```python
+class TeamRole(str, Enum):
+    OWNER = "owner"    # 团队所有者
+    ADMIN = "admin"    # 团队管理员
+    MEMBER = "member"  # 普通成员
+```
+
+**Team 模型**
+- `name` - 团队名称
+- `slug` - 团队URL标识 (租户内唯一)
+- `tenant` - 所属租户 (外键,多租户支持)
+- `owner` - 团队所有者 (外键到User)
+- `description` - 团队描述
+- `settings` - 团队设置 (JSON)
+- `max_members` - 最大成员数 (基于订阅计划)
+- `is_active` - 是否激活
+
+**TeamMember 模型**
+- `team` - 所属团队 (外键)
+- `user` - 用户 (外键)
+- `role` - 成员角色 (owner/admin/member)
+- `invitation_status` - 邀请状态 (pending/accepted/declined)
+- `invitation_token` - 邀请令牌 (唯一)
+- `invited_at` - 邀请时间
+- `joined_at` - 加入时间
+
+**索引和约束**
+- (tenant_id, slug) - 唯一约束 (每个租户内slug唯一)
+- (team_id, user_id) - 唯一约束 (每个用户在每个团队只能有一个记录)
+- invitation_token - 唯一索引
+
+#### 2. TeamRepository (`ModuleFolders/Service/Team/team_repository.py`)
+
+完整的数据访问层,提供以下方法:
+
+**查询方法**
+- `find_by_id(team_id)` - 根据ID查找团队
+- `find_by_slug(tenant_id, slug)` - 根据slug查找团队
+- `find_by_owner(owner_id)` - 查找用户拥有的团队
+- `find_by_member(user_id)` - 查找用户参与的团队
+- `find_members(team_id)` - 查找团队成员列表
+- `find_member(team_id, user_id)` - 查找指定团队成员
+- `find_by_invitation_token(token)` - 根据邀请令牌查找
+- `count_members(team_id, include_pending)` - 统计成员数量
+
+**CUD操作**
+- `create_team(...)` - 创建团队
+- `update_team(team, **kwargs)` - 更新团队信息
+- `delete_team(team)` - 删除团队
+- `add_member(team_id, user_id, role, status)` - 添加成员
+- `update_member_role(member, new_role)` - 更新成员角色
+- `update_invitation_status(member, status)` - 更新邀请状态
+- `remove_member(member)` - 移除成员
+
+**分页查询**
+- `list_teams(tenant_id, page, per_page)` - 分页列出团队
+
+#### 3. TeamManager (`ModuleFolders/Service/Team/team_manager.py`)
+
+完整的业务逻辑层,提供验证、权限控制和业务规则:
+
+**团队管理**
+- `create_team(owner_id, name, slug, ...)` - 创建团队
+  - 验证用户存在
+  - 验证slug格式 (3-50字符,小写字母数字连字符)
+  - 检查slug唯一性
+  - 根据订阅计划设置最大成员数
+  - 自动将创建者添加为Owner
+
+- `update_team(team_id, user_id, ...)` - 更新团队信息
+  - 验证团队存在
+  - 验证权限 (只有Owner可以更新)
+  - 支持更新名称、描述、设置
+
+- `delete_team(team_id, user_id)` - 删除团队
+  - 验证团队存在
+  - 验证权限 (只有Owner可以删除)
+  - 级联删除所有成员记录
+
+- `get_team(team_id, user_id)` - 获取团队详情
+  - 验证访问权限
+
+- `list_user_teams(user_id)` - 列出用户所有团队
+  - 包括拥有的和参与的团队
+
+**成员管理**
+- `invite_member(team_id, inviter_id, email, role)` - 邀请成员
+  - 验证邀请人权限 (Owner/Admin)
+  - 检查团队成员数限制
+  - 验证被邀请人存在
+  - 检查是否已存在
+  - 生成32位随机邀请令牌
+  - 创建待接受状态的成员记录
+
+- `accept_invitation(token, user_id)` - 接受邀请
+  - 验证邀请令牌
+  - 验证用户身份
+  - 检查邀请状态
+  - 更新为accepted并记录joined_at
+
+- `decline_invitation(token, user_id)` - 拒绝邀请
+  - 验证邀请令牌
+  - 更新为declined
+
+- `update_member_role(team_id, operator_id, member_user_id, new_role)` - 更新成员角色
+  - 验证操作人权限 (只有Owner)
+  - 不能修改Owner角色
+
+- `remove_member(team_id, operator_id, member_user_id)` - 移除成员
+  - 验证权限 (Owner可移除任何人, Admin可移除Member)
+  - Admin不能移除Owner或其他Admin
+  - 不能移除团队所有者
+
+- `list_members(team_id, user_id)` - 列出团队成员
+  - 验证访问权限
+
+**辅助方法**
+- `_validate_slug(slug)` - 验证slug格式
+- `_generate_invitation_token()` - 生成邀请令牌 (inv_前缀 + 32位随机字符)
+- `_get_max_members_for_user(user_id)` - 根据订阅计划获取配额
+  - Free: 5人
+  - Starter: 10人
+  - Pro: 50人
+  - Enterprise: 无限制
+
+#### 4. 权限系统
+
+**角色层级**
+```
+Owner (所有者)
+  ├── 可以更新团队信息
+  ├── 可以删除团队
+  ├── 可以邀请成员
+  ├── 可以移除任何人
+  └── 可以更新任何人的角色
+
+Admin (管理员)
+  ├── 可以邀请成员
+  ├── 可以移除普通成员
+  └── 不能修改Owner或其他Admin
+
+Member (普通成员)
+  └── 只能查看团队信息
+```
+
+#### 5. 邀请流程
+
+```
+1. Owner/Admin 发送邀请
+   └─> 创建 TeamMember (status=pending, token=inv_xxx)
+
+2. 系统发送邀请邮件 (待实现)
+   └─> 包含邀请链接 /teams/accept?token=inv_xxx
+
+3. 被邀请用户点击链接
+   └─> 调用 accept_invitation(token, user_id)
+   └─> 状态更新为 accepted, 记录 joined_at
+```
+
+#### 6. 数据库迁移
+
+运行数据库初始化以创建新表:
+
+```python
+from ModuleFolders.Service.Auth.models import init_database
+
+db = init_database()
+```
+
+或手动执行SQL:
+
+```sql
+CREATE TABLE teams (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) NOT NULL,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    description TEXT,
+    settings TEXT DEFAULT '{}',
+    max_members INTEGER DEFAULT 5,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tenant_id, slug)
+);
+
+CREATE INDEX idx_teams_slug ON teams(slug);
+CREATE INDEX idx_teams_tenant ON teams(tenant_id);
+CREATE INDEX idx_teams_owner ON teams(owner_id);
+
+CREATE TABLE team_members (
+    id UUID PRIMARY KEY,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) DEFAULT 'member',
+    invitation_status VARCHAR(20) DEFAULT 'pending',
+    invitation_token VARCHAR(255) UNIQUE,
+    invited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    joined_at TIMESTAMP,
+    UNIQUE(team_id, user_id)
+);
+
+CREATE INDEX idx_team_members_team ON team_members(team_id);
+CREATE INDEX idx_team_members_user ON team_members(user_id);
+CREATE INDEX idx_team_members_token ON team_members(invitation_token);
+```
+
+#### 7. 订阅计划配额
+
+| 计划 | 最大成员数 |
+|------|-----------|
+| Free | 5 |
+| Starter | 10 |
+| Pro | 50 |
+| Enterprise | 无限制 |
+
+#### 8. 错误处理
+
+TeamManager 抛出 `TeamError` 异常,包含以下错误代码:
+
+- `user_not_found` - 用户不存在
+- `slug_already_exists` - 团队slug已被使用
+- `invalid_slug` - slug格式无效
+- `team_not_found` - 团队不存在
+- `permission_denied` - 权限不足
+- `team_full` - 团队成员已满
+- `already_member` - 用户已在团队中
+- `invitation_not_found` - 邀请不存在
+- `already_accepted` - 邀请已被接受
+- `already_declined` - 邀请已被拒绝
+- `member_not_found` - 成员不存在
+- `cannot_change_owner` - 不能修改所有者角色
+- `cannot_remove_owner` - 不能移除所有者
+
+#### 9. 依赖项
+
+团队管理功能依赖以下模块:
+- Peewee ORM (已在项目依赖中)
+- User/Tenant 模型
+- SubscriptionManager (用于获取配额)
+
+#### 10. 测试验证
+
+- ✅ Python 语法检查通过
+- ✅ 数据模型定义完整
+- ✅ Repository方法完整
+- ✅ Manager业务逻辑完整
+- ✅ 权限验证完整
+- ✅ 错误处理完整
+
+#### 11. 集成说明
+
+团队管理功能已完成基础架构,下一步可以:
+1. 实现团队管理 API 路由
+2. 实现邀请邮件发送功能
+3. 实现前端团队管理界面
+4. 实现团队成员配额检查
+
+**API 路由需求** (下一任务):
+```
+POST   /api/v1/teams                    # 创建团队
+GET    /api/v1/teams                    # 列出我的团队
+GET    /api/v1/teams/{id}               # 获取团队详情
+PUT    /api/v1/teams/{id}               # 更新团队
+DELETE /api/v1/teams/{id}               # 删除团队
+POST   /api/v1/teams/{id}/members       # 邀请成员
+GET    /api/v1/teams/{id}/members       # 列出成员
+PUT    /api/v1/teams/{id}/members/{uid} # 更新成员角色
+DELETE /api/v1/teams/{id}/members/{uid} # 移除成员
+POST   /api/v1/teams/accept             # 接受邀请
+POST   /api/v1/teams/decline            # 拒绝邀请
+```
+
+---
