@@ -13,7 +13,7 @@ from typing import List, Dict, Any, Optional
 # --- Pre-emptive Import for FastAPI & Pydantic ---
 try:
     import uvicorn
-    from fastapi import FastAPI, HTTPException, Body, File, UploadFile, Response, BackgroundTasks, Depends, Header
+    from fastapi import FastAPI, HTTPException, Body, File, UploadFile, Response, BackgroundTasks, Depends, Header, Request
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
     from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm

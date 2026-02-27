@@ -1,0 +1,50 @@
+[      42ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[      42ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[      42ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[      42ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[   17265ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[   17265ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[   17269ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[   17269ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[   21216ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[   21216ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[   21219ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[   21219ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[   58341ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/cache/status:0
+[   58341ms] [WARNING] Backend not available, skipping auto-restore: Error: Backend not available
+    at checkCacheStatus (http://localhost:4200/pages/CacheEditor.tsx?t=1772210639873:210:13)
+    at async initializeState (http://localhost:4200/pages/CacheEditor.tsx?t=1772210639873:148:9) @ http://localhost:4200/pages/CacheEditor.tsx?t=1772210639873:173
+[   58341ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/cache/status:0
+[   58341ms] [WARNING] Backend not available, skipping auto-restore: Error: Backend not available
+    at checkCacheStatus (http://localhost:4200/pages/CacheEditor.tsx?t=1772210639873:210:13)
+    at async initializeState (http://localhost:4200/pages/CacheEditor.tsx?t=1772210639873:148:9) @ http://localhost:4200/pages/CacheEditor.tsx?t=1772210639873:173
+[   63021ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[   63021ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[   63024ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[   63024ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx?t=1772210639873:20:20) @ http://localhost:4200/services/DataService.ts:511
+[   64284ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:4200/api/v1/teams:0
+[   64292ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:4200/api/v1/teams:0
+[   66975ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[   66976ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025

@@ -1,0 +1,10 @@
+[      62ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[     312ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/favicon.ico:0
+[    3566ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[    3566ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx:20:20) @ http://localhost:4200/services/DataService.ts:511
+[    3572ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:4200/api/plugins:0
+[    3572ms] [ERROR] API Error: getPlugins Error: Failed to fetch plugins
+    at Object.getPlugins (http://localhost:4200/services/DataService.ts:509:26)
+    at async loadPlugins (http://localhost:4200/pages/Plugins.tsx:20:20) @ http://localhost:4200/services/DataService.ts:511
