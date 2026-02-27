@@ -3,9 +3,3 @@
 
 ## 重要
 实现相关的功能，更新标记相关的实), spawning parallel loop in worktree
-2026-02-27T10:06:00.264124Z  INFO ralph: Created worktree at /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/wise-palm on branch ralph/wise-palm
-2026-02-27T10:06:00.375800Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/wise-palm"
-2026-02-27T10:06:00.375817Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/wise-palm/.ralph/agent/memories.md" (exists: true)
-2026-02-27T10:06:00.377946Z  INFO ralph_core::event_loop: Successfully loaded 2 memories from store
-2026-02-27T10:06:00.377955Z  INFO ralph_core::event_loop: Injecting 2 memories (668 chars) into prompt
-2026-02-27T10:06:00.378011Z  INFO ralph_core::event_loop: Injecting ready tasks (0 ready, 0 open, 3 closed) into prompt
