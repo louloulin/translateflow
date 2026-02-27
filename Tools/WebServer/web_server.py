@@ -5556,6 +5556,62 @@ async def decline_team_invitation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/v1/teams/{team_id}/quota", response_model=Dict[str, Any])
+async def get_team_quota_status(
+    team_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取团队配额状态
+
+    路径参数：
+    - team_id: 团队ID
+
+    返回：
+    团队配额信息，包含：
+    - current_members: 当前成员数（已加入）
+    - pending_invites: 待接受邀请数
+    - total_reserved: 总占用名额（已加入 + 待接受）
+    - max_members: 最大成员数（基于订阅计划）
+    - remaining_slots: 剩余可用名额
+    - usage_percentage: 使用百分比
+    - plan: 订阅计划名称
+    - is_unlimited: 是否无限制
+
+    说明：
+    - 配额基于团队所有者的订阅计划
+    - Free: 5人, Starter: 10人, Pro: 50人, Enterprise: 无限制
+    - 待接受的邀请也计入配额
+
+    错误：
+    - 403: 无权限访问团队
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team.team_quota_middleware import TeamQuotaMiddleware
+        from ModuleFolders.Service.Team.team_manager import TeamManager, TeamError
+
+        # 验证访问权限
+        team_manager = TeamManager()
+        team = team_manager.get_team(team_id, str(user.id))
+
+        # 获取配额状态
+        quota_middleware = TeamQuotaMiddleware()
+        quota_status = quota_middleware.get_quota_status(team_id, str(user.id))
+
+        return quota_status
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # --- Static File Serving for the React Frontend ---
 
 # This will serve the built React app (index.html, JS, CSS files)

@@ -259,13 +259,14 @@ class TeamManager:
         ]:
             raise TeamError("无权限邀请成员", "permission_denied")
 
-        # 检查团队是否已满
-        member_count = self.repository.count_members(team_id, include_pending=True)
-        if member_count >= team.max_members:
-            raise TeamError(
-                f"团队成员已满 (最大{team.max_members}人)",
-                "team_full"
-            )
+        # 检查团队配额 (使用配额中间件)
+        from ModuleFolders.Service.Team.team_quota_middleware import TeamQuotaMiddleware, TeamQuotaError
+        quota_middleware = TeamQuotaMiddleware()
+        try:
+            quota_middleware.check_before_add_member(team_id, inviter_id, email)
+        except TeamQuotaError as e:
+            # 将配额异常转换为TeamError
+            raise TeamError(e.message, "team_full")
 
         # 查找被邀请用户
         try:

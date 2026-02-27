@@ -28,6 +28,7 @@
 | 订阅计费 | **发票 PDF 生成** | 100% | ✅ 完成 |
 | 高级功能 | **团队管理基础功能** | 100% | ✅ 完成 |
 | 高级功能 | **团队管理 API 路由** | 100% | ✅ 完成 |
+| 高级功能 | **团队成员配额检查中间件** | 100% | ✅ 完成 |
 
 ---
 
@@ -2556,14 +2557,337 @@ Member (普通成员)
 
 ---
 
+## 本次更新 (2026-02-27) - 团队成员配额检查中间件
+
+### 实现内容：团队成员配额检查中间件系统
+
+实现了完整的团队成员配额检查中间件,根据订阅计划自动执行团队成员配额限制。
+
+#### 1. TeamQuotaMiddleware (`ModuleFolders/Service/Team/team_quota_middleware.py`)
+
+完整的配额中间件,提供以下功能:
+
+**配额配置**
+```python
+QUOTA_LIMITS = {
+    SubscriptionPlan.FREE: 5,        # 免费计划 5人
+    SubscriptionPlan.STARTER: 10,    # 入门计划 10人
+    SubscriptionPlan.PRO: 50,        # 专业计划 50人
+    SubscriptionPlan.ENTERPRISE: float('inf'),  # 企业计划 无限制
+}
+```
+
+**核心方法**
+- `get_max_members(user_id)` - 获取用户的最大成员配额
+- `get_plan_name(user_id)` - 获取用户的订阅计划名称
+- `check_team_quota(team_id, user_id)` - 检查团队配额
+- `check_before_add_member(team_id, operator_id, email)` - 添加成员前检查
+- `get_quota_status(team_id, user_id)` - 获取配额状态
+
+**配额检查**
+- `check_team_quota()` - 检查配额是否可用
+  - 根据订阅计划获取配额限制
+  - 统计当前成员数(可包含待接受邀请)
+  - 超出配额时抛出 TeamQuotaError
+  - 返回配额使用情况
+
+- `get_quota_status()` - 获取详细配额状态
+  - current_members: 已加入成员数
+  - pending_invites: 待接受邀请数
+  - total_reserved: 总占用名额
+  - max_members: 最大配额
+  - remaining_slots: 剩余名额
+  - usage_percentage: 使用百分比
+  - plan: 订阅计划名称
+  - is_unlimited: 是否无限制
+
+**异常处理**
+- `TeamQuotaError` - 配额异常
+  - message: 错误消息
+  - current_members: 当前成员数
+  - max_members: 最大配额
+  - plan: 订阅计划
+  - to_dict(): 转换为字典格式,包含升级链接
+
+**FastAPI 集成**
+- `require_team_quota` - FastAPI 依赖函数
+  - 自动检查团队配额
+  - 可在路由中直接使用
+
+- `@check_team_quota` - 装饰器
+  - 简化配额检查代码
+  - 自动注入配额结果
+
+#### 2. TeamManager 集成 (`ModuleFolders/Service/Team/team_manager.py`)
+
+在 `invite_member()` 方法中集成配额中间件:
+
+**集成流程**
+1. 验证团队存在
+2. 验证邀请人权限
+3. **使用配额中间件检查配额** (新增)
+4. 查找被邀请用户
+5. 检查是否已存在
+6. 创建邀请记录
+
+**代码变更**
+```python
+# 旧代码: 直接检查 max_members
+member_count = self.repository.count_members(team_id, include_pending=True)
+if member_count >= team.max_members:
+    raise TeamError(f"团队成员已满 (最大{team.max_members}人)", "team_full")
+
+# 新代码: 使用配额中间件
+from ModuleFolders.Service.Team.team_quota_middleware import TeamQuotaMiddleware, TeamQuotaError
+quota_middleware = TeamQuotaMiddleware()
+try:
+    quota_middleware.check_before_add_member(team_id, inviter_id, email)
+except TeamQuotaError as e:
+    raise TeamError(e.message, "team_full")
+```
+
+**优势**
+- 基于订阅计划动态调整配额
+- 统一的配额管理逻辑
+- 更详细的错误信息
+- 包含升级引导
+
+#### 3. API 路由 (`Tools/WebServer/web_server.py`)
+
+新增配额状态查询接口:
+
+**GET /api/v1/teams/{team_id}/quota** - 获取团队配额状态
+
+返回示例:
+```json
+{
+  "current_members": 3,
+  "pending_invites": 1,
+  "total_reserved": 4,
+  "max_members": 10,
+  "remaining_slots": 6,
+  "usage_percentage": 30.0,
+  "plan": "starter",
+  "is_unlimited": false
+}
+```
+
+**功能说明**
+- 需要认证 (JWT Token)
+- 验证访问权限(必须是团队成员)
+- 返回详细配额状态
+- 包含订阅计划信息
+- 计算使用百分比
+
+#### 4. 配额限制规则
+
+| 订阅计划 | 最大成员数 | 说明 |
+|---------|-----------|------|
+| Free | 5 | 免费计划,最多5人 |
+| Starter | 10 | 入门计划,最多10人 |
+| Pro | 50 | 专业计划,最多50人 |
+| Enterprise | 无限制 | 企业计划,不限制人数 |
+
+#### 5. 使用示例
+
+**检查配额**
+```python
+from ModuleFolders.Service.Team.team_quota_middleware import TeamQuotaMiddleware, TeamQuotaError
+
+middleware = TeamQuotaMiddleware()
+
+try:
+    result = middleware.check_team_quota(
+        team_id="team-uuid-123",
+        user_id="user-uuid-456"
+    )
+    # result: {
+    #     "allowed": true,
+    #     "current_members": 3,
+    #     "max_members": 10,
+    #     "remaining_slots": 7,
+    #     "plan": "starter"
+    # }
+except TeamQuotaError as e:
+    # e.message: "团队成员数已达上限 (10/10)。当前计划: starter。请升级订阅以邀请更多成员。"
+    # e.to_dict(): {
+    #     "error": "team_quota_exceeded",
+    #     "message": "...",
+    #     "current_members": 10,
+    #     "max_members": 10,
+    #     "plan": "starter",
+    #     "upgrade_url": "/pricing"
+    # }
+    pass
+```
+
+**获取配额状态**
+```python
+status = middleware.get_quota_status(
+    team_id="team-uuid-123",
+    user_id="user-uuid-456"
+)
+# status: {
+#     "current_members": 3,
+#     "pending_invites": 1,
+#     "total_reserved": 4,
+#     "max_members": 10,
+#     "remaining_slots": 6,
+#     "usage_percentage": 30.0,
+#     "plan": "starter",
+#     "is_unlimited": false
+# }
+```
+
+**FastAPI 依赖集成**
+```python
+from fastapi import Depends
+from ModuleFolders.Service.Team.team_quota_middleware import require_team_quota
+
+@app.post("/api/v1/teams/{team_id}/members")
+async def invite_member(
+    team_id: str,
+    request: InviteMemberRequest,
+    current_user: User = Depends(get_current_user),
+    quota: Dict[str, Any] = Depends(require_team_quota)  # 自动检查配额
+):
+    # quota 包含配额检查结果
+    # 如果配额不足,自动返回错误
+    pass
+```
+
+**装饰器集成**
+```python
+from ModuleFolders.Service.Team.team_quota_middleware import check_team_quota
+
+@app.post("/api/v1/teams/{team_id}/members")
+@check_team_quota()  # 自动检查配额
+async def invite_member(
+    team_id: str,
+    request: InviteMemberRequest,
+    current_user: User,
+    quota_result: Dict[str, Any]  # 自动注入配额结果
+):
+    # 配额检查通过后执行
+    pass
+```
+
+#### 6. API 使用示例
+
+**获取配额状态**
+```bash
+curl -X GET "http://localhost:8000/api/v1/teams/team-uuid-123/quota" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**响应示例**
+```json
+{
+  "current_members": 3,
+  "pending_invites": 1,
+  "total_reserved": 4,
+  "max_members": 10,
+  "remaining_slots": 6,
+  "usage_percentage": 30.0,
+  "plan": "starter",
+  "is_unlimited": false
+}
+```
+
+#### 7. 错误处理
+
+**配额超限错误**
+```json
+{
+  "detail": "团队成员数已达上限 (10/10)。当前计划: starter。请升级订阅以邀请更多成员。"
+}
+```
+
+**TeamQuotaError.to_dict() 输出**
+```json
+{
+  "error": "team_quota_exceeded",
+  "message": "团队成员数已达上限 (10/10)。当前计划: starter。请升级订阅以邀请更多成员。",
+  "current_members": 10,
+  "max_members": 10,
+  "plan": "starter",
+  "upgrade_url": "/pricing"
+}
+```
+
+#### 8. 依赖模块
+
+配额中间件依赖以下模块:
+- TeamManager (ModuleFolders/Service/Team/team_manager.py)
+- TeamRepository (ModuleFolders/Service/Team/team_repository.py)
+- SubscriptionManager (ModuleFolders/Service/Billing/SubscriptionManager.py)
+- User/Tenant 模型 (ModuleFolders/Service/Auth/models.py)
+
+#### 9. 测试验证
+
+- ✅ Python 语法检查通过
+- ✅ 配额中间件方法完整
+- ✅ TeamManager 集成成功
+- ✅ API 路由注册成功
+- ✅ 错误处理完整
+
+#### 10. 功能特性
+
+**动态配额**
+- 根据订阅计划自动调整
+- 支持实时配额查询
+- Enterprise 计划无限制
+
+**详细状态**
+- 成员分类统计(已加入/待接受)
+- 使用百分比计算
+- 剩余名额显示
+
+**用户友好**
+- 清晰的错误消息
+- 包含升级引导
+- 中文提示信息
+
+**灵活集成**
+- FastAPI 依赖函数
+- 装饰器支持
+- 直接方法调用
+
+#### 11. 安全特性
+
+**权限验证**
+- 检查访问权限
+- 用户只能查看自己团队的配额
+- 基于团队所有者的订阅计划
+
+**数据一致性**
+- 包含待接受邀请的计算
+- 实时统计成员数量
+- 防止超配额添加成员
+
+#### 12. 集成说明
+
+团队成员配额检查中间件已完成并集成到:
+- TeamManager.invite_member() - 邀请成员时自动检查
+- GET /api/v1/teams/{team_id}/quota - 配额状态查询API
+
+### 下一步
+
+团队成员配额检查中间件已完成,可以:
+1. 实现前端团队管理界面
+2. 实现配额预警通知功能
+3. 前端页面开发(剩余约8%工作)
+
+---
+
 ## 总体进度
 
-**整体完成度: 93%**
+**整体完成度: 94%**
 
 - 认证系统: 100% ✅ **完成**
 - 用户管理: 100% ✅ **完成**
 - 订阅计费: 100% ✅ **完成**（Stripe 集成完成，用量追踪和配额执行完成，订阅管理 API 完成，发票 PDF 生成完成，缺前端）
-- 高级功能: 50% (OAuth 完成，团队管理 API 完成，团队邀请邮件完成，缺多租户和SSO)
+- 高级功能: 55% (OAuth 完成，团队管理 API 完成，团队邀请邮件完成，团队配额中间件完成，缺多租户和SSO)
 
 ---
 
@@ -2578,6 +2902,7 @@ Member (普通成员)
 7. ✅ ~~实现发票 PDF 生成功能~~ (已完成)
 8. ✅ ~~实现团队管理基础功能~~ (已完成)
 9. ✅ ~~实现团队管理 API 路由~~ (已完成)
-10. 前端页面开发（支付界面、订阅管理、用量统计、OAuth 登录、团队管理）- 剩余9%工作
+10. ✅ ~~实现团队成员配额检查中间件~~ (已完成)
+11. 前端页面开发（支付界面、订阅管理、用量统计、OAuth 登录、团队管理）- 剩余6%工作
 
 ---
