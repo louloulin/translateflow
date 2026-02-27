@@ -117,7 +117,7 @@ class FileReader():
         files = os.listdir(folder_path)
 
         # 查找以 "CacheData" 开头且以 ".json" 结尾的文件
-        json_files = [file for file in files if file.startswith("AinieeCacheData") and file.endswith(".json")]
+        json_files = [file for file in files if file.startswith("TranslateFlowCacheData") and file.endswith(".json")]
 
         if not json_files:
             print(f"Error: No 'CacheData' JSON files found in folder '{folder_path}'.")

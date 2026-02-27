@@ -99,8 +99,8 @@ class TUIEditor:
     def load_cache_data(self, project_path: str) -> bool:
         """从缓存文件加载数据"""
         try:
-            cache_file = os.path.join(project_path, "cache", "AinieeCacheData.json")
-            proofread_cache_file = os.path.join(project_path, "cache", "AinieeCacheData_proofread.json")
+            cache_file = os.path.join(project_path, "cache", "TranslateFlowCacheData.json")
+            proofread_cache_file = os.path.join(project_path, "cache", "TranslateFlowCacheData_proofread.json")
 
             # 检查是否存在AI校对版本的cache
             if os.path.exists(proofread_cache_file):

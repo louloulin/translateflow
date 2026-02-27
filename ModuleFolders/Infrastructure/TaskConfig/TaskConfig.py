@@ -330,7 +330,7 @@ class TaskConfig(Base):
             if os.path.isfile(abs_input_path):
                 base_name = os.path.splitext(base_name)[0]
             
-            output_folder_name = f"{base_name}_AiNiee_Output"
+            output_folder_name = f"{base_name}_TranslateFlow_Output"
             self.label_output_path = os.path.join(parent_dir, output_folder_name)
 
             # 润色文本输出路径

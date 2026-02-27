@@ -93,7 +93,7 @@ class CacheManager(Base):
         }
         """
         cache_dir = os.path.join(self.save_to_file_require_path, "cache")
-        path = os.path.join(cache_dir, "AinieeCacheData.json")
+        path = os.path.join(cache_dir, "TranslateFlowCacheData.json")
         # 定义临时文件路径，确保在同一文件系统下以支持原子性替换
         tmp_path = path + f".{os.getpid()}.tmp"
 
@@ -117,7 +117,7 @@ class CacheManager(Base):
                     timestamp = time.strftime("%Y%m%d_%H%M%S")
                     backup_dir = os.path.join(cache_dir, "backups")
                     os.makedirs(backup_dir, exist_ok=True)
-                    backup_path = os.path.join(backup_dir, f"AinieeCacheData_{timestamp}.json")
+                    backup_path = os.path.join(backup_dir, f"TranslateFlowCacheData_{timestamp}.json")
                     
                     import shutil
                     shutil.copy2(path, backup_path)
@@ -127,7 +127,7 @@ class CacheManager(Base):
                     if limit > 0:
                         try:
                             backups = sorted(
-                                [os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.startswith("AinieeCacheData_")],
+                                [os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.startswith("TranslateFlowCacheData_")],
                                 key=os.path.getmtime
                             )
                             while len(backups) > limit:
@@ -186,7 +186,7 @@ class CacheManager(Base):
     # 从缓存文件读取数据
     def load_from_file(self, output_path: str) -> None:
         """从文件加载数据"""
-        path = os.path.join(output_path, "cache", "AinieeCacheData.json")
+        path = os.path.join(output_path, "cache", "TranslateFlowCacheData.json")
         with self.file_lock:
             if os.path.isfile(path):
                 try:
@@ -199,7 +199,7 @@ class CacheManager(Base):
                         backup_dir = os.path.join(output_path, "cache", "backups")
                         if os.path.exists(backup_dir):
                             # Find newest backup
-                            backups = sorted([os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.startswith("AinieeCacheData_")], 
+                            backups = sorted([os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.startswith("TranslateFlowCacheData_")], 
                                             key=lambda x: os.path.getmtime(x), reverse=True)
                             for b_path in backups:
                                 try:
