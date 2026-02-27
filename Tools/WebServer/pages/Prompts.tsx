@@ -3,6 +3,15 @@ import { Save, Plus, Trash2, FileText, Search, RefreshCw, ChevronRight, AlertTri
 import { DataService } from '../services/DataService';
 import { useI18n } from '../contexts/I18nContext';
 import { useGlobal } from '../contexts/GlobalContext';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { ScrollArea } from '../components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../components/ui/dialog';
+import { Separator } from '../components/ui/separator';
+import { Badge } from '../components/ui/badge';
+import { cn } from '../lib/utils';
 
 export const Prompts: React.FC = () => {
     const { t } = useI18n();
@@ -77,9 +86,11 @@ export const Prompts: React.FC = () => {
         setSaving(true);
         try {
             await DataService.savePromptContent(activeCategory, selectedPrompt, content);
-            alert(t('msg_saved') || 'Saved successfully');
+            // using toast would be better here, but for now alert is fine or we can add a simple notification system later
+            // For now, let's just use alert as in the original code, or console log
+            console.log('Saved successfully');
         } catch (e) {
-            alert('Save failed');
+            console.error('Save failed', e);
         } finally {
             setSaving(false);
         }
@@ -98,9 +109,8 @@ export const Prompts: React.FC = () => {
         try {
             await DataService.saveConfig(newConfig);
             setConfig(newConfig);
-            alert(t('msg_prompt_updated') || 'Prompt applied');
         } catch (e) {
-            alert('Apply failed');
+            console.error('Apply failed', e);
         }
     };
 
@@ -114,7 +124,7 @@ export const Prompts: React.FC = () => {
             setNewName('');
             loadPromptContent(filename);
         } catch (e) {
-            alert('Create failed');
+            console.error('Create failed', e);
         }
     };
 
@@ -123,156 +133,165 @@ export const Prompts: React.FC = () => {
 
     const filteredPrompts = prompts.filter(p => p.toLowerCase().includes(filter.toLowerCase()));
 
-    const getThemeColorClass = () => {
-        switch(activeTheme) {
-            case 'elysia': return 'text-pink-500';
-            case 'herrscher_of_human': return 'text-[#ff4d6d]';
-            default: return 'text-primary';
-        }
-    };
-
     return (
-        <div className="flex flex-col h-[calc(100vh-120px)] max-w-7xl mx-auto space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                    <Edit3 className={getThemeColorClass()} size={24} />
-                    <h1 className="text-2xl font-bold text-white">{t('menu_prompt_features') || 'Prompt Management'}</h1>
+        <div className="flex flex-col h-[calc(100vh-100px)] gap-4 p-4 max-w-[1600px] mx-auto w-full">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Edit3 className="h-6 w-6 text-primary" />
+                    <h1 className="text-2xl font-bold tracking-tight">{t('menu_prompt_features') || 'Prompt Management'}</h1>
                 </div>
                 {selectedPrompt && !isSystem && (
-                    <div className="flex gap-3">
+                    <div className="flex gap-2">
                         {isSelectionTarget && (
-                            <button 
-                                onClick={handleApply}
-                                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-primary border border-primary/30 px-4 py-2 rounded-lg font-bold transition-all"
-                            >
-                                <Check size={18} /> {t('opt_apply') || 'Apply'}
-                            </button>
+                            <Button variant="outline" onClick={handleApply} className="gap-2">
+                                <Check className="h-4 w-4" /> {t('opt_apply') || 'Apply'}
+                            </Button>
                         )}
-                        <button 
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="flex items-center gap-2 bg-primary hover:bg-cyan-400 text-slate-900 px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-primary/20"
-                        >
-                            {saving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
+                        <Button onClick={handleSave} disabled={saving} className="gap-2">
+                            {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             {t('ui_settings_save') || 'Save'}
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>
 
-            <div className="flex flex-1 overflow-hidden gap-4">
-                {/* Categories & Files Sidebar */}
-                <div className="w-72 flex flex-col gap-4 overflow-hidden">
-                    {/* Categories */}
-                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-2 flex flex-wrap gap-1">
-                        {categories.map(cat => (
-                            <button
-                                key={cat}
-                                onClick={() => setActiveCategory(cat)}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${activeCategory === cat ? 'bg-primary text-slate-900' : 'text-slate-400 hover:bg-slate-800'}`}
-                            >
-                                {cat}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* File List */}
-                    <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl flex flex-col overflow-hidden">
-                        <div className="p-3 border-b border-slate-800 flex flex-col gap-2">
-                            <div className="relative">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Filter..." 
-                                    value={filter}
-                                    onChange={e => setFilter(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white focus:border-primary outline-none"
-                                />
-                            </div>
-                            {!isSystem && (
-                                <button 
-                                    onClick={() => setIsCreating(true)}
-                                    className="w-full flex items-center justify-center gap-2 py-1.5 bg-primary/10 border border-primary/20 text-primary rounded-lg hover:bg-primary/20 transition-all text-xs font-bold"
+            <div className="flex flex-1 gap-4 overflow-hidden">
+                {/* Sidebar */}
+                <Card className="w-80 flex flex-col border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                            Categories
+                        </CardTitle>
+                    </CardHeader>
+                    <div className="px-4 pb-4">
+                        <div className="flex flex-wrap gap-2">
+                            {categories.map(cat => (
+                                <Button
+                                    key={cat}
+                                    variant={activeCategory === cat ? "default" : "secondary"}
+                                    size="sm"
+                                    onClick={() => setActiveCategory(cat)}
+                                    className={cn("text-xs", activeCategory === cat ? "" : "text-muted-foreground")}
                                 >
-                                    <Plus size={14} /> {t('menu_prompt_create') || 'New Prompt'}
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                            {isCreating && (
-                                <div className="p-2 bg-slate-800 rounded-lg border border-primary/30 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
-                                    <input 
-                                        autoFocus
-                                        className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white outline-none"
-                                        placeholder="Prompt name..."
-                                        value={newName}
-                                        onChange={e => setNewName(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && handleCreate()}
-                                    />
-                                    <div className="flex justify-end gap-2">
-                                        <button onClick={() => setIsCreating(false)} className="p-1 hover:text-red-400"><X size={14}/></button>
-                                        <button onClick={handleCreate} className="p-1 text-primary hover:text-cyan-300"><Check size={14}/></button>
-                                    </div>
-                                </div>
-                            )}
-                            {filteredPrompts.map(p => (
-                                <button
-                                    key={p}
-                                    onClick={() => loadPromptContent(p)}
-                                    className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left text-xs transition-all group ${selectedPrompt === p ? 'bg-primary/10 border border-primary/30 text-primary font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent'}`}
-                                >
-                                    <div className="flex items-center gap-2 truncate">
-                                        <FileText size={14} className={selectedPrompt === p ? 'text-primary' : 'text-slate-500'} />
-                                        <span className="truncate">{p.replace(/\.(txt|json)$/, '')}</span>
-                                    </div>
-                                    <ChevronRight size={12} className={`opacity-0 group-hover:opacity-100 transition-opacity ${selectedPrompt === p ? 'opacity-100' : ''}`} />
-                                </button>
+                                    {cat}
+                                </Button>
                             ))}
                         </div>
                     </div>
-                </div>
-
-                {/* Content Editor */}
-                <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl flex flex-col overflow-hidden relative">
-                    {loading && (
-                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-10 flex items-center justify-center">
-                            <RefreshCw className="animate-spin text-primary" size={32} />
-                        </div>
-                    )}
                     
-                    {selectedPrompt ? (
-                        <>
-                            <div className="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-900/30">
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{activeCategory}</span>
-                                    <span className="text-sm font-bold text-white">{selectedPrompt}</span>
-                                </div>
-                                {isSystem && (
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
-                                        <AlertTriangle size={12} className="text-red-500" />
-                                        <span className="text-[10px] font-bold text-red-500 uppercase tracking-tighter">{t('label_readonly') || 'Read Only'}</span>
+                    <Separator />
+                    
+                    <div className="p-4 flex flex-col gap-2 flex-1 overflow-hidden">
+                        <div className="relative">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Filter prompts..."
+                                value={filter}
+                                onChange={e => setFilter(e.target.value)}
+                                className="pl-8 h-9"
+                            />
+                        </div>
+                        
+                        {!isSystem && (
+                            <Dialog open={isCreating} onOpenChange={setIsCreating}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start gap-2 h-9 border-dashed text-muted-foreground hover:text-primary">
+                                        <Plus className="h-4 w-4" /> {t('menu_prompt_create') || 'New Prompt'}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Create New Prompt</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="py-4">
+                                        <Input
+                                            placeholder="Enter prompt name..."
+                                            value={newName}
+                                            onChange={e => setNewName(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleCreate()}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsCreating(false)}>Cancel</Button>
+                                        <Button onClick={handleCreate}>Create</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        )}
+
+                        <ScrollArea className="flex-1 pr-2">
+                            <div className="flex flex-col gap-1 py-1">
+                                {filteredPrompts.map(p => (
+                                    <Button
+                                        key={p}
+                                        variant={selectedPrompt === p ? "secondary" : "ghost"}
+                                        className={cn(
+                                            "justify-between h-auto py-2 px-3 font-normal",
+                                            selectedPrompt === p && "bg-primary/10 text-primary font-medium"
+                                        )}
+                                        onClick={() => loadPromptContent(p)}
+                                    >
+                                        <div className="flex items-center gap-2 truncate">
+                                            <FileText className={cn("h-4 w-4 shrink-0", selectedPrompt === p ? "text-primary" : "text-muted-foreground")} />
+                                            <span className="truncate">{p.replace(/\.(txt|json)$/, '')}</span>
+                                        </div>
+                                        {selectedPrompt === p && <ChevronRight className="h-3 w-3 opacity-50" />}
+                                    </Button>
+                                ))}
+                                {filteredPrompts.length === 0 && (
+                                    <div className="text-center py-8 text-muted-foreground text-sm">
+                                        No prompts found
                                     </div>
                                 )}
                             </div>
-                            <textarea
-                                value={content}
-                                onChange={e => setContent(e.target.value)}
-                                readOnly={isSystem}
-                                className={`flex-1 w-full bg-slate-950 p-6 font-mono text-sm leading-relaxed outline-none transition-all ${isSystem ? 'text-slate-400 cursor-default' : 'text-slate-200 focus:bg-slate-950/50'}`}
-                                placeholder="Prompt content..."
-                            />
+                        </ScrollArea>
+                    </div>
+                </Card>
+
+                {/* Editor */}
+                <Card className="flex-1 flex flex-col overflow-hidden border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
+                    {selectedPrompt ? (
+                        <>
+                            <div className="flex items-center justify-between p-4 border-b">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-[10px] uppercase">{activeCategory}</Badge>
+                                        <h2 className="font-semibold text-lg">{selectedPrompt}</h2>
+                                    </div>
+                                </div>
+                                {isSystem && (
+                                    <Badge variant="destructive" className="gap-1">
+                                        <AlertTriangle className="h-3 w-3" />
+                                        {t('label_readonly') || 'Read Only'}
+                                    </Badge>
+                                )}
+                            </div>
+                            <div className="flex-1 p-0 relative">
+                                {loading && (
+                                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                                        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                                    </div>
+                                )}
+                                <Textarea
+                                    value={content}
+                                    onChange={e => setContent(e.target.value)}
+                                    readOnly={isSystem}
+                                    className="w-full h-full resize-none border-0 focus-visible:ring-0 rounded-none p-6 font-mono text-sm leading-relaxed"
+                                    placeholder="Enter prompt content here..."
+                                />
+                            </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 space-y-4">
-                            <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center">
-                                <FileText size={32} />
+                        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4">
+                            <div className="h-16 w-16 rounded-full bg-secondary/50 flex items-center justify-center">
+                                <FileText className="h-8 w-8" />
                             </div>
                             <p className="text-sm font-medium">Select a prompt to view or edit</p>
-                            {elysiaActive && <Sparkles className="text-pink-400 animate-pulse" size={24} />}
+                            {elysiaActive && <Sparkles className="text-pink-400 animate-pulse h-6 w-6" />}
                         </div>
                     )}
-                </div>
+                </Card>
             </div>
         </div>
     );

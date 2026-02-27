@@ -46,11 +46,11 @@ export const Terminal: React.FC<TerminalProps> = ({ logs, height = "h-64" }) => 
         {logs.map((log) => (
           <div 
             key={log.id} 
-            className={`flex gap-3 hover:bg-white/5 p-0.5 rounded px-2 transition-colors ${log.type === 'error' ? 'cursor-pointer' : ''}`}
+            className={`flex gap-3 min-w-0 hover:bg-white/5 p-0.5 rounded px-2 transition-colors ${log.type === 'error' ? 'cursor-pointer' : ''}`}
             onClick={(e) => handleLogClick(e, log.type)}
           >
             <span className="text-slate-500 min-w-[80px] select-none">[{log.timestamp}]</span>
-            <span className={`${getColor(log.type)} break-all`}>{log.message}</span>
+            <span className={`${getColor(log.type)} min-w-0 whitespace-pre-wrap break-words`}>{log.message}</span>
           </div>
         ))}
         <div ref={bottomRef} />

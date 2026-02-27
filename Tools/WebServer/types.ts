@@ -7,6 +7,20 @@ export interface LogEntry {
   type: 'error' | 'warning' | 'success' | 'system' | 'info';
 }
 
+export type ContentWidthMode = 'fluid' | 'contained';
+
+export type UiDensityMode = 'comfortable' | 'compact';
+
+export interface UiPreferences {
+  contentWidthMode: ContentWidthMode;
+  density: UiDensityMode;
+  taskConsole: {
+    splitRatio: number;
+    minTerminalPx: number;
+  };
+  updatedAt: number;
+}
+
 export interface TaskStats {
   rpm: number;
   tpm: number;
@@ -298,6 +312,8 @@ export interface AppConfig {
   enable_xlsx_conversion: boolean;
   enable_dry_run: boolean;
   unlocked_themes?: string[]; // Persist unlocked themes
+  temp_file_limit?: number;
+  cache_editor_page_size?: number;
   response_check_switch: {
     newline_character_count_check: boolean;
     return_to_original_text_check: boolean;

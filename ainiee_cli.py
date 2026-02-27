@@ -3827,6 +3827,23 @@ class CLIMenu:
                 self._is_queue_mode = False  # 清除队列模式标记
 
 def main():
+    # Force unbuffered stdout for real-time web monitoring
+    try:
+        # Check if we are running as a backend worker or just want unbuffered output
+        if os.environ.get('AINIEE_BACKEND_WORKER') or os.environ.get('PYTHONUNBUFFERED'):
+            sys.stdout.reconfigure(line_buffering=True, encoding='utf-8')
+            # Explicitly print a marker to confirm stdout is working
+            print("[AINIEE_CLI] Process started in unbuffered mode.", flush=True)
+    except Exception as e:
+        # If reconfigure fails (e.g. older python or weird stream), just ignore
+        pass
+
+    # DEBUG: Log args
+    try:
+        with open("cli_debug.log", "a") as f:
+            f.write(f"[{datetime.now()}] ARGV: {sys.argv}\n")
+    except: pass
+
     parser = argparse.ArgumentParser(description="AiNiee-Next - A powerful tool for AI-driven translation and polishing.", add_help=False)
     
     # 将 --help 参数单独处理，以便自定义帮助信息

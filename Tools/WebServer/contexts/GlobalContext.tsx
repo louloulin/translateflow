@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AppConfig, LogEntry, TaskStats, ChartDataPoint, TaskType, ThemeType } from '../types';
+import { AppConfig, LogEntry, TaskStats, ChartDataPoint, TaskType, ThemeType, UiPreferences } from '../types';
 import { DEFAULT_CONFIG } from '../constants';
 import { DataService } from '../services/DataService';
+import { clearUiPreferences, getDefaultUiPreferences, loadUiPreferences, normalizeUiPreferences, saveUiPreferences } from '@/lib/uiPreferences';
 
 // Define the shape of the Task Runner's persistent state
 interface TaskRunnerState {
@@ -68,6 +69,11 @@ interface GlobalContextType {
 
   // Helper to clear task state (optional, if needed manually)
   resetTaskState: () => void;
+
+  // UI Preferences
+  uiPrefs: UiPreferences;
+  setUiPrefs: (next: UiPreferences | ((prev: UiPreferences) => UiPreferences)) => void;
+  resetUiPrefs: () => void;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
@@ -83,6 +89,11 @@ export const GlobalProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [notification, setNotification] = useState<ThemeType | null>(null);
 
   const [unlockedThemes, setUnlockedThemes] = useState<ThemeType[]>(['default']);
+
+  const [uiPrefs, setUiPrefsState] = useState<UiPreferences>(() => {
+    if (typeof window === 'undefined') return getDefaultUiPreferences();
+    return loadUiPreferences();
+  });
 
   // Update unlockedThemes and activeTheme when config is loaded
   useEffect(() => {
@@ -178,6 +189,29 @@ export const GlobalProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Initialize Task State
   const [taskState, setTaskState] = useState<TaskRunnerState>(DEFAULT_TASK_STATE);
 
+  /**
+   * Updates UI preferences and persists the result to localStorage.
+   */
+  const setUiPrefs = (next: UiPreferences | ((prev: UiPreferences) => UiPreferences)) => {
+    setUiPrefsState(prev => {
+      const computed = typeof next === 'function' ? (next as any)(prev) : next;
+      const normalized = normalizeUiPreferences({
+        ...computed,
+        updatedAt: Date.now(),
+      });
+      saveUiPreferences(normalized);
+      return normalized;
+    });
+  };
+
+  /**
+   * Resets UI preferences to defaults and clears persisted storage.
+   */
+  const resetUiPrefs = () => {
+    clearUiPreferences();
+    setUiPrefsState(getDefaultUiPreferences());
+  };
+
   // Initial Data Fetch
   useEffect(() => {
     // Fetch Version
@@ -218,6 +252,10 @@ export const GlobalProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       // In a real app, you might want to auto-save here or debounce save
   };
 
+  useEffect(() => {
+    setUiPrefsState(prev => normalizeUiPreferences(prev));
+  }, []);
+
   const resetTaskState = () => {
       setTaskState(DEFAULT_TASK_STATE);
   };
@@ -243,7 +281,10 @@ export const GlobalProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       rulesProfiles,
       taskState,
       setTaskState,
-      resetTaskState
+      resetTaskState,
+      uiPrefs,
+      setUiPrefs,
+      resetUiPrefs
     }}>
       {children}
     </GlobalContext.Provider>

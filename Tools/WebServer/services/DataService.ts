@@ -1030,5 +1030,26 @@ export const DataService = {
         });
         if (!res.ok) throw new Error('Failed to save analysis');
         return await res.json();
+    },
+
+    // --- Stev Extraction ---
+
+    async startStevTask(type: 'extract' | 'inject' | 'update', payload: any): Promise<any> {
+        const res = await fetch(`${API_BASE}/stev/${type}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Failed to start task');
+        }
+        return await res.json();
+    },
+
+    async getStevStatus(): Promise<any> {
+        const res = await fetch(`${API_BASE}/stev/status`);
+        if (!res.ok) throw new Error('Failed to get status');
+        return await res.json();
     }
 };

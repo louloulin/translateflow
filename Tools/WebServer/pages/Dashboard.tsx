@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Settings, FileOutput, ArrowRight, FileText, Folder, AlertCircle } from 'lucide-react';
-import { useI18n } from '../contexts/I18nContext';
-import { useGlobal } from '../contexts/GlobalContext';
-import { DataService } from '../services/DataService';
+import { Play, Settings, FileOutput, ArrowRight, FileText, Folder, AlertCircle, PlayCircle } from 'lucide-react';
+import { useI18n } from '@/contexts/I18nContext';
+import { useGlobal } from '@/contexts/GlobalContext';
+import { DataService } from '@/services/DataService';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 export const Dashboard: React.FC = () => {
   const { t } = useI18n();
-  const { version, config, setTaskState, activeTheme } = useGlobal(); // Use global state
-  const [recentProjects, setRecentProjects] = useState<string[]>([]);
+  const { version, config, setTaskState, activeTheme } = useGlobal();
+  const [recentProjects, setRecentProjects] = useState<any[]>([]);
   const [breakpointStatus, setBreakpointStatus] = useState<{
     can_resume: boolean;
     has_incomplete: boolean;
@@ -64,14 +71,11 @@ export const Dashboard: React.FC = () => {
   const characterQuote = getCharacterBlessing();
   
   useEffect(() => {
-    // Update local recent projects list when config loads
     if (config) {
-        // recent_projects is now a list of objects: {path, profile, rules_profile}
         setRecentProjects([...(config.recent_projects || [])]);
     }
   }, [config]);
 
-  // Check for incomplete translation tasks on mount
   useEffect(() => {
     const checkBreakpoint = async () => {
       try {
@@ -102,7 +106,6 @@ export const Dashboard: React.FC = () => {
       const rulesProfile = typeof project === 'object' ? project.rules_profile : null;
 
       try {
-          // 1. Auto-switch Profiles if they differ from current
           if (profile && profile !== config?.active_profile) {
               await DataService.switchProfile(profile);
           }
@@ -110,31 +113,25 @@ export const Dashboard: React.FC = () => {
               await DataService.switchRulesProfile(rulesProfile);
           }
 
-          // 2. Set Task State
           setTaskState(prev => ({
               ...prev, 
               customInputPath: path,
               isResuming: true,
           }));
 
-          // 3. Navigate
           navigate('/task');
       } catch (error) {
           console.error("Failed to resume project with specific profiles", error);
-          // Fallback to simple resume
           setTaskState(prev => ({ ...prev, customInputPath: path, isResuming: true }));
           navigate('/task');
       }
   };
 
-  // Helper to parse path string into displayable info
   const getProjectInfo = (path: string) => {
-      // Handle Windows backslashes or Unix forward slashes
       const normalized = path.replace(/\\/g, '/');
       const parts = normalized.split('/');
       const name = parts.pop() || path;
       
-      // Guess type from extension
       let type = "FOLDER";
       let icon = <Folder size={16} className="text-blue-400" />;
       
@@ -149,193 +146,190 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Breakpoint Resume Alert */}
+      {/* Breakpoint Alert */}
       {breakpointStatus && breakpointStatus.has_incomplete && (
-        <div className={`relative overflow-hidden rounded-xl border p-4 animate-in slide-in-from-top-2 duration-300 ${
-          elysiaActive
-            ? 'bg-pink-500/10 border-pink-500/30'
-            : 'bg-amber-500/10 border-amber-500/30'
-        }`}>
-          <div className="flex items-start gap-3">
-            <AlertCircle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-              elysiaActive ? 'text-pink-400' : 'text-amber-400'
-            }`} />
-            <div className="flex-1">
-              <h3 className={`font-semibold text-sm ${
-                elysiaActive ? 'text-pink-300' : 'text-amber-300'
-              }`}>
-                检测到未完成的翻译任务
-              </h3>
-              <p className="text-slate-400 text-xs mt-1">
+        <Alert className={cn(
+          "border-l-4", 
+          elysiaActive ? "border-l-pink-500 bg-pink-500/5" : "border-l-amber-500 bg-amber-500/5"
+        )}>
+          <AlertCircle className={cn("h-4 w-4", elysiaActive ? "text-pink-500" : "text-amber-500")} />
+          <AlertTitle className={cn(elysiaActive ? "text-pink-500" : "text-amber-500")}>
+            检测到未完成的翻译任务
+          </AlertTitle>
+          <AlertDescription className="mt-2">
+            <div className="flex flex-col gap-2">
+              <span className="text-muted-foreground text-xs">
                 {breakpointStatus.project_name} - {breakpointStatus.completed_line}/{breakpointStatus.total_line} 行 ({breakpointStatus.progress?.toFixed(1)}%)
-              </p>
+              </span>
+              <div className="flex items-center gap-4 w-full">
+                <Progress value={breakpointStatus.progress || 0} className="h-2 flex-1" />
+                <Button size="sm" onClick={handleResumeBreakpoint} className={cn(elysiaActive && "bg-pink-500 hover:bg-pink-600")}>
+                  继续翻译
+                </Button>
+              </div>
             </div>
-            <button
-              onClick={handleResumeBreakpoint}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                elysiaActive
-                  ? 'bg-pink-500 hover:bg-pink-400 text-white'
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-900'
-              }`}
-            >
-              继续翻译
-            </button>
-          </div>
-          {/* Progress bar */}
-          <div className="mt-3 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                elysiaActive ? 'bg-pink-500' : 'bg-amber-500'
-              }`}
-              style={{ width: `${breakpointStatus.progress || 0}%` }}
-            />
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
 
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+          <h1 className="text-3xl font-bold tracking-tight">
             {characterGreeting || t('ui_dashboard_welcome')}
           </h1>
-          <p className="text-slate-400 mt-1 md:mt-2 text-sm md:text-base max-w-xl">
+          <p className="text-muted-foreground mt-2 max-w-xl">
             {characterQuote || t('ui_dashboard_subtitle')}
           </p>
         </div>
         <div className="flex gap-2">
-           <span className={`px-3 py-1 rounded-full border text-[10px] md:text-xs font-medium whitespace-nowrap transition-all duration-500 ${
+           <Badge variant="outline" className={cn(
+             "transition-all duration-500",
              activeTheme === 'herrscher_of_human' 
-               ? 'bg-pink-400/20 text-pink-500 border-pink-400/40 shadow-[0_0_15px_rgba(255,143,163,0.3)]' 
-               : (elysiaActive ? 'bg-pink-500/10 text-pink-400 border-pink-500/30' : 'bg-accent/10 text-accent border-accent/20')
-           }`}>
+               ? 'bg-pink-400/20 text-pink-500 border-pink-400/40' 
+               : (elysiaActive ? 'bg-pink-500/10 text-pink-400 border-pink-500/30' : '')
+           )}>
              {activeTheme === 'herrscher_of_human' ? '人之律者 · 爱与希望' : (elysiaActive ? '完美无瑕' : t('ui_system_online'))}
-           </span>
-           <span className={`px-3 py-1 rounded-full border text-[10px] md:text-xs font-medium whitespace-nowrap transition-all duration-500 ${
-             activeTheme === 'herrscher_of_human'
-               ? 'bg-purple-400/20 text-purple-500 border-purple-400/40'
-               : (elysiaActive ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' : 'bg-primary/10 text-primary border-primary/20')
-           }`}>
+           </Badge>
+           <Badge variant="secondary" className="font-mono">
              {activeTheme === 'herrscher_of_human' ? `∞ ${version}` : version}
-           </span>
+           </Badge>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-        <div onClick={() => navigate('/task')} className="cursor-pointer group relative overflow-hidden bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-slate-700 hover:border-indigo-500/50 p-6 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Play size={80} className="md:w-[120px] md:h-[120px]" />
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 group relative overflow-hidden"
+            onClick={() => navigate('/task')}
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Play size={100} />
           </div>
-          <div className="relative z-10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <PlayCircle className="text-primary" />
+                {t('menu_start_translation')}
+            </CardTitle>
+            <CardDescription>{t('ui_new_task_desc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
             {elysiaActive && (
-              <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-pink-500 text-[8px] font-bold text-white rounded-full shadow-lg shadow-pink-500/30 animate-pulse">
-                MAGIC
-              </div>
+              <Badge className="absolute top-4 right-4 bg-pink-500 animate-pulse">MAGIC</Badge>
             )}
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
-              <Play size={20} md:size={24} fill="currentColor" />
-            </div>
-            <h3 className="text-lg md:text-xl font-semibold text-white mb-2">{t('menu_start_translation')}</h3>
-            <p className="text-slate-400 text-xs md:text-sm mb-6">{t('ui_new_task_desc')}</p>
-            <div className="flex items-center text-indigo-400 text-sm font-medium">
-              {t('ui_btn_start')} <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-        </div>
+          </CardContent>
+          <CardFooter>
+            <Button variant="ghost" className="p-0 text-primary hover:text-primary hover:bg-transparent group-hover:translate-x-1 transition-transform">
+                {t('ui_btn_start')} <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardFooter>
+        </Card>
 
-        <div onClick={() => navigate('/settings')} className="cursor-pointer group relative overflow-hidden bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-slate-700 hover:border-cyan-500/50 p-6 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Settings size={80} className="md:w-[120px] md:h-[120px]" />
+        <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 group relative overflow-hidden"
+            onClick={() => navigate('/settings')}
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Settings size={100} />
           </div>
-          <div className="relative z-10">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4 group-hover:scale-110 transition-transform">
-              <Settings size={20} md:size={24} />
-            </div>
-            <h3 className="text-lg md:text-xl font-semibold text-white mb-2">{t('menu_settings')}</h3>
-            <p className="text-slate-400 text-xs md:text-sm mb-6">{t('ui_config_desc')}</p>
-            <div className="flex items-center text-cyan-400 text-sm font-medium">
-              {t('ui_btn_edit')} <ArrowRight size={16} className="ml-2 group-hover:translate-x-2 transition-transform" />
-            </div>
-          </div>
-        </div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <Settings className="text-primary" />
+                {t('menu_settings')}
+            </CardTitle>
+            <CardDescription>{t('ui_config_desc')}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button variant="ghost" className="p-0 text-primary hover:text-primary hover:bg-transparent group-hover:translate-x-1 transition-transform">
+                {t('ui_btn_edit')} <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardFooter>
+        </Card>
 
-        <div onClick={() => navigate('/export')} className="cursor-pointer group relative overflow-hidden bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-slate-700 hover:border-emerald-500/50 p-6 rounded-2xl transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <FileOutput size={80} className="md:w-[120px] md:h-[120px]" />
+        <Card 
+            className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 group relative overflow-hidden"
+            onClick={() => navigate('/export')}
+        >
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <FileOutput size={100} />
           </div>
-          <div className="relative z-10">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
-              <FileOutput size={20} md:size={24} />
-            </div>
-            <h3 className="text-lg md:text-xl font-semibold text-white mb-2">{t('menu_export_only')}</h3>
-            <p className="text-slate-400 text-xs md:text-sm mb-6">{t('ui_history_desc')}</p>
-            <div className="flex items-center text-emerald-400 text-sm font-medium">
-              {t('ui_btn_history')} <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-        </div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <FileOutput className="text-primary" />
+                {t('menu_export_only')}
+            </CardTitle>
+            <CardDescription>{t('ui_history_desc')}</CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <Button variant="ghost" className="p-0 text-primary hover:text-primary hover:bg-transparent group-hover:translate-x-1 transition-transform">
+                {t('ui_btn_history')} <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
 
-      <div className="bg-surface border border-slate-800 rounded-xl p-4 md:p-6 min-h-[300px]">
-        <h2 className="text-lg font-semibold text-white mb-4">{t('menu_recent_projects')}</h2>
+      {/* Recent Projects */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('menu_recent_projects')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+            {!config ? (
+                <div className="text-muted-foreground text-sm animate-pulse py-4">Loading configuration...</div>
+            ) : recentProjects.length === 0 ? (
+                <div className="text-muted-foreground text-sm italic py-4">No recent projects found.</div>
+            ) : (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>{t('ui_recent_proj_header')}</TableHead>
+                            <TableHead>{t('ui_recent_type')}</TableHead>
+                            <TableHead className="hidden md:table-cell">{t('label_input')}</TableHead>
+                            <TableHead className="text-right">{t('ui_recent_action')}</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {recentProjects.map((project, i) => {
+                            const path = typeof project === 'string' ? project : project.path;
+                            const info = getProjectInfo(path);
+                            const profileStr = typeof project === 'object' ? `${project.profile} / ${project.rules_profile}` : 'legacy';
         
-        {!config ? (
-             <div className="text-slate-500 text-sm animate-pulse py-4">Loading configuration...</div>
-        ) : recentProjects.length === 0 ? (
-             <div className="text-slate-500 text-sm italic py-4">No recent projects found in config.</div>
-        ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="text-slate-500 text-xs uppercase border-b border-slate-800">
-                    <th className="pb-3 pl-2">{t('ui_recent_proj_header')}</th>
-                    <th className="pb-3">{t('ui_recent_type')}</th>
-                    <th className="pb-3 hidden md:table-cell">{t('label_input')}</th>
-                    <th className="pb-3 text-right pr-2">{t('ui_recent_action')}</th>
-                  </tr>
-                </thead>
-                                <tbody className="text-sm">
-                                  {recentProjects.map((project, i) => {
-                                    const path = typeof project === 'string' ? project : project.path;
-                                    const info = getProjectInfo(path);
-                                    const profileStr = typeof project === 'object' ? `${project.profile} / ${project.rules_profile}` : 'legacy';
-                
-                                    return (
-                                        <tr key={i} className={`border-b border-slate-800/50 transition-all duration-300 group ${elysiaActive ? 'hover:bg-pink-500/5 hover:translate-x-2' : 'hover:bg-slate-800/50'}`}
-                                            style={elysiaActive ? { animation: `elysia-entrance 0.5s var(--elysia-spring) both ${0.4 + i * 0.05}s` } : {}}>
-                                          <td className="py-3 pl-2 font-medium text-slate-200 flex items-center gap-3">
-                                              {info.icon}
-                                              <div className="flex flex-col">
-                                                <span>{info.name}</span>
-                                                <span className="text-[10px] text-slate-500 md:hidden">{profileStr}</span>
-                                              </div>
-                                          </td>
-                                          <td className="py-3 text-slate-400">
-                                              <div className="flex flex-col gap-1">
-                                                <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-xs w-fit">
-                                                    {info.type}
-                                                </span>
-                                                <span className="text-[10px] text-slate-500 hidden md:block">{profileStr}</span>
-                                              </div>
-                                          </td>
-                                          <td className="py-3 text-slate-500 text-xs font-mono hidden md:table-cell truncate max-w-[200px]" title={info.fullPath}>
-                                              {info.fullPath}
-                                          </td>
-                                          <td className="py-3 text-right pr-2">
-                                            <button 
-                                                onClick={() => handleResume(project)} 
-                                                className="text-primary hover:text-cyan-300 text-xs font-medium px-3 py-1 bg-primary/10 rounded border border-primary/20 hover:bg-primary/20 transition-all"
-                                            >
-                                                {t('ui_resume')}
-                                            </button>
-                                          </td>
-                                        </tr>
-                                    );
-                                  })}
-                                </tbody>
-              </table>
-            </div>
-        )}
-      </div>
+                            return (
+                                <TableRow key={i} className="group">
+                                    <TableCell className="font-medium flex items-center gap-3">
+                                        {info.icon}
+                                        <div className="flex flex-col">
+                                            <span>{info.name}</span>
+                                            <span className="text-[10px] text-muted-foreground md:hidden">{profileStr}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                            <Badge variant="secondary" className="w-fit text-[10px]">{info.type}</Badge>
+                                            <span className="text-[10px] text-muted-foreground hidden md:block">{profileStr}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-xs font-mono hidden md:table-cell truncate max-w-[200px]" title={info.fullPath}>
+                                        {info.fullPath}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => handleResume(project)}
+                                            className="h-7 text-xs"
+                                        >
+                                            {t('ui_resume')}
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

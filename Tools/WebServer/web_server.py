@@ -142,6 +142,12 @@ class TaskManager:
                 "-y",  # Crucial for non-interactive mode
                 "--web-mode" # Activate parsable output
             ]
+
+            # Debug: Log the command being executed
+            import shutil
+            uv_path = shutil.which("uv")
+            self.logs.append({"timestamp": time.time(), "message": f"[DEBUG] UV Path: {uv_path}"})
+            self.logs.append({"timestamp": time.time(), "message": f"[DEBUG] Command: {' '.join(cli_args)}"})
             
             # Add optional arguments based on the payload
             if payload.get("output_path"):
@@ -235,6 +241,7 @@ class TaskManager:
             for line in iter(self.process.stdout.readline, ''):
                 line = line.strip()
                 if line:
+                    print(f"[SUBPROCESS OUT] {line}") # DEBUG: Print to server console
                     self.logs.append({"timestamp": time.time(), "message": line})
                     
                     # 1. Parsing current file
@@ -563,6 +570,49 @@ def save_config_generic(key: str, value: Any):
 @app.get("/api/system/mode")
 async def get_system_mode():
     return {"mode": SYSTEM_MODE}
+
+@app.get("/api/system/status")
+async def get_system_status():
+    try:
+        import psutil
+        return {
+            "cpu_percent": psutil.cpu_percent(),
+            "memory_percent": psutil.virtual_memory().percent,
+            "disk_percent": psutil.disk_usage('/').percent,
+            "boot_time": psutil.boot_time()
+        }
+    except ImportError:
+        return {
+            "cpu_percent": 0,
+            "memory_percent": 0,
+            "disk_percent": 0,
+            "boot_time": 0,
+            "error": "psutil not installed"
+        }
+
+@app.post("/api/system/update")
+async def update_system():
+    try:
+        # Run git pull
+        result = subprocess.run(["git", "pull"], capture_output=True, text=True, cwd=PROJECT_ROOT)
+        return {"success": result.returncode == 0, "output": result.stdout + "\n" + result.stderr}
+    except Exception as e:
+        return {"success": False, "output": str(e)}
+
+@app.post("/api/system/restart")
+async def restart_system():
+    """Restarts the server process."""
+    def restart():
+        time.sleep(1)
+        # Re-execute the current script
+        # Note: This might not work perfectly in all environments (e.g. docker, supervisor)
+        # But for local dev it's usually fine.
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+    
+    threading.Thread(target=restart).start()
+    return {"message": "Server is restarting..."}
+
 
 @app.get("/api/version")
 async def get_version():
@@ -1207,6 +1257,80 @@ async def save_analysis_results(request: SaveAnalysisRequest):
         "profile": new_profile_name,
         "count": len(glossary_data)
     }
+
+# --- Stev Extraction Endpoints ---
+
+stev_status = "idle"
+stev_logs = []
+stev_lock = threading.Lock()
+
+class StevLogCapture:
+    def __init__(self):
+        self.logs = []
+    def write(self, message):
+        if message.strip():
+            self.logs.append(message.rstrip())
+    def flush(self):
+        pass
+
+def run_stev_task(task_type: str, config: dict):
+    global stev_status, stev_logs
+    
+    with stev_lock:
+        stev_status = "running"
+        stev_logs = [f"[{datetime.now().strftime('%H:%M:%S')}] Task '{task_type}' started."]
+    
+    # Capture stdout
+    import sys
+    from io import StringIO
+    
+    capture = StevLogCapture()
+    original_stdout = sys.stdout
+    sys.stdout = capture
+    
+    try:
+        from source.AiNiee.StevExtraction.jtpp import Jr_Tpp
+        
+        # Jr_Tpp expects a config dict with some defaults if not present
+        # We pass the payload directly as config
+        tpp = Jr_Tpp(config) 
+        
+        if task_type == 'extract':
+            tpp.FromGame(config.get('game_dir'), config.get('save_path'), config.get('data_path'))
+        elif task_type == 'inject':
+            tpp.ToGame(config.get('game_dir'), config.get('path'), config.get('output_path'), "")
+        elif task_type == 'update':
+            tpp.Update(config.get('game_dir'), config.get('path'), config.get('save_path'), config.get('data_path'))
+            
+        with stev_lock:
+            stev_status = "completed"
+            stev_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Task completed successfully.")
+    except Exception as e:
+        with stev_lock:
+            stev_status = "error"
+            stev_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        sys.stdout = original_stdout
+        # Copy captured logs
+        with stev_lock:
+            stev_logs.extend(capture.logs)
+
+@app.post("/api/stev/{task_type}")
+def start_stev_task(task_type: str, payload: dict, background_tasks: BackgroundTasks):
+    global stev_status
+    if stev_status == "running":
+        raise HTTPException(status_code=400, detail="A Stev task is already running")
+    
+    background_tasks.add_task(run_stev_task, task_type, payload)
+    return {"status": "started"}
+
+@app.get("/api/stev/status")
+def get_stev_status():
+    global stev_status, stev_logs
+    with stev_lock:
+        return {"status": stev_status, "logs": list(stev_logs)}
 
 # --- Plugin Management Endpoints ---
 
@@ -3022,7 +3146,7 @@ def get_scheduler_manager():
         from ModuleFolders.Infrastructure.Automation.SchedulerManager import SchedulerManager
         _scheduler_manager = SchedulerManager()
         # Load from config
-        _scheduler_manager.load_from_config(app.config)
+        _scheduler_manager.load_from_config(load_config_sync())
     return _scheduler_manager
 
 
@@ -3075,7 +3199,9 @@ async def add_scheduler_task(task: ScheduledTaskItem):
         )
 
         if sm.add_task(new_task):
-            sm.save_to_config(app.config)
+            temp_config = {}
+            sm.save_to_config(temp_config)
+            save_config_generic("scheduler", temp_config["scheduler"])
             return {"success": True, "message": "Task added successfully"}
         else:
             raise HTTPException(status_code=400, detail="Task ID already exists")
@@ -3099,7 +3225,9 @@ async def update_scheduler_task(task_id: str, enabled: bool = None, schedule: st
             update_data["profile"] = profile
 
         if sm.update_task(task_id, **update_data):
-            sm.save_to_config(app.config)
+            temp_config = {}
+            sm.save_to_config(temp_config)
+            save_config_generic("scheduler", temp_config["scheduler"])
             return {"success": True, "message": "Task updated successfully"}
         else:
             raise HTTPException(status_code=404, detail="Task not found")
@@ -3115,7 +3243,9 @@ async def delete_scheduler_task(task_id: str):
     try:
         sm = get_scheduler_manager()
         if sm.remove_task(task_id):
-            sm.save_to_config(app.config)
+            temp_config = {}
+            sm.save_to_config(temp_config)
+            save_config_generic("scheduler", temp_config["scheduler"])
             return {"success": True, "message": "Task deleted successfully"}
         else:
             raise HTTPException(status_code=404, detail="Task not found")
@@ -3131,7 +3261,9 @@ async def start_scheduler():
     try:
         sm = get_scheduler_manager()
         sm.start()
-        sm.save_to_config(app.config)
+        temp_config = {}
+        sm.save_to_config(temp_config)
+        save_config_generic("scheduler", temp_config["scheduler"])
         return {"success": True, "message": "Scheduler started"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -3143,7 +3275,9 @@ async def stop_scheduler():
     try:
         sm = get_scheduler_manager()
         sm.stop()
-        sm.save_to_config(app.config)
+        temp_config = {}
+        sm.save_to_config(temp_config)
+        save_config_generic("scheduler", temp_config["scheduler"])
         return {"success": True, "message": "Scheduler stopped"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
