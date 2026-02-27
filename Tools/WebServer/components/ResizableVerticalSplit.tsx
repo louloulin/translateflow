@@ -83,7 +83,7 @@ export const ResizableVerticalSplit: React.FC<ResizableVerticalSplitProps> = ({
       try {
         el.releasePointerCapture(e.pointerId)
       } catch {
-        return
+        // ignore
       }
       const h = el.clientHeight
       const finalTop = typeof topPx === 'number' ? topPx : clampTopPx(h * ratio, h)
@@ -145,4 +145,3 @@ export const ResizableVerticalSplit: React.FC<ResizableVerticalSplitProps> = ({
     </div>
   )
 }
-

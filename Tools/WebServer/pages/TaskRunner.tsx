@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from '../components/Terminal';
 import { StatsPanel } from '../components/StatsPanel';
+import { ResizableVerticalSplit } from '../components/ResizableVerticalSplit';
 import { Play, Square, Upload, FileText, ChevronRight, ChevronDown, Terminal as TerminalIcon, Loader2, History, AlertCircle, Sparkles, ListPlus, X } from 'lucide-react';
 import { DataService } from '../services/DataService';
 import { TaskStats, LogEntry, TaskType, TaskPayload } from '../types';
@@ -9,9 +10,30 @@ import { useI18n } from '../contexts/I18nContext';
 
 export const TaskRunner: React.FC = () => {
   const { t } = useI18n();
-  const { config, taskState, setTaskState } = useGlobal(); // Use persistent global state
+  const { config, taskState, setTaskState, uiPrefs, setUiPrefs } = useGlobal(); // Use persistent global state
   
   const intervalRef = useRef<any>(null);
+
+  const [splitRatio, setSplitRatio] = useState(uiPrefs.taskConsole.splitRatio);
+
+  useEffect(() => {
+    setSplitRatio(uiPrefs.taskConsole.splitRatio);
+  }, [uiPrefs.taskConsole.splitRatio]);
+
+  /**
+   * Persists the task console split ratio to localStorage-backed UI preferences.
+   */
+  const commitSplitRatio = (nextRatio: number) => {
+    setSplitRatio(nextRatio);
+    setUiPrefs(prev => ({
+      ...prev,
+      taskConsole: {
+        ...prev.taskConsole,
+        splitRatio: nextRatio,
+      },
+      updatedAt: Date.now(),
+    }));
+  };
   
   // Upload State
   const [tempFiles, setTempFiles] = useState<{name: string, path: string, size: number}[]>([]);
@@ -561,37 +583,49 @@ export const TaskRunner: React.FC = () => {
       {/* Content */}
       <div className="flex-1 min-h-0 flex flex-col relative space-y-4 pt-2">
         {(!config?.show_detailed_logs || activeTab === 'console') ? (
-            <div className="flex-1 flex flex-col space-y-4 min-h-0">
-                <StatsPanel data={taskState.chartData} stats={taskState.stats} />
-                <Terminal logs={taskState.logs} height="flex-1" />
-            </div>
+            <ResizableVerticalSplit
+              ratio={splitRatio}
+              onRatioCommit={commitSplitRatio}
+              minTopPx={220}
+              minBottomPx={uiPrefs.taskConsole.minTerminalPx}
+              top={<StatsPanel data={taskState.chartData} stats={taskState.stats} />}
+              bottom={<Terminal logs={taskState.logs} height="h-full" />}
+            />
         ) : (
-            <div className="flex-1 flex flex-col space-y-4 min-h-0">
-                <StatsPanel data={taskState.chartData} stats={taskState.stats} variant="compact" />
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0 overflow-y-auto">
-                    {/* Source Pane */}
-                    <div className="flex flex-col bg-slate-900/40 border border-magenta/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-magenta/5 min-h-[300px]">
-                        <div className="px-4 py-2 bg-magenta/10 border-b border-magenta/20 flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-magenta uppercase tracking-widest">{t('label_original_source')}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">{(taskState.comparison?.source?.split('\n').length || 0)} {t('label_lines')}</span>
-                        </div>
-                        <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-slate-300 leading-relaxed scrollbar-thin scrollbar-thumb-magenta/20 whitespace-pre-wrap">
-                            {taskState.comparison?.source || <span className="text-slate-600 italic">{t('msg_waiting_text')}</span>}
-                        </div>
-                    </div>
+            <ResizableVerticalSplit
+              ratio={splitRatio}
+              onRatioCommit={commitSplitRatio}
+              minTopPx={220}
+              minBottomPx={uiPrefs.taskConsole.minTerminalPx}
+              top={<StatsPanel data={taskState.chartData} stats={taskState.stats} variant="compact" />}
+              bottom={(
+                <div className="h-full min-h-0 overflow-y-auto">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
+                      {/* Source Pane */}
+                      <div className="flex flex-col bg-slate-900/40 border border-magenta/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-magenta/5 min-h-[300px]">
+                          <div className="px-4 py-2 bg-magenta/10 border-b border-magenta/20 flex justify-between items-center">
+                              <span className="text-[10px] font-bold text-magenta uppercase tracking-widest">{t('label_original_source')}</span>
+                              <span className="text-[10px] text-slate-500 font-mono">{(taskState.comparison?.source?.split('\n').length || 0)} {t('label_lines')}</span>
+                          </div>
+                          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-slate-300 leading-relaxed scrollbar-thin scrollbar-thumb-magenta/20 whitespace-pre-wrap">
+                              {taskState.comparison?.source || <span className="text-slate-600 italic">{t('msg_waiting_text')}</span>}
+                          </div>
+                      </div>
 
-                    {/* Translation Pane */}
-                    <div className="flex flex-col bg-slate-900/40 border border-primary/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-primary/5 min-h-[300px]">
-                        <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t('label_translation_output')}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">{(taskState.comparison?.translation?.split('\n').length || 0)} {t('label_lines')}</span>
-                        </div>
-                        <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-primary-light leading-relaxed scrollbar-thin scrollbar-thumb-primary/20 whitespace-pre-wrap">
-                            {taskState.comparison?.translation || <span className="text-slate-600 italic animate-pulse">{t('msg_processing_batch')}</span>}
-                        </div>
-                    </div>
+                      {/* Translation Pane */}
+                      <div className="flex flex-col bg-slate-900/40 border border-primary/20 rounded-xl overflow-hidden backdrop-blur-sm shadow-inner shadow-primary/5 min-h-[300px]">
+                          <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 flex justify-between items-center">
+                              <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t('label_translation_output')}</span>
+                              <span className="text-[10px] text-slate-500 font-mono">{(taskState.comparison?.translation?.split('\n').length || 0)} {t('label_lines')}</span>
+                          </div>
+                          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-primary-light leading-relaxed scrollbar-thin scrollbar-thumb-primary/20 whitespace-pre-wrap">
+                              {taskState.comparison?.translation || <span className="text-slate-600 italic animate-pulse">{t('msg_processing_batch')}</span>}
+                          </div>
+                      </div>
+                  </div>
                 </div>
-            </div>
+              )}
+            />
         )}
 
         {taskState.isRunning && (

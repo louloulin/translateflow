@@ -9,14 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Settings, FileJson, Trash2, ChevronDown, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
+import { Settings, FileJson, Trash2, ChevronDown, Wifi, WifiOff, AlertTriangle, LayoutPanelTop } from 'lucide-react';
 import { AppConfig } from '@/types';
 import { cn } from '@/lib/utils';
 
 export const SettingsSystem: React.FC = () => {
   const { t } = useI18n();
-  const { config, setConfig, unlockThemeWithNotification } = useGlobal();
+  const { config, setConfig, unlockThemeWithNotification, uiPrefs, setUiPrefs, resetUiPrefs } = useGlobal();
   const [tempFiles, setTempFiles] = useState<{name: string, path: string, size: number}[]>([]);
   const [selectedTempFiles, setSelectedTempFiles] = useState<string[]>([]);
   const [isDeletingFiles, setIsDeletingFiles] = useState(false);
@@ -29,6 +30,17 @@ export const SettingsSystem: React.FC = () => {
   }, []);
 
   if (!config) return null;
+
+  /**
+   * Updates UI preferences and persists them to localStorage.
+   */
+  const updateUiPrefs = (patch: Partial<typeof uiPrefs>) => {
+    setUiPrefs(prev => ({
+      ...prev,
+      ...patch,
+      updatedAt: Date.now(),
+    }));
+  };
 
   const handleChange = (field: keyof AppConfig, value: any) => {
     setConfig({ ...config, [field]: value });
@@ -91,6 +103,96 @@ export const SettingsSystem: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <LayoutPanelTop className="h-5 w-5 text-primary" />
+            {t('ui_layout_title')}
+          </CardTitle>
+          <CardDescription>{t('ui_layout_desc')}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label>{t('ui_layout_width_mode')}</Label>
+            <Select
+              value={uiPrefs.contentWidthMode}
+              onValueChange={(v) => updateUiPrefs({ contentWidthMode: v === 'contained' ? 'contained' : 'fluid' })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fluid">{t('ui_layout_width_fluid')}</SelectItem>
+                <SelectItem value="contained">{t('ui_layout_width_contained')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('ui_layout_density')}</Label>
+            <Select
+              value={uiPrefs.density}
+              onValueChange={(v) => updateUiPrefs({ density: v === 'compact' ? 'compact' : 'comfortable' })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="comfortable">{t('ui_layout_density_comfortable')}</SelectItem>
+                <SelectItem value="compact">{t('ui_layout_density_compact')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('ui_layout_task_split_ratio')}</Label>
+            <Input
+              type="number"
+              min={0.2}
+              max={0.8}
+              step={0.01}
+              value={uiPrefs.taskConsole.splitRatio}
+              onChange={(e) => {
+                const n = parseFloat(e.target.value);
+                if (Number.isNaN(n)) return;
+                const clamped = Math.min(0.8, Math.max(0.2, n));
+                updateUiPrefs({ taskConsole: { ...uiPrefs.taskConsole, splitRatio: clamped } });
+              }}
+            />
+            <p className="text-xs text-muted-foreground">0.2–0.8（数值越大，统计区域越高）</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('ui_layout_terminal_min_height')}</Label>
+            <Input
+              type="number"
+              min={140}
+              max={800}
+              step={10}
+              value={uiPrefs.taskConsole.minTerminalPx}
+              onChange={(e) => {
+                const n = parseInt(e.target.value) || 0;
+                const clamped = Math.min(800, Math.max(140, n));
+                updateUiPrefs({ taskConsole: { ...uiPrefs.taskConsole, minTerminalPx: clamped } });
+              }}
+            />
+            <p className="text-xs text-muted-foreground">窗口较矮时会尽量保证控制台可用</p>
+          </div>
+
+          <div className="md:col-span-2 flex items-center justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!confirm(t('ui_layout_reset_confirm'))) return;
+                resetUiPrefs();
+              }}
+            >
+              {t('ui_layout_reset')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* General System Toggles */}
       <Card>
         <CardHeader>

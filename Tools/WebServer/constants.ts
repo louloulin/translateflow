@@ -664,7 +664,19 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "desc_update": "使用新游戏文件更新现有项目 (增量更新)。",
     "btn_start_update": "开始更新",
     "msg_fill_all_fields": "请填写所有字段",
-    "ui_console_output": "控制台输出"
+    "ui_console_output": "控制台输出",
+    "ui_layout_title": "显示与布局",
+    "ui_layout_desc": "控制内容宽度、信息密度与任务控制台面板高度",
+    "ui_layout_width_mode": "内容宽度",
+    "ui_layout_width_fluid": "自适应（更宽）",
+    "ui_layout_width_contained": "限制宽度（更易读）",
+    "ui_layout_density": "信息密度",
+    "ui_layout_density_comfortable": "舒适",
+    "ui_layout_density_compact": "紧凑",
+    "ui_layout_task_split_ratio": "任务页统计高度比例",
+    "ui_layout_terminal_min_height": "控制台最小高度（px）",
+    "ui_layout_reset": "恢复默认",
+    "ui_layout_reset_confirm": "确认恢复显示与布局默认设置？"
 };
 
 // Approximated English Locale for demonstration
@@ -1171,7 +1183,19 @@ export const EN_LOCALE: Record<string, string> = {
     "desc_update": "Update existing project with new game files (incremental update).",
     "btn_start_update": "Start Update",
     "msg_fill_all_fields": "Please fill all fields",
-    "ui_console_output": "Console Output"
+    "ui_console_output": "Console Output",
+    "ui_layout_title": "Display & Layout",
+    "ui_layout_desc": "Control content width, density, and task console panel sizing",
+    "ui_layout_width_mode": "Content Width",
+    "ui_layout_width_fluid": "Fluid (Wider)",
+    "ui_layout_width_contained": "Contained (Readable)",
+    "ui_layout_density": "Density",
+    "ui_layout_density_comfortable": "Comfortable",
+    "ui_layout_density_compact": "Compact",
+    "ui_layout_task_split_ratio": "Task stats height ratio",
+    "ui_layout_terminal_min_height": "Console min height (px)",
+    "ui_layout_reset": "Reset",
+    "ui_layout_reset_confirm": "Reset display & layout settings to defaults?"
 };
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -1263,6 +1287,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   recent_projects: [],
   enable_cache_backup: true,
   enable_auto_restore_ebook: true,
+  enable_xlsx_conversion: true,
   enable_dry_run: false,
   unlocked_themes: ['default'],
   temp_file_limit: 10,
