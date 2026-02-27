@@ -27,6 +27,7 @@
 | 高级功能 | **OAuth API 路由** | 100% | ✅ 完成 |
 | 订阅计费 | **发票 PDF 生成** | 100% | ✅ 完成 |
 | 高级功能 | **团队管理基础功能** | 100% | ✅ 完成 |
+| 高级功能 | **团队管理 API 路由** | 100% | ✅ 完成 |
 
 ---
 
@@ -2153,5 +2154,250 @@ DELETE /api/v1/teams/{id}/members/{uid} # 移除成员
 POST   /api/v1/teams/accept             # 接受邀请
 POST   /api/v1/teams/decline            # 拒绝邀请
 ```
+
+#### 12. 团队管理 API 路由 ✅ (100%) - 本次实现
+
+在 `Tools/WebServer/web_server.py` 中实现了完整的团队管理 API 路由系统。
+
+**请求/响应模型 (6个)**
+- `CreateTeamRequest` - 创建团队请求（团队名称、slug、描述）
+- `UpdateTeamRequest` - 更新团队请求（名称、描述、设置）
+- `InviteMemberRequest` - 邀请成员请求（邮箱、角色）
+- `UpdateMemberRoleRequest` - 更新成员角色请求
+- `AcceptInvitationRequest` - 接受邀请请求（邀请令牌）
+- `DeclineInvitationRequest` - 拒绝邀请请求（邀请令牌）
+
+**团队管理 API (10个路由)**
+
+**团队CRUD操作**:
+- `POST /api/v1/teams` - 创建团队
+  - 创建者自动成为团队所有者（Owner）
+  - 根据订阅计划自动设置最大成员数
+  - 验证slug格式和唯一性
+  - 支持多租户（自动获取用户租户ID）
+
+- `GET /api/v1/teams` - 获取我的团队列表
+  - 返回用户拥有的团队（Owner）
+  - 返回用户参与的团队（Admin/Member）
+  - 包含成员数量和用户角色信息
+
+- `GET /api/v1/teams/{team_id}` - 获取团队详情
+  - 包含完整的团队信息
+  - 包含成员数量和用户角色
+  - 权限验证（必须是团队成员）
+
+- `PUT /api/v1/teams/{team_id}` - 更新团队信息
+  - 只有Owner可以更新
+  - 支持部分字段更新（名称、描述、设置）
+  - 自动更新 updated_at 时间戳
+
+- `DELETE /api/v1/teams/{team_id}` - 删除团队
+  - 只有Owner可以删除
+  - 级联删除所有成员记录
+  - 不可撤销操作
+
+**成员管理 API (5个路由)**
+
+- `POST /api/v1/teams/{team_id}/members` - 邀请成员
+  - 只有Owner和Admin可以邀请
+  - 验证被邀请用户存在
+  - 检查团队成员数限制
+  - 生成唯一的邀请令牌（32位随机字符）
+  - 返回邀请令牌用于接受邀请
+
+- `GET /api/v1/teams/{team_id}/members` - 获取成员列表
+  - 返回所有团队成员（包括待接受邀请）
+  - 包含用户信息和角色
+  - 包含邀请状态和加入时间
+
+- `PUT /api/v1/teams/{team_id}/members/{member_user_id}` - 更新成员角色
+  - 只有Owner可以更新成员角色
+  - 不能修改Owner角色
+  - 支持Admin和Member之间的角色转换
+
+- `DELETE /api/v1/teams/{team_id}/members/{member_user_id}` - 移除成员
+  - Owner可以移除任何人
+  - Admin可以移除Member
+  - 不能移除团队所有者
+
+**邀请处理 API (2个路由)**
+
+- `POST /api/v1/teams/accept` - 接受团队邀请
+  - 验证邀请令牌
+  - 验证用户身份
+  - 更新邀请状态为accepted
+  - 记录加入时间
+
+- `POST /api/v1/teams/decline` - 拒绝团队邀请
+  - 验证邀请令牌
+  - 更新邀请状态为declined
+  - 邀请令牌失效
+
+#### 13. API 使用示例
+
+**创建团队**
+```bash
+curl -X POST "http://localhost:8000/api/v1/teams" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "我的翻译团队",
+    "slug": "my-translation-team",
+    "description": "专业的翻译团队"
+  }'
+```
+
+**获取我的团队列表**
+```bash
+curl -X GET "http://localhost:8000/api/v1/teams" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**邀请成员**
+```bash
+curl -X POST "http://localhost:8000/api/v1/teams/team-uuid/members" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "member@example.com",
+    "role": "admin"
+  }'
+```
+
+**接受邀请**
+```bash
+curl -X POST "http://localhost:8000/api/v1/teams/accept" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "inv_abc123..."}'
+```
+
+**更新成员角色**
+```bash
+curl -X PUT "http://localhost:8000/api/v1/teams/team-uuid/members/user-uuid" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"new_role": "admin"}'
+```
+
+**移除成员**
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/teams/team-uuid/members/user-uuid" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### 14. 权限系统
+
+**角色层级**
+```
+Owner (所有者)
+  ├── 创建/更新/删除团队
+  ├── 邀请成员
+  ├── 移除任何人
+  ├── 更新任何人的角色
+  └── 查看所有信息
+
+Admin (管理员)
+  ├── 邀请成员
+  ├── 移除普通成员
+  ├── 不能修改Owner或其他Admin
+  └── 查看所有信息
+
+Member (普通成员)
+  └── 只能查看信息
+```
+
+#### 15. 邀请流程
+
+```
+1. Owner/Admin 发送邀请
+   └─> 创建 TeamMember (status=pending, token=inv_xxx)
+   └─> 返回邀请令牌
+
+2. 被邀请用户接受邀请
+   └─> POST /api/v1/teams/accept
+   └─> 验证令牌和用户身份
+   └─> 状态更新为 accepted, 记录 joined_at
+
+3. 被邀请用户拒绝邀请
+   └─> POST /api/v1/teams/decline
+   └─> 验证令牌
+   └─> 状态更新为 declined
+```
+
+#### 16. 安全特性
+
+**认证和授权**
+- 所有路由使用 JWT 认证
+- 详细的权限验证（Owner/Admin/Member）
+- 用户只能访问自己的团队信息
+
+**数据验证**
+- Slug格式验证（3-50字符，小写字母数字连字符）
+- 唯一性检查（slug在租户内唯一）
+- 角色验证（防止无效角色）
+- 团队成员数限制检查
+
+**错误处理**
+- 适当的 HTTP 状态码（200, 400, 403, 404, 500）
+- 详细的中文错误消息
+- 区分不同类型的错误（权限、验证、不存在等）
+
+#### 17. 依赖模块
+
+团队管理 API 路由依赖以下模块：
+- TeamManager (`ModuleFolders/Service/Team/team_manager.py`)
+- TeamRepository (`ModuleFolders/Service/Team/team_repository.py`)
+- JWT Middleware (`ModuleFolders/Service/Auth/auth_middleware.py`)
+- Team/TeamMember 模型 (`ModuleFolders/Service/Auth/models.py`)
+- SubscriptionManager (用于获取配额)
+
+#### 18. 测试验证
+
+- ✅ Python 语法检查通过
+- ✅ FastAPI 应用加载成功
+- ✅ 10 个团队管理路由注册成功
+- ✅ 所有路由使用正确的 HTTP 方法
+- ✅ 请求/响应模型定义完整
+
+#### 集成说明
+
+团队管理 API 已完全集成到 WebServer，可以通过 FastAPI 自动生成的文档访问：
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+### 下一步
+
+团队管理 API 已完成，可以：
+1. 实现前端团队管理界面
+2. 实现邀请邮件发送功能
+3. 实现团队成员配额检查中间件
+4. 前端页面开发（剩余约9%工作）
+
+---
+
+## 总体进度
+
+**整体完成度: 92%**
+
+- 认证系统: 100% ✅ **完成**
+- 用户管理: 100% ✅ **完成**
+- 订阅计费: 100% ✅ **完成**（Stripe 集成完成，用量追踪和配额执行完成，订阅管理 API 完成，发票 PDF 生成完成，缺前端）
+- 高级功能: 40% (OAuth 完成，团队管理 API 完成，缺多租户和SSO)
+
+---
+
+## 下一步计划
+
+1. ✅ ~~实现 OAuth 第三方登录~~ (已完成)
+2. ✅ ~~完善用量追踪和配额验证逻辑~~ (已完成)
+3. ✅ ~~实现用户管理 API 路由~~ (已完成)
+4. ✅ ~~实现订阅管理 API 路由~~ (已完成)
+5. ✅ ~~实现用量管理 API 路由~~ (已完成)
+6. ✅ ~~实现 OAuth API 路由~~ (已完成)
+7. ✅ ~~实现发票 PDF 生成功能~~ (已完成)
+8. ✅ ~~实现团队管理基础功能~~ (已完成)
+9. ✅ ~~实现团队管理 API 路由~~ (已完成)
+10. 前端页面开发（支付界面、订阅管理、用量统计、OAuth 登录、团队管理）- 剩余9%工作
 
 ---

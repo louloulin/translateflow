@@ -4805,6 +4805,757 @@ async def unlink_oauth_account(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# --- 团队管理 API ---
+
+# 请求/响应模型
+class CreateTeamRequest(BaseModel):
+    """创建团队请求"""
+    name: str
+    slug: str
+    description: Optional[str] = None
+
+class UpdateTeamRequest(BaseModel):
+    """更新团队请求"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    settings: Optional[Dict[str, Any]] = None
+
+class InviteMemberRequest(BaseModel):
+    """邀请成员请求"""
+    email: str
+    role: str = "member"  # owner, admin, member
+
+class UpdateMemberRoleRequest(BaseModel):
+    """更新成员角色请求"""
+    new_role: str  # owner, admin, member
+
+class AcceptInvitationRequest(BaseModel):
+    """接受邀请请求"""
+    token: str
+
+class DeclineInvitationRequest(BaseModel):
+    """拒绝邀请请求"""
+    token: str
+
+
+@app.post("/api/v1/teams", response_model=Dict[str, Any])
+async def create_team(
+    request: CreateTeamRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    创建团队
+
+    请求体：
+    - name: 团队名称（必填）
+    - slug: 团队URL标识（必填，3-50字符，小写字母数字连字符）
+    - description: 团队描述（可选）
+
+    返回：
+    创建的团队信息，包含：
+    - id: 团队ID
+    - name: 团队名称
+    - slug: 团队URL标识
+    - description: 团队描述
+    - owner_id: 所有者ID
+    - max_members: 最大成员数
+    - created_at: 创建时间
+
+    说明：
+    - 创建者自动成为团队所有者（Owner）
+    - 最大成员数根据订阅计划自动设置
+    - Free: 5人, Starter: 10人, Pro: 50人, Enterprise: 无限制
+
+    错误：
+    - 400: slug格式无效或已被使用
+    - 404: 用户不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+        from ModuleFolders.Service.Auth.models import Tenant
+
+        # 获取用户的租户ID（如果有）
+        tenant_id = None
+        try:
+            tenant = Tenant.get(Tenant.owner == user.id)
+            tenant_id = str(tenant.id)
+        except:
+            pass
+
+        team_manager = TeamManager()
+
+        # 创建团队
+        team = team_manager.create_team(
+            owner_id=str(user.id),
+            name=request.name,
+            slug=request.slug,
+            tenant_id=tenant_id,
+            description=request.description,
+        )
+
+        return {
+            "id": str(team.id),
+            "name": team.name,
+            "slug": team.slug,
+            "description": team.description,
+            "owner_id": str(team.owner.id),
+            "max_members": team.max_members,
+            "is_active": team.is_active,
+            "created_at": team.created_at.isoformat() if team.created_at else None,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/teams", response_model=List[Dict[str, Any]])
+async def list_teams(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取我的团队列表
+
+    返回：
+    用户参与的所有团队，每个团队包含：
+    - id: 团队ID
+    - name: 团队名称
+    - slug: 团队URL标识
+    - description: 团队描述
+    - owner_id: 所有者ID
+    - is_active: 是否激活
+    - member_count: 成员数量
+    - my_role: 用户在团队中的角色
+
+    说明：
+    - 包括用户拥有的团队（Owner）
+    - 包括用户参与的团队（Admin/Member）
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager, TeamRepository
+
+        team_manager = TeamManager()
+        team_repository = TeamRepository()
+
+        # 获取用户所有团队
+        teams = team_manager.list_user_teams(user_id=str(user.id))
+
+        result = []
+        for team in teams:
+            # 获取成员数量
+            member_count = team_repository.count_members(team.id, include_pending=False)
+
+            # 获取用户在团队中的角色
+            member = team_repository.find_member(team.id, str(user.id))
+            my_role = member.role if member else None
+
+            result.append({
+                "id": str(team.id),
+                "name": team.name,
+                "slug": team.slug,
+                "description": team.description,
+                "owner_id": str(team.owner.id),
+                "is_active": team.is_active,
+                "max_members": team.max_members,
+                "member_count": member_count,
+                "my_role": my_role,
+                "created_at": team.created_at.isoformat() if team.created_at else None,
+            })
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/teams/{team_id}", response_model=Dict[str, Any])
+async def get_team(
+    team_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取团队详情
+
+    路径参数：
+    - team_id: 团队ID
+
+    返回：
+    团队的完整信息，包含：
+    - id: 团队ID
+    - name: 团队名称
+    - slug: 团队URL标识
+    - description: 团队描述
+    - owner_id: 所有者ID
+    - max_members: 最大成员数
+    - is_active: 是否激活
+    - member_count: 当前成员数
+    - my_role: 当前用户在团队中的角色
+    - created_at: 创建时间
+
+    错误：
+    - 403: 无权限访问该团队
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager, TeamRepository
+
+        team_manager = TeamManager()
+        team_repository = TeamRepository()
+
+        # 获取团队（包含权限验证）
+        team = team_manager.get_team(team_id=team_id, user_id=str(user.id))
+
+        # 获取成员数量
+        member_count = team_repository.count_members(team.id, include_pending=False)
+
+        # 获取用户在团队中的角色
+        member = team_repository.find_member(team.id, str(user.id))
+        my_role = member.role if member else None
+
+        return {
+            "id": str(team.id),
+            "name": team.name,
+            "slug": team.slug,
+            "description": team.description,
+            "owner_id": str(team.owner.id),
+            "max_members": team.max_members,
+            "is_active": team.is_active,
+            "member_count": member_count,
+            "my_role": my_role,
+            "settings": team.settings,
+            "created_at": team.created_at.isoformat() if team.created_at else None,
+            "updated_at": team.updated_at.isoformat() if team.updated_at else None,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/teams/{team_id}", response_model=Dict[str, Any])
+async def update_team(
+    team_id: str,
+    request: UpdateTeamRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新团队信息
+
+    路径参数：
+    - team_id: 团队ID
+
+    请求体：
+    - name: 团队名称（可选）
+    - description: 团队描述（可选）
+    - settings: 团队设置（可选，JSON对象）
+
+    返回：
+    更新后的团队信息
+
+    说明：
+    - 只有团队所有者（Owner）可以更新团队信息
+    - 支持部分字段更新
+
+    错误：
+    - 403: 无权限（非Owner）
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 构建更新参数（只包含提供的字段）
+        update_data = {}
+        if request.name is not None:
+            update_data["name"] = request.name
+        if request.description is not None:
+            update_data["description"] = request.description
+        if request.settings is not None:
+            update_data["settings"] = request.settings
+
+        # 更新团队
+        team = team_manager.update_team(
+            team_id=team_id,
+            user_id=str(user.id),
+            **update_data
+        )
+
+        return {
+            "id": str(team.id),
+            "name": team.name,
+            "slug": team.slug,
+            "description": team.description,
+            "owner_id": str(team.owner.id),
+            "max_members": team.max_members,
+            "is_active": team.is_active,
+            "settings": team.settings,
+            "updated_at": team.updated_at.isoformat() if team.updated_at else None,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/teams/{team_id}")
+async def delete_team(
+    team_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    删除团队
+
+    路径参数：
+    - team_id: 团队ID
+
+    返回：
+    - message: 成功消息
+
+    说明：
+    - 只有团队所有者（Owner）可以删除团队
+    - 删除团队将级联删除所有成员记录
+    - 此操作不可撤销
+
+    错误：
+    - 403: 无权限（非Owner）
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 删除团队
+        team_manager.delete_team(team_id=team_id, user_id=str(user.id))
+
+        return {"message": "团队删除成功"}
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/teams/{team_id}/members", response_model=Dict[str, Any])
+async def invite_team_member(
+    team_id: str,
+    request: InviteMemberRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    邀请成员加入团队
+
+    路径参数：
+    - team_id: 团队ID
+
+    请求体：
+    - email: 被邀请用户邮箱
+    - role: 成员角色（member/admin，默认member）
+
+    返回：
+    邀请信息，包含：
+    - invitation_id: 邀请ID
+    - invitation_token: 邀请令牌（用于接受邀请）
+    - email: 被邀请邮箱
+    - role: 分配的角色
+    - team_id: 团队ID
+    - team_name: 团队名称
+
+    说明：
+    - 只有Owner和Admin可以邀请成员
+    - 被邀请用户必须已存在
+    - 邀请令牌有效期为7天
+    - 需要使用邀请令牌调用接受邀请API
+
+    错误：
+    - 400: 角色无效、团队成员已满、用户已在团队中
+    - 403: 无权限
+    - 404: 团队或用户不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+        from ModuleFolders.Service.Auth.models import User
+
+        team_manager = TeamManager()
+
+        # 根据邮箱查找被邀请用户
+        try:
+            invited_user = User.get(User.email == request.email)
+        except:
+            raise HTTPException(
+                status_code=404,
+                detail=f"用户不存在: {request.email}"
+            )
+
+        # 验证角色
+        if request.role not in ["admin", "member"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的角色: {request.role}，应为 admin 或 member"
+            )
+
+        # 发送邀请
+        member = team_manager.invite_member(
+            team_id=team_id,
+            inviter_id=str(user.id),
+            user_id=str(invited_user.id),
+            role=request.role,
+        )
+
+        return {
+            "invitation_id": str(member.id),
+            "invitation_token": member.invitation_token,
+            "email": request.email,
+            "role": member.role,
+            "team_id": team_id,
+            "team_name": member.team.name,
+            "invited_at": member.invited_at.isoformat() if member.invited_at else None,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            if e.code in ["team_full", "already_member"]:
+                raise HTTPException(status_code=400, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/teams/{team_id}/members", response_model=List[Dict[str, Any]])
+async def list_team_members(
+    team_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取团队成员列表
+
+    路径参数：
+    - team_id: 团队ID
+
+    返回：
+    团队成员列表，每个成员包含：
+    - id: 成员记录ID
+    - user_id: 用户ID
+    - username: 用户名
+    - email: 用户邮箱
+    - full_name: 用户全名
+    - avatar_url: 用户头像
+    - role: 成员角色（owner/admin/member）
+    - invitation_status: 邀请状态（pending/accepted/declined）
+    - invited_at: 邀请时间
+    - joined_at: 加入时间
+
+    说明：
+    - 只有团队成员可以查看成员列表
+    - 包含待接受邀请的成员
+
+    错误：
+    - 403: 无权限访问
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 获取成员列表（包含权限验证）
+        members = team_manager.list_members(team_id=team_id, user_id=str(user.id))
+
+        result = []
+        for member in members:
+            user_data = member.user
+            result.append({
+                "id": str(member.id),
+                "user_id": str(user_data.id),
+                "username": user_data.username,
+                "email": user_data.email,
+                "full_name": user_data.full_name,
+                "avatar_url": user_data.avatar_url,
+                "role": member.role,
+                "invitation_status": member.invitation_status,
+                "invited_at": member.invited_at.isoformat() if member.invited_at else None,
+                "joined_at": member.joined_at.isoformat() if member.joined_at else None,
+            })
+
+        return result
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/teams/{team_id}/members/{member_user_id}", response_model=Dict[str, Any])
+async def update_team_member_role(
+    team_id: str,
+    member_user_id: str,
+    request: UpdateMemberRoleRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新团队成员角色
+
+    路径参数：
+    - team_id: 团队ID
+    - member_user_id: 成员用户ID
+
+    请求体：
+    - new_role: 新角色（owner/admin/member）
+
+    返回：
+    更新后的成员信息，包含：
+    - id: 成员记录ID
+    - user_id: 用户ID
+    - username: 用户名
+    - email: 用户邮箱
+    - role: 新角色
+    - updated_at: 更新时间
+
+    说明：
+    - 只有Owner可以更新成员角色
+    - 不能修改Owner的角色
+    - 可以将Admin降级为Member
+    - 可以将Member升级为Admin
+
+    错误：
+    - 400: 角色无效、不能修改Owner角色
+    - 403: 无权限
+    - 404: 团队或成员不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 验证角色
+        if request.new_role not in ["owner", "admin", "member"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的角色: {request.new_role}"
+            )
+
+        # 更新成员角色
+        member = team_manager.update_member_role(
+            team_id=team_id,
+            operator_id=str(user.id),
+            member_user_id=member_user_id,
+            new_role=request.new_role,
+        )
+
+        user_data = member.user
+        return {
+            "id": str(member.id),
+            "user_id": str(user_data.id),
+            "username": user_data.username,
+            "email": user_data.email,
+            "role": member.role,
+            "invitation_status": member.invitation_status,
+            "updated_at": member.team.updated_at.isoformat() if member.team.updated_at else None,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code in ["team_not_found", "member_not_found"]:
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code in ["permission_denied", "cannot_change_owner"]:
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/teams/{team_id}/members/{member_user_id}")
+async def remove_team_member(
+    team_id: str,
+    member_user_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    移除团队成员
+
+    路径参数：
+    - team_id: 团队ID
+    - member_user_id: 成员用户ID
+
+    返回：
+    - message: 成功消息
+
+    说明：
+    - Owner可以移除任何人
+    - Admin可以移除Member，但不能移除Owner和其他Admin
+    - 不能移除团队所有者
+    - 移除后用户将无法访问团队资源
+
+    错误：
+    - 403: 无权限或不能移除Owner
+    - 404: 团队或成员不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 移除成员
+        team_manager.remove_member(
+            team_id=team_id,
+            operator_id=str(user.id),
+            member_user_id=member_user_id,
+        )
+
+        return {"message": "成员移除成功"}
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code in ["team_not_found", "member_not_found"]:
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code in ["permission_denied", "cannot_remove_owner"]:
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/teams/accept", response_model=Dict[str, Any])
+async def accept_team_invitation(
+    request: AcceptInvitationRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    接受团队邀请
+
+    请求体：
+    - token: 邀请令牌
+
+    返回：
+    团队信息，包含：
+    - id: 团队ID
+    - name: 团队名称
+    - slug: 团队URL标识
+    - role: 用户在团队中的角色
+    - joined_at: 加入时间
+
+    说明：
+    - 用户必须已登录
+    - 邀请令牌有效期为7天
+    - 接受后用户成为团队成员
+    - 邀请令牌只能使用一次
+
+    错误：
+    - 400: 邀请已被接受或拒绝
+    - 404: 邀请不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 接受邀请
+        member = team_manager.accept_invitation(
+            token=request.token,
+            user_id=str(user.id),
+        )
+
+        team = member.team
+        return {
+            "id": str(team.id),
+            "name": team.name,
+            "slug": team.slug,
+            "description": team.description,
+            "role": member.role,
+            "joined_at": member.joined_at.isoformat() if member.joined_at else None,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code in ["invitation_not_found", "already_accepted", "already_declined"]:
+                raise HTTPException(status_code=400, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/teams/decline")
+async def decline_team_invitation(
+    request: DeclineInvitationRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    拒绝团队邀请
+
+    请求体：
+    - token: 邀请令牌
+
+    返回：
+    - message: 成功消息
+    - team_name: 团队名称
+
+    说明：
+    - 用户必须已登录
+    - 拒绝后邀请令牌失效
+    - 无法重新使用同一令牌接受邀请
+
+    错误：
+    - 400: 邀请已被接受或拒绝
+    - 404: 邀请不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 拒绝邀请
+        member = team_manager.decline_invitation(
+            token=request.token,
+            user_id=str(user.id),
+        )
+
+        return {
+            "message": "邀请已拒绝",
+            "team_name": member.team.name,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code in ["invitation_not_found", "already_accepted", "already_declined"]:
+                raise HTTPException(status_code=400, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # --- Static File Serving for the React Frontend ---
 
 # This will serve the built React app (index.html, JS, CSS files)
