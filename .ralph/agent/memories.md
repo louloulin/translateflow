@@ -52,3 +52,12 @@
 ### mem-1772189833-1830
 > pyproject.toml updated: package=translateflow-cli, cmd=translateflow, description includes 'formerly AiNiee-Next' for discoverability
 <!-- tags: branding, config | created: 2026-02-27 -->
+## Fixes
+
+### mem-1772206170-88fd
+> UI功能验证完成：使用Playwright MCP成功验证TranslateFlow前端UI。主仪表盘/团队管理/设置页面均正常渲染。前后端集成正常，API通信无问题。技术栈：Vite+React19.2.3+Radix UI+Tailwind CSS。运行在4200端口，后端API在8000端口。部分i18n key未翻译但不影响功能使用。
+<!-- tags: ui, verification, playwright, mcp, frontend | created: 2026-02-27 -->
+
+### mem-1772205752-dd76
+> 成功解决reportlab缺失问题：使用pip install --break-system-packages reportlab安装。macOS externally-managed-environment需要特殊处理。修复后/api/v1/subscriptions/plans端点正常工作，发票PDF生成功能恢复。
+<!-- tags: dependencies, pdf, stripe | created: 2026-02-27 -->

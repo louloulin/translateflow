@@ -1,0 +1,28 @@
+[    5636ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[    6045ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4200/node_modules/.vite/deps/chunk-LDGIP5W7.js?v=47659610:391
+[    6046ms] [ERROR] Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem. @ http://localhost:4200/node_modules/.vite/deps/chunk-LDGIP5W7.js?v=47659610:391
+[    6084ms] TypeError: Cannot read properties of null (reading 'useState')
+    at exports.useState (http://localhost:4200/node_modules/.vite/deps/chunk-LDGIP5W7.js?v=47659610:959:35)
+    at I18nProvider (http://localhost:4200/contexts/I18nContext.tsx:8:35)
+    at Object.react_stack_bottom_frame (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:18509:20)
+    at renderWithHooks (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:5654:24)
+    at updateFunctionComponent (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:7475:21)
+    at beginWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:8525:20)
+    at runWithFiberInDEV (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:997:72)
+    at performUnitOfWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:12561:98)
+    at workLoopSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:12424:43)
+    at renderRootSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:12408:13)
+[    6047ms] [WARNING] %s
+
+%s
+ An error occurred in the <I18nProvider> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=8b504ea8:6965
+[    6081ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/favicon.ico:0
