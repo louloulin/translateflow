@@ -5699,3 +5699,1189 @@ None, 'code': 'invalid_request_error'}}
 
 [16:14:55] [RETRY] Request failed. Retrying in 4s... (2/2)
 
+[16:14:59] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:14:59] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:14:59] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:01] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:01] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:15:06] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:06] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:06] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:08] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:08] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:15:12] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:12] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:12] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:14] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:14] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:15:18] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:19] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:19] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:21] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:21] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:15:25] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:26] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:26] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:28] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:28] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:15:32] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:32] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:32] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:34] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:34] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:15:39] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:39] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:39] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:43] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:43] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:15:47] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:47] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:47] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:49] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:15:54] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:54] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:54] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:15:56] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:15:56] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:00] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:01] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:01] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:03] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:03] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:07] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:07] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:07] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:10] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:10] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:14] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:14] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:14] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:17] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:17] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:21] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:21] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:21] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:23] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:23] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:27] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:27] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:27] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:29] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:29] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:34] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:34] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:34] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:36] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:36] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:40] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:41] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:41] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:43] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:43] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:47] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:47] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:47] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:49] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:16:53] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:53] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:53] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:16:55] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:16:55] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:00] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:00] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:00] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:02] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:02] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:06] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:06] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:06] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:09] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:09] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:13] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:13] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:13] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:16] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:16] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:20] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:20] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:20] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:22] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:22] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:26] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:26] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:26] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:29] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:29] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:33] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:33] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:33] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:35] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:35] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:39] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:39] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:39] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:41] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:41] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:45] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:45] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:45] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:48] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:48] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:52] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:52] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:52] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:17:54] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:54] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:17:58] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:58] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:17:58] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:01] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:01] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:05] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:06] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:06] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:08] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:08] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:12] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:12] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:12] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:14] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:14] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:18] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:18] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:18] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:20] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:20] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:25] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:25] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:25] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:27] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:27] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:31] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:32] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:32] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:34] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:34] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:38] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:38] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:38] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:40] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:40] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:44] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:44] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:44] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:47] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:47] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:51] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:51] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:51] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:18:53] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:53] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:18:58] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:59] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:18:59] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:01] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:01] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:19:05] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:05] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:05] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:08] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:08] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:19:12] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:12] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:12] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:14] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:14] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:19:18] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:18] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:18] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:20] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:20] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:19:24] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:24] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:24] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:27] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:27] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:19:31] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:31] [WARNING] 已达到最大翻译轮次，但仍有未翻译文本。智能轮次限制已将最大轮次增加到 6 ...
+
+[16:19:31] [INFO] 正在生成翻译任务 ...
+
+[16:19:31] [INFO] 已经生成全部翻译任务 ...
+
+[16:19:31] [INFO] 即将开始执行任务，预计任务总数为 53，请注意保持网络通畅 ...
+
+[16:19:34] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:34] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:37] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:37] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:19:41] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:41] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:41] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:43] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:43] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:19:47] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:47] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:47] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:49] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:19:54] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:54] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:54] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:19:56] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:19:56] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:00] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:00] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:00] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:03] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:03] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:07] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:07] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:07] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:10] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:10] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:14] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:14] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:14] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:17] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:17] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:21] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:21] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:21] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:24] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:24] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:29] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:29] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:29] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:31] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:31] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:36] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:36] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:36] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:38] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:38] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:42] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:42] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:42] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:44] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:44] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:49] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:51] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:51] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:20:56] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:56] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:56] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:20:58] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:20:58] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:02] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:02] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:02] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:05] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:05] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:09] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:09] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:09] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:12] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:12] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:16] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:16] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:16] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:18] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:18] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:22] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:22] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:22] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:24] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:24] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:29] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:29] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:29] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:31] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:31] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:35] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:36] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:36] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:38] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:38] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:42] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:42] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:42] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:45] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:45] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:49] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:51] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:51] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:21:55] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:56] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:56] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:21:58] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:21:58] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:02] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:03] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:03] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:22:05] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:05] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:09] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:09] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:09] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:22:11] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:11] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:16] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:16] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:16] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:22:19] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:19] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:23] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:23] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:23] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:22:26] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:26] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:30] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:30] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:30] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:22:32] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:32] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:37] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:37] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:37] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:22:39] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:39] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:43] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:44] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:44] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:22:46] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:46] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:50] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:50] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:50] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:22:53] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:53] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:22:57] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:58] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:22:58] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:23:00] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:23:00] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:23:04] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:23:04] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:23:04] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:23:07] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:23:07] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:23:13] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:23:14] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:23:14] [RETRY] Request failed. Retrying in 2s... (1/2)
+

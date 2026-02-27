@@ -1,57 +1,55 @@
-# AiNiee-Next 双语对照功能分析
+# Scratchpad - AI Translation Tool Renaming Project
 
-## 核心发现
+## Current Understanding
 
-### 1. 配置状态
-- `enable_bilingual_output` 在 preset.json 中已设置为 `true` ✅
-- 但 BilingualPlugin 需要在 `plugin_enables` 中手动启用
+**Project**: AiNiee-Next - An AI-powered translation CLI/TUI tool
+**Current Name Issues**:
+- "AiNiee" doesn't clearly convey translation or AI aspect
+- The name is not memorable or professional enough
+- Needs a name that highlights AI and translation expertise
 
-### 2. 双语工作原理
-双语功能由两部分组成：
-1. **BilingualPlugin** (`default_enable = False`)
-   - 在 `postprocess_text` 事件触发时修改 `translated_text`
-   - 将原文与译文合并为 "译文\n原文" 格式
-   - 需要在 `root_config["plugin_enables"]["BilingualPlugin"] = True` 启用
+**Project Key Features**:
+- High-performance AI translation (50+ concurrent threads)
+- Multi-format support (Epub, Docx, Srt, etc.)
+- CLI/TUI interface
+- Cross-platform (Windows, Linux, macOS, Android)
+- Plugin architecture (RAG, translation checker)
+- Web dashboard
+- Context caching for cost optimization
+- API failover support
 
-2. **FileOutputer** 双语文件生成
-   - 读取 `enable_bilingual_output` 配置
-   - 为支持的格式（TXT/EPUB/SRT/PDF）生成分离的双语文件
+## Analysis Framework
 
-### 3. 触发流程
-```
-翻译完成 → TaskExecutor.postprocess_text → BilingualPlugin.process_dictionary_list → FileOutputer
-```
+### Naming Considerations:
+1. **Chinese Market**:
+   - Needs to be memorable in Chinese
+   - Should convey "AI" + "Translation" concept
+   - Short, catchy, professional
 
-### 4. 验证要点
-- [x] 配置文件 preset.json 中 enable_bilingual_output = true
-- [x] postprocess_text 事件在 TaskExecutor.py:656 触发
-- [x] BilingualPlugin 已注册到 postprocess_text 事件
-- [ ] 需要验证 plugin_enables 中 BilingualPlugin 是否启用
+2. **International Market**:
+   - English name should be easy to pronounce
+   - Should convey AI + translation
+   - Professional and modern
 
-## 待处理任务
-- 验证双语功能是否正常工作
-- 检查 TUI 搜索功能
+### Brand Identity Goals:
+- Professional
+- Tech-forward (AI emphasis)
+- Translation expertise
+- Reliability/Performance
+- Modern tooling
 
-## 分析完成状态 (2026-02-27)
+## Research Areas:
+1. Competitor naming analysis (DeepL, Google Translate, etc.)
+2. AI product naming trends
+3. Translation tool naming conventions
+4. Logo design principles for AI products
 
-### ✅ 已完成分析项目
-1. **双语配置** - enable_bilingual_output: true (已启用)
-2. **BilingualPlugin** - 需要手动启用 (default_enable=False)
-3. **TUI搜索** - 已实现 (TUIEditor 支持搜索)
-4. **Web定时任务** - 已实现 (TaskQueue)
-5. **Web编辑器** - 已实现 (CacheEditor)
-6. **Web断点续传** - 已实现
+## Plan (to be detailed):
+1. Research phase - analyze naming patterns
+2. Name proposal development
+3. Logo design concept
+4. Create comprehensive logo.md document
+5. Implementation plan
 
-### 📊 功能对比总结
-| 功能 | Qt (GUI) | TUI | Web |
-|------|---------|-----|-----|
-| 双语对照 | ❌ | ✅ | ✅ |
-| 搜索功能 | ✅ | ✅ | ❌ |
-| 定时任务 | ✅ | ✅ | ✅ |
-| 断点续传 | ✅ | ✅ | ✅ |
-
-### 结论
-- 核心翻译功能完整实现
-- 三个版本各有优势
-- TUI/Web 双语对照优于 Qt
-- 分析任务已完成
+---
+*Created: 2026-02-27*

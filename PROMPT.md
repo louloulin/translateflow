@@ -1277,15 +1277,43 @@ class QualityEstimatorService:
 | 功能模块 | CLI/TUI | Web | 说明 |
 |----------|---------|-----|------|
 | **双语配置** | ✅ | ✅ | preset.json 中 enable_bilingual_output: true |
-| **BilingualPlugin** | ✅ | ✅ | 代码已实现，需手动启用 |
-| **TUI 搜索对话框** | ✅ | - | SearchDialog.py 已实现 |
-| **Web 定时任务 UI** | - | ✅ | Scheduler.tsx 已实现 |
-| **Web 在线编辑器** | - | ✅ | Editor.tsx 已实现 |
+| **BilingualPlugin** | ✅ | ✅ | 代码已实现，需手动启用 (default_enable=False) |
+| **TUI 搜索对话框** | ✅ | - | SearchDialog.py 已实现，支持正则表达式和范围搜索 |
+| **Web 定时任务 UI** | - | ✅ | Scheduler.tsx 已实现，支持任务CRON配置 |
+| **Web 在线编辑器** | - | ✅ | CacheEditor.tsx 已实现，集成 Monaco Editor |
 | **Web 断点续传** | - | ✅ | TaskRunner.tsx 已实现 |
-| **TUI 校对界面** | ✅ | - | ProofreadTUI.py 已实现 |
-| **术语选择器** | ✅ | - | TermSelector.py 已实现 |
+| **TUI 校对界面** | ✅ | - | ProofreadTUI.py 已实现，支持AI校对报告展示 |
+| **术语选择器** | ✅ | ✅ | TermSelector.py 已实现，跨平台支持 |
+| **UI配置模型名称修复** | ✅ | ✅ | TaskConfig.initialize() 支持可选参数，自动加载配置 |
 
-### 13.2 待实现功能 🔲
+### 13.2 已验证实现细节
+
+#### 双语功能 (Bilingual)
+- **配置文件**: `Resource/platforms/preset.json:49-50`
+  - `enable_bilingual_output`: true ✅
+  - `bilingual_text_order`: "translation_first" ✅
+- **插件代码**: `PluginScripts/BilingualPlugin/BilingualPlugin.py`
+  - 支持 postprocess_text 和 manual_export 事件
+  - 原生支持 TXT/EPUB/SRT/PDF 格式
+- **输出配置**: TaskExecutor.py 正确传递 enable_bilingual_output 配置
+
+#### TUI 功能
+- **SearchDialog.py**: 支持搜索范围(全文/原文/译文/润文)、正则表达式、标记行过滤
+- **ProofreadTUI.py**: 支持AI校对报告展示，问题分级显示(高危/中危/低危)
+- **TermSelector.py**: 跨平台键盘响应支持(Windows/Linux/macOS)
+
+#### Web 功能
+- **Scheduler.tsx**: 完整的定时任务管理UI，支持CRON表达式、任务启用/禁用
+- **CacheEditor.tsx**: Monaco Editor 集成，支持分页、AI校对状态显示
+- **断点续传**: TaskRunner 检测缓存状态，自动恢复翻译
+
+#### Bug 修复
+- **UI配置模型名称修复**: TaskConfig.initialize() 方法增加可选 config_dict 参数
+  - 问题：调用者使用无参调用导致配置未加载，模型名称不生效
+  - 解决：将 config_dict 设为可选参数，未传入时自动从配置文件加载
+  - 影响文件：TaskConfig.py, SimpleExecutor.py (5处), WriterUtil.py (1处)
+
+### 13.3 待实现功能 🔲
 
 | 功能模块 | 优先级 | 说明 |
 |----------|--------|------|
@@ -1294,16 +1322,20 @@ class QualityEstimatorService:
 | **Qt 双语对照显示** | P2 | GUI 版本添加实时对照 |
 | **Qt 诊断系统** | P2 | 添加 SmartDiagnostic |
 
-### 13.3 配置说明
+### 13.4 配置说明
 
 **双语功能启用步骤**:
 1. 在 Web/CLI 的插件设置中启用 `BilingualPlugin`
 2. 确保 `enable_bilingual_output: true`（已在 preset.json 中设置）
 3. 翻译文件后会自动生成 `_bilingual` 后缀的双语文件
 
+**注意事项**:
+- BilingualPlugin.default_enable = False，需要手动在插件设置中启用
+- 对于 TXT/EPUB/SRT/PDF 格式，FileOutputer 会原生输出双语版本，不需要启用插件
+
 ---
 
-**文档版本**: 3.1
+**文档版本**: 3.3
 **最后更新**: 2026-02-27
-**更新内容**: 添加功能实现状态总结，修正双语配置状态
-**分析范围**: Smartcat、DeepL等专业平台对比，功能差距分析，实施路线图
+**更新内容**: 添加UI配置模型名称修复说明
+**分析范围**: Bug修复状态更新

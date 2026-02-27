@@ -9,3 +9,8 @@
 2026-02-27T08:14:36.319046Z  INFO ralph_core::event_loop: Successfully loaded 1 memories from store
 2026-02-27T08:14:36.319059Z  INFO ralph_core::event_loop: Injecting 1 memories (346 chars) into prompt
 2026-02-27T08:14:36.319332Z  INFO ralph_core::event_loop: Injecting ready tasks (0 ready, 0 open, 2 closed) into prompt
+2026-02-27T08:19:15.112445Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl"
+2026-02-27T08:19:15.112497Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl/.ralph/agent/memories.md" (exists: true)
+2026-02-27T08:19:15.112617Z  INFO ralph_core::event_loop: Successfully loaded 2 memories from store
+2026-02-27T08:19:15.112629Z  INFO ralph_core::event_loop: Injecting 2 memories (612 chars) into prompt
+2026-02-27T08:19:15.112923Z  INFO ralph_core::event_loop: Injecting ready tasks (0 ready, 0 open, 2 closed) into prompt
