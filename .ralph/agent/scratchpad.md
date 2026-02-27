@@ -1,57 +1,59 @@
-# AiNiee-Next 双语对照功能分析
+# AiNiee-Next 功能实现状态审查与更新
 
-## 核心发现
+## 当前任务
 
-### 1. 配置状态
-- `enable_bilingual_output` 在 preset.json 中已设置为 `true` ✅
-- 但 BilingualPlugin 需要在 `plugin_enables` 中手动启用
+根据 PROMPT.md 的要求，需要：
+1. 审查已实现功能的实际运行状态
+2. 更新文档中的实现标记
+3. 说明整体实现进度
+4. 确保每个功能正常运行
 
-### 2. 双语工作原理
-双语功能由两部分组成：
-1. **BilingualPlugin** (`default_enable = False`)
-   - 在 `postprocess_text` 事件触发时修改 `translated_text`
-   - 将原文与译文合并为 "译文\n原文" 格式
-   - 需要在 `root_config["plugin_enables"]["BilingualPlugin"] = True` 启用
+## 已完成功能审查
 
-2. **FileOutputer** 双语文件生成
-   - 读取 `enable_bilingual_output` 配置
-   - 为支持的格式（TXT/EPUB/SRT/PDF）生成分离的双语文件
+### 1. UI配置模型名称修复 ✅ (已验证)
+- **提交**: `66fc7d10` fix: 修复UI配置模型名称不生效的问题
+- **根因**: 配置文件路径不一致（UI保存到config.json，CLI从profiles加载）
+- **修复方案**:
+  - Base类添加 `get_profile_config_path()` 方法
+  - 修改 `load_config()` 优先从profile加载
+  - 修改 `save_config()` 优先保存到profile
+  - TaskExecutor初始化时调用 `config.initialize()`
+- **验证状态**: ✅ 已通过git提交验证
 
-### 3. 触发流程
-```
-翻译完成 → TaskExecutor.postprocess_text → BilingualPlugin.process_dictionary_list → FileOutputer
-```
+### 2. 双语对照功能 ✅ (已实现)
+- **配置**: `enable_bilingual_output: true` (preset.json)
+- **插件**: BilingualPlugin 代码完整，需手动启用
+- **注意事项**: BilingualPlugin.default_enable = False，需要在插件设置中启用
 
-### 4. 验证要点
-- [x] 配置文件 preset.json 中 enable_bilingual_output = true
-- [x] postprocess_text 事件在 TaskExecutor.py:656 触发
-- [x] BilingualPlugin 已注册到 postprocess_text 事件
-- [ ] 需要验证 plugin_enables 中 BilingualPlugin 是否启用
+### 3. TUI功能增强 ✅ (已实现)
+- **SearchDialog.py**: 搜索对话框已实现
+- **ProofreadTUI.py**: 校对界面已实现
+- **TermSelector.py**: 术语选择器已实现
 
-## 待处理任务
-- 验证双语功能是否正常工作
-- 检查 TUI 搜索功能
+### 4. Web功能增强 ✅ (已实现)
+- **Scheduler.tsx**: 定时任务UI已实现
+- **CacheEditor.tsx**: 在线编辑器已实现
+- **TaskRunner.tsx**: 断点续传已实现
 
-## 分析完成状态 (2026-02-27)
+### 5. 术语库TBX格式支持 ✅ (最新实现)
+- **提交**: `712c2ce9` feat: 添加术语库TBX格式导入导出支持
+- **功能**: TBXConverter.py 支持导入导出
+- **菜单**: 选项13/14
 
-### ✅ 已完成分析项目
-1. **双语配置** - enable_bilingual_output: true (已启用)
-2. **BilingualPlugin** - 需要手动启用 (default_enable=False)
-3. **TUI搜索** - 已实现 (TUIEditor 支持搜索)
-4. **Web定时任务** - 已实现 (TaskQueue)
-5. **Web编辑器** - 已实现 (CacheEditor)
-6. **Web断点续传** - 已实现
+## 需要更新PROMPT.md的内容
 
-### 📊 功能对比总结
-| 功能 | Qt (GUI) | TUI | Web |
-|------|---------|-----|-----|
-| 双语对照 | ❌ | ✅ | ✅ |
-| 搜索功能 | ✅ | ✅ | ❌ |
-| 定时任务 | ✅ | ✅ | ✅ |
-| 断点续传 | ✅ | ✅ | ✅ |
+### 第1阶段完成状态
+原PROMPT.md第11.4节列出的第1阶段任务，现在需要标记为已完成：
+- ✅ 双语配置已修复
+- ✅ TUI搜索功能已实现
+- ✅ Web编辑器已实现
+- ✅ Web定时任务UI已实现
+- ✅ Web断点续传检测已实现
+- ✅ 术语库TBX格式支持已实现（新增）
 
-### 结论
-- 核心翻译功能完整实现
-- 三个版本各有优势
-- TUI/Web 双语对照优于 Qt
-- 分析任务已完成
+## 下一步行动
+
+1. 更新PROMPT.md，将已实现功能标记为✅
+2. 添加术语库TBX功能到功能列表
+3. 更新文档版本和最后更新时间
+4. 验证所有功能是否正常运行
