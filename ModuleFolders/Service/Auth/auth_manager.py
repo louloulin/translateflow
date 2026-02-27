@@ -96,7 +96,7 @@ class AuthManager:
 
         # Create user
         user = User.create(
-            id=uuid4(),
+            id=str(uuid4()),
             email=email,
             username=username,
             password_hash=self.password_manager.hash_password(password),
@@ -115,7 +115,7 @@ class AuthManager:
 
         # Store refresh token
         RefreshToken.create(
-            id=uuid4(),
+            id=str(uuid4()),
             user=user,
             token=refresh_token,
             token_hash=self.jwt_handler.get_token_hash(refresh_token),
@@ -126,7 +126,7 @@ class AuthManager:
 
         # Record login history
         LoginHistory.create(
-            id=uuid4(),
+            id=str(uuid4()),
             user=user,
             ip_address=ip_address or "unknown",
             user_agent=user_agent,
@@ -188,7 +188,7 @@ class AuthManager:
         if not self.password_manager.verify_password(password, user.password_hash):
             # Record failed login
             LoginHistory.create(
-                id=uuid4(),
+                id=str(uuid4()),
                 user=user,
                 ip_address=ip_address or "unknown",
                 user_agent=user_agent,
@@ -227,7 +227,7 @@ class AuthManager:
 
         # Store refresh token
         RefreshToken.create(
-            id=uuid4(),
+            id=str(uuid4()),
             user=user,
             token=refresh_token,
             token_hash=self.jwt_handler.get_token_hash(refresh_token),
@@ -238,7 +238,7 @@ class AuthManager:
 
         # Record successful login
         LoginHistory.create(
-            id=uuid4(),
+            id=str(uuid4()),
             user=user,
             ip_address=ip_address or "unknown",
             user_agent=user_agent,
@@ -353,7 +353,7 @@ class AuthManager:
 
         # Store token in database
         PasswordReset.create(
-            id=uuid4(),
+            id=str(uuid4()),
             user=user,
             token=reset_token,
             token_hash=token_hash,
@@ -484,7 +484,7 @@ class AuthManager:
 
         # Store token in database
         EmailVerification.create(
-            id=uuid4(),
+            id=str(uuid4()),
             user=user,
             token=verification_token,
             token_hash=token_hash,

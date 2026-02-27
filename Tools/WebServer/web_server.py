@@ -747,7 +747,9 @@ async def register(request: RegisterRequest, background_tasks: BackgroundTasks):
         # Initialize database if needed
         try:
             init_database()
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Database init error: {e}")
             pass  # Database might already be initialized
 
         auth_manager = get_auth_manager()

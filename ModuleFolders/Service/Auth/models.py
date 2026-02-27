@@ -85,7 +85,8 @@ class TeamRole(str, Enum):
 class BaseModel:
     """Base model with common fields."""
 
-    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    # Use CharField for UUID to ensure SQLite compatibility
+    id = CharField(max_length=36, primary_key=True, default=lambda: str(uuid.uuid4()))
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)
 
@@ -110,7 +111,7 @@ class User(_db.Model, BaseModel):
     )
 
     # Multi-tenant support
-    tenant_id = UUIDField(null=True, index=True)
+    tenant_id = CharField(max_length=36, null=True, index=True)
 
     # Account status
     status = CharField(
@@ -184,7 +185,7 @@ class Tenant(_db.Model, BaseModel):
     settings = JSONField(default=dict)
 
     # Contact
-    owner_id = UUIDField(null=True)
+    owner_id = CharField(max_length=36, null=True)
     contact_email = CharField(max_length=255, null=True)
 
     class Meta:
@@ -230,7 +231,7 @@ class ApiKey(_db.Model, BaseModel):
 class LoginHistory(_db.Model):
     """Login history for security audit."""
 
-    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    id = CharField(max_length=36, primary_key=True, default=lambda: str(uuid.uuid4()))
     user = ForeignKeyField(User, backref="login_history", on_delete="CASCADE")
 
     # Connection details
@@ -260,7 +261,7 @@ class LoginHistory(_db.Model):
 class PasswordReset(_db.Model):
     """Password reset token storage."""
 
-    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    id = CharField(max_length=36, primary_key=True, default=lambda: str(uuid.uuid4()))
     user = ForeignKeyField(User, backref="password_resets", on_delete="CASCADE")
 
     token = CharField(max_length=255, unique=True, index=True)
@@ -282,7 +283,7 @@ class PasswordReset(_db.Model):
 class EmailVerification(_db.Model):
     """Email verification token storage."""
 
-    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    id = CharField(max_length=36, primary_key=True, default=lambda: str(uuid.uuid4()))
     user = ForeignKeyField(User, backref="email_verifications", on_delete="CASCADE")
 
     token = CharField(max_length=255, unique=True, index=True)
@@ -306,7 +307,7 @@ class EmailVerification(_db.Model):
 class RefreshToken(_db.Model):
     """Refresh token for JWT authentication."""
 
-    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    id = CharField(max_length=36, primary_key=True, default=lambda: str(uuid.uuid4()))
     user = ForeignKeyField(User, backref="refresh_tokens", on_delete="CASCADE")
 
     token = CharField(max_length=255, unique=True, index=True)
@@ -369,7 +370,7 @@ class Team(_db.Model, BaseModel):
 class TeamMember(_db.Model):
     """Team member relationship model."""
 
-    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    id = CharField(max_length=36, primary_key=True, default=lambda: str(uuid.uuid4()))
     team = ForeignKeyField(Team, backref="members", on_delete="CASCADE")
     user = ForeignKeyField(User, backref="team_memberships", on_delete="CASCADE")
 
@@ -401,7 +402,7 @@ class TeamMember(_db.Model):
 class OAuthAccount(_db.Model):
     """OAuth account linkage model for third-party login."""
 
-    id = UUIDField(primary_key=True, default=uuid.uuid4)
+    id = CharField(max_length=36, primary_key=True, default=lambda: str(uuid.uuid4()))
     user = ForeignKeyField(User, backref="oauth_accounts", on_delete="CASCADE")
 
     # OAuth provider info
@@ -446,7 +447,8 @@ class OAuthAccount(_db.Model):
 # Database initialization function
 def init_database():
     """Initialize database tables."""
-    _db.connect()
+    if _db.is_closed():
+        _db.connect()
     _db.create_tables([
         User,
         Tenant,

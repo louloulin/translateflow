@@ -1,0 +1,32 @@
+[  172068ms] Error: useI18n must be used within an I18nProvider
+    at useI18n (http://localhost:4200/contexts/I18nContext.tsx?t=1772208368876:44:11)
+    at MainLayout (http://localhost:4200/components/Layout/MainLayout.tsx?t=1772208714806:47:60)
+    at Object.react_stack_bottom_frame (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:18509:20)
+    at renderWithHooks (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:5654:24)
+    at updateFunctionComponent (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:7475:21)
+    at beginWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:8525:20)
+    at runWithFiberInDEV (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:997:72)
+    at performUnitOfWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12561:98)
+    at workLoopSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12424:43)
+    at renderRootSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12408:13)
+[  172068ms] [WARNING] %s
+
+%s
+ An error occurred in the <MainLayout> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:6965
+[  181206ms] Error: useI18n must be used within an I18nProvider
+    at useI18n (http://localhost:4200/contexts/I18nContext.tsx?t=1772208746760:44:11)
+    at MainLayout (http://localhost:4200/components/Layout/MainLayout.tsx?t=1772208746760:47:60)
+    at Object.react_stack_bottom_frame (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:18509:20)
+    at renderWithHooks (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:5654:24)
+    at updateFunctionComponent (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:7475:21)
+    at beginWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:8525:20)
+    at runWithFiberInDEV (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:997:72)
+    at performUnitOfWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12561:98)
+    at workLoopSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12424:43)
+    at renderRootSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12408:13)
+[  181206ms] [WARNING] %s
+
+%s
+ An error occurred in the <MainLayout> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:6965

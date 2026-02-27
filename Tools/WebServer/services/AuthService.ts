@@ -151,4 +151,166 @@ export const AuthService = {
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
   },
+
+  // User profile management
+  async getUserProfile(token: string): Promise<User> {
+    const res = await fetch('/api/v1/users/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to get user profile');
+    }
+
+    return await res.json();
+  },
+
+  async updateUserProfile(token: string, data: Partial<User>): Promise<User> {
+    const res = await fetch('/api/v1/users/me', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Update failed' }));
+      throw new Error(error.detail || 'Update failed');
+    }
+
+    return await res.json();
+  },
+
+  async updateUserPassword(token: string, oldPassword: string, newPassword: string): Promise<void> {
+    const res = await fetch('/api/v1/users/me/password', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Password update failed' }));
+      throw new Error(error.detail || 'Password update failed');
+    }
+  },
+
+  async getLoginHistory(token: string): Promise<any[]> {
+    const res = await fetch('/api/v1/users/me/login-history', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to get login history');
+    }
+
+    const data = await res.json();
+    return data.history || [];
+  },
+
+  // Subscription management
+  async getSubscriptionPlans(): Promise<any[]> {
+    const res = await fetch('/api/v1/subscriptions/plans');
+    if (!res.ok) {
+      throw new Error('Failed to get subscription plans');
+    }
+    return await res.json();
+  },
+
+  async getCurrentSubscription(token: string): Promise<any> {
+    const res = await fetch('/api/v1/subscriptions/current', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Failed to get current subscription');
+    }
+    return await res.json();
+  },
+
+  async createSubscription(token: string, plan: string): Promise<any> {
+    const res = await fetch('/api/v1/subscriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ plan }),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to create subscription' }));
+      throw new Error(error.detail || 'Failed to create subscription');
+    }
+    return await res.json();
+  },
+
+  async cancelSubscription(token: string): Promise<void> {
+    const res = await fetch('/api/v1/subscriptions/current', {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Failed to cancel subscription');
+    }
+  },
+
+  async getInvoices(token: string): Promise<any[]> {
+    const res = await fetch('/api/v1/subscriptions/invoices', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Failed to get invoices');
+    }
+    return await res.json();
+  },
+
+  async getInvoicePdf(token: string, invoiceId: string): Promise<Blob> {
+    const res = await fetch(`/api/v1/subscriptions/invoices/${invoiceId}/pdf`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Failed to get invoice PDF');
+    }
+    return await res.blob();
+  },
+
+  // Usage statistics
+  async getUsageCurrent(token: string): Promise<any> {
+    const res = await fetch('/api/v1/usage/current', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Failed to get usage data');
+    }
+    return await res.json();
+  },
+
+  async getUsageHistory(token: string, period: string = 'monthly'): Promise<any[]> {
+    const res = await fetch(`/api/v1/usage/history?period=${period}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      throw new Error('Failed to get usage history');
+    }
+    return await res.json();
+  },
 };
