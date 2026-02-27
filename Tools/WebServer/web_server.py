@@ -4410,6 +4410,55 @@ async def get_invoice_pdf(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/v1/subscriptions/invoices/{invoice_id}/pdf")
+async def download_invoice_pdf(
+    invoice_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    下载发票 PDF 文件
+
+    生成并下载指定发票的自定义 PDF 文件。
+
+    参数：
+    - invoice_id: 发票 ID（本地数据库 ID 或 Stripe 发票 ID）
+
+    返回：
+    - PDF 文件流（Content-Type: application/pdf）
+    """
+    try:
+        from ModuleFolders.Service.Billing import InvoiceGenerator
+        from fastapi.responses import Response
+
+        # 生成 PDF
+        invoice_generator = InvoiceGenerator()
+
+        # 尝试生成为字节数据
+        try:
+            pdf_data = invoice_generator.generate_pdf_bytes(invoice_id)
+        except ValueError:
+            # 如果本地数据库没有此发票，尝试通过 Stripe 发票 ID 查找
+            # 这里可以添加逻辑从 Stripe 获取发票信息并生成本地发票
+            raise HTTPException(
+                status_code=404,
+                detail="发票不存在"
+            )
+
+        # 返回 PDF 文件
+        return Response(
+            content=pdf_data,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="invoice_{invoice_id}.pdf"'
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF 生成失败: {str(e)}")
+
+
 # --- Usage Management API Routes ---
 
 @app.get("/api/v1/usage/current", response_model=Dict[str, Any])

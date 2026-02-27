@@ -72,6 +72,7 @@ dependencies = [
     "uvicorn[standard]>=0.40.0",
     "bcrypt>=4.2.1",
     "pyjwt>=2.10.1",
+    "reportlab>=4.2.0",
 ]
 
 [project.scripts]
