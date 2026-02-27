@@ -9,6 +9,7 @@ from .UsageTracker import UsageTracker
 from .PaymentProcessor import PaymentProcessor
 from .QuotaEnforcer import QuotaEnforcer, QuotaExceededError
 from .InvoiceGenerator import InvoiceGenerator
+from .stripe_webhook import StripeWebhookHandler
 
 __all__ = [
     "SubscriptionManager",
@@ -17,4 +18,5 @@ __all__ = [
     "QuotaEnforcer",
     "QuotaExceededError",
     "InvoiceGenerator",
+    "StripeWebhookHandler",
 ]

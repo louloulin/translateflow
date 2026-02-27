@@ -18,6 +18,15 @@ from .templates import (
     get_subscription_confirmation_template,
     get_quota_warning_template,
     get_login_alert_template,
+    get_email_change_notification_template,
+    get_password_change_notification_template,
+    get_account_deletion_notification_template,
+    get_role_change_notification_template,
+    get_account_suspended_notification_template,
+    get_account_reactivated_notification_template,
+    get_payment_notification_template,
+    get_subscription_notification_template,
+    get_invoice_notification_template,
     EmailTemplate,
 )
 
@@ -184,6 +193,122 @@ class EmailService:
         """Send login security alert email."""
         template = get_login_alert_template(username, ip_address, location, time)
         return self.send_email(to, template)
+
+    def send_email_change_notification(
+        self,
+        to: str,
+        username: str,
+    ) -> Dict[str, Any]:
+        """Send email change notification email."""
+        template = get_email_change_notification_template(username)
+        return self.send_email(to, template)
+
+    def send_password_change_notification(
+        self,
+        to: str,
+        username: str,
+    ) -> Dict[str, Any]:
+        """Send password change notification email."""
+        template = get_password_change_notification_template(username)
+        return self.send_email(to, template)
+
+    def send_account_deletion_notification(
+        self,
+        to: str,
+        username: str,
+    ) -> Dict[str, Any]:
+        """Send account deletion notification email."""
+        template = get_account_deletion_notification_template(username)
+        return self.send_email(to, template)
+
+    def send_role_change_notification(
+        self,
+        to: str,
+        username: str,
+        new_role: str,
+    ) -> Dict[str, Any]:
+        """Send role change notification email."""
+        template = get_role_change_notification_template(username, new_role)
+        return self.send_email(to, template)
+
+    def send_account_suspended_notification(
+        self,
+        to: str,
+        username: str,
+        reason: str,
+    ) -> Dict[str, Any]:
+        """Send account suspended notification email."""
+        template = get_account_suspended_notification_template(username, reason)
+        return self.send_email(to, template)
+
+    def send_account_reactivated_notification(
+        self,
+        to: str,
+        username: str,
+    ) -> Dict[str, Any]:
+        """Send account reactivated notification email."""
+        template = get_account_reactivated_notification_template(username)
+        return self.send_email(to, template)
+
+    def send_payment_notification(
+        self,
+        email: str,
+        payment_id: str,
+        status: str,
+        amount: float = None,
+        currency: str = None,
+        error_message: str = None,
+    ) -> Dict[str, Any]:
+        """发送支付通知邮件"""
+        # 查找用户名
+        username = email.split("@")[0]  # 简化处理，实际应从数据库查询
+        template = get_payment_notification_template(
+            username=username,
+            payment_id=payment_id,
+            amount=amount or 0,
+            currency=currency or "CNY",
+            status=status,
+            error_message=error_message,
+        )
+        return self.send_email(email, template)
+
+    def send_subscription_notification(
+        self,
+        email: str,
+        event: str,
+        plan: str,
+        status: str = None,
+    ) -> Dict[str, Any]:
+        """发送订阅通知邮件"""
+        username = email.split("@")[0]  # 简化处理
+        template = get_subscription_notification_template(
+            username=username,
+            event=event,
+            plan=plan,
+            status=status,
+        )
+        return self.send_email(email, template)
+
+    def send_invoice_notification(
+        self,
+        email: str,
+        invoice_id: str,
+        status: str,
+        amount: float = None,
+        currency: str = None,
+        attempt_count: int = None,
+    ) -> Dict[str, Any]:
+        """发送发票通知邮件"""
+        username = email.split("@")[0]  # 简化处理
+        template = get_invoice_notification_template(
+            username=username,
+            invoice_id=invoice_id,
+            status=status,
+            amount=amount,
+            currency=currency,
+            attempt_count=attempt_count,
+        )
+        return self.send_email(email, template)
 
 
 # Global instance for convenience

@@ -339,3 +339,475 @@ TranslateFlow - AI驱动的翻译工具
         html=_render_base_html("安全提醒", html_content),
         text=text_content
     )
+
+
+def get_email_change_notification_template(username: str) -> EmailTemplate:
+    """Get email change notification template."""
+    html_content = f"""
+        <h2>邮箱地址已更改</h2>
+        <p>你好 <strong>{username}</strong>,</p>
+        <p>您的账户邮箱地址已成功更改。</p>
+        <p>为了安全起见，您需要重新验证新的邮箱地址。</p>
+        <p>如果这不是您本人的操作，请立即联系支持团队。</p>
+        <p><a href="https://translateflow.example.com/settings/security" class="button">查看安全设置</a></p>
+    """
+
+    text_content = f"""邮箱地址已更改
+
+你好 {username},
+
+您的账户邮箱地址已成功更改。
+
+为了安全起见，您需要重新验证新的邮箱地址。
+
+如果这不是您本人的操作，请立即联系支持团队。
+https://translateflow.example.com/settings/security
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+    return EmailTemplate(
+        subject="TranslateFlow 邮箱地址已更改",
+        html=_render_base_html("邮箱更改", html_content),
+        text=text_content
+    )
+
+
+def get_password_change_notification_template(username: str) -> EmailTemplate:
+    """Get password change notification template."""
+    html_content = f"""
+        <h2>密码已更改</h2>
+        <p>你好 <strong>{username}</strong>,</p>
+        <p>您的账户密码已成功更改。</p>
+        <p>所有设备上的登录会话已被撤销，需要重新登录。</p>
+        <p>如果这不是您本人的操作，请立即联系支持团队。</p>
+        <p><a href="https://translateflow.example.com/settings/security" class="button">查看安全设置</a></p>
+    """
+
+    text_content = f"""密码已更改
+
+你好 {username},
+
+您的账户密码已成功更改。
+
+所有设备上的登录会话已被撤销，需要重新登录。
+
+如果这不是您本人的操作，请立即联系支持团队。
+https://translateflow.example.com/settings/security
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+    return EmailTemplate(
+        subject="TranslateFlow 密码已更改",
+        html=_render_base_html("密码更改", html_content),
+        text=text_content
+    )
+
+
+def get_account_deletion_notification_template(username: str) -> EmailTemplate:
+    """Get account deletion notification template."""
+    html_content = f"""
+        <h2>账户已删除</h2>
+        <p>你好 <strong>{username}</strong>,</p>
+        <p>您的 TranslateFlow 账户已被成功删除。</p>
+        <p>您的所有个人数据已被永久删除，无法恢复。</p>
+        <p>感谢您使用 TranslateFlow。我们希望未来能再次为您服务。</p>
+    """
+
+    text_content = f"""账户已删除
+
+你好 {username},
+
+您的 TranslateFlow 账户已被成功删除。
+
+您的所有个人数据已被永久删除，无法恢复。
+
+感谢您使用 TranslateFlow。我们希望未来能再次为您服务。
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+    return EmailTemplate(
+        subject="TranslateFlow 账户已删除",
+        html=_render_base_html("账户删除", html_content),
+        text=text_content
+    )
+
+
+def get_role_change_notification_template(username: str, new_role: str) -> EmailTemplate:
+    """Get role change notification template."""
+    role_names = {
+        "super_admin": "超级管理员",
+        "tenant_admin": "租户管理员",
+        "team_admin": "团队管理员",
+        "translation_admin": "翻译管理员",
+        "developer": "开发者",
+        "user": "普通用户",
+    }
+    role_name = role_names.get(new_role, new_role)
+
+    html_content = f"""
+        <h2>用户角色已更改</h2>
+        <p>你好 <strong>{username}</strong>,</p>
+        <p>您的账户角色已更改为 <strong>{role_name}</strong>。</p>
+        <p>新角色的权限已立即生效。</p>
+        <p>如有任何疑问，请联系管理员。</p>
+    """
+
+    text_content = f"""用户角色已更改
+
+你好 {username},
+
+您的账户角色已更改为 {role_name}。
+
+新角色的权限已立即生效。
+
+如有任何疑问，请联系管理员。
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+    return EmailTemplate(
+        subject="TranslateFlow 用户角色已更改",
+        html=_render_base_html("角色更改", html_content),
+        text=text_content
+    )
+
+
+def get_account_suspended_notification_template(username: str, reason: str) -> EmailTemplate:
+    """Get account suspended notification template."""
+    html_content = f"""
+        <h2>账户已被暂停</h2>
+        <p>你好 <strong>{username}</strong>,</p>
+        <p>您的 TranslateFlow 账户已被暂停。</p>
+        <p><strong>原因：</strong>{reason}</p>
+        <p>在账户暂停期间，您将无法访问大部分功能。</p>
+        <p>如有任何疑问或希望重新激活账户，请联系支持团队。</p>
+        <p><a href="mailto:support@translateflow.example.com" class="button">联系支持</a></p>
+    """
+
+    text_content = f"""账户已被暂停
+
+你好 {username},
+
+您的 TranslateFlow 账户已被暂停。
+
+原因：{reason}
+
+在账户暂停期间，您将无法访问大部分功能。
+
+如有任何疑问或希望重新激活账户，请联系支持团队。
+support@translateflow.example.com
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+    return EmailTemplate(
+        subject="TranslateFlow 账户已被暂停",
+        html=_render_base_html("账户暂停", html_content),
+        text=text_content
+    )
+
+
+def get_account_reactivated_notification_template(username: str) -> EmailTemplate:
+    """Get account reactivated notification template."""
+    html_content = f"""
+        <h2>账户已重新激活</h2>
+        <p>你好 <strong>{username}</strong>,</p>
+        <p>您的 TranslateFlow 账户已被重新激活。</p>
+        <p>您现在可以正常使用所有功能。</p>
+        <p>如有任何疑问，请联系支持团队。</p>
+        <p><a href="https://translateflow.example.com/dashboard" class="button">前往控制台</a></p>
+    """
+
+    text_content = f"""账户已重新激活
+
+你好 {username},
+
+您的 TranslateFlow 账户已被重新激活。
+
+您现在可以正常使用所有功能。
+
+如有任何疑问，请联系支持团队。
+https://translateflow.example.com/dashboard
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+    return EmailTemplate(
+        subject="TranslateFlow 账户已重新激活",
+        html=_render_base_html("账户激活", html_content),
+        text=text_content
+    )
+
+
+def get_payment_notification_template(
+    username: str,
+    payment_id: str,
+    amount: float,
+    currency: str,
+    status: str,
+    error_message: str = None
+) -> EmailTemplate:
+    """获取支付通知模板"""
+    if status == "成功":
+        html_content = f"""
+            <h2>支付成功通知</h2>
+            <p>你好 <strong>{username}</strong>,</p>
+            <p>您的支付已成功处理！</p>
+            <h3>支付详情</h3>
+            <ul>
+                <li>支付ID：{payment_id}</li>
+                <li>金额：{currency} {amount:.2f}</li>
+                <li>状态：成功</li>
+            </ul>
+            <p>感谢您的付款！</p>
+        """
+
+        text_content = f"""支付成功通知
+
+你好 {username},
+
+您的支付已成功处理！
+
+支付详情：
+- 支付ID：{payment_id}
+- 金额：{currency} {amount:.2f}
+- 状态：成功
+
+感谢您的付款！
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+        return EmailTemplate(
+            subject="TranslateFlow 支付成功",
+            html=_render_base_html("支付成功", html_content),
+            text=text_content
+        )
+    else:
+        html_content = f"""
+            <h2>支付失败通知</h2>
+            <p>你好 <strong>{username}</strong>,</p>
+            <p>很抱歉，您的支付未能成功处理。</p>
+            <h3>支付详情</h3>
+            <ul>
+                <li>支付ID：{payment_id}</li>
+                <li>状态：失败</li>
+            </ul>
+            <p><strong>失败原因：</strong>{error_message or '未知错误'}</p>
+            <p>请检查您的支付方式或尝试其他支付方式。</p>
+            <p><a href="https://translateflow.example.com/settings/billing" class="button">管理账单</a></p>
+        """
+
+        text_content = f"""支付失败通知
+
+你好 {username},
+
+很抱歉，您的支付未能成功处理。
+
+支付详情：
+- 支付ID：{payment_id}
+- 状态：失败
+
+失败原因：{error_message or '未知错误'}
+
+请检查您的支付方式或尝试其他支付方式。
+https://translateflow.example.com/settings/billing
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+        return EmailTemplate(
+            subject="TranslateFlow 支付失败",
+            html=_render_base_html("支付失败", html_content),
+            text=text_content
+        )
+
+
+def get_subscription_notification_template(
+    username: str,
+    event: str,
+    plan: str,
+    status: str = None
+) -> EmailTemplate:
+    """获取订阅通知模板"""
+    plan_names = {
+        "free": "免费计划",
+        "starter": "入门计划",
+        "pro": "专业计划",
+        "enterprise": "企业计划",
+    }
+    plan_name = plan_names.get(plan, plan)
+
+    if event == "updated":
+        html_content = f"""
+            <h2>订阅已更新</h2>
+            <p>你好 <strong>{username}</strong>,</p>
+            <p>您的订阅计划已更新为 <strong>{plan_name}</strong>。</p>
+            <p>状态：{status or '活跃'}</p>
+            <p>新计划的功能已立即生效。</p>
+            <p><a href="https://translateflow.example.com/settings/billing" class="button">管理订阅</a></p>
+        """
+
+        text_content = f"""订阅已更新
+
+你好 {username},
+
+您的订阅计划已更新为 {plan_name}。
+
+状态：{status or '活跃'}
+
+新计划的功能已立即生效。
+https://translateflow.example.com/settings/billing
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+        return EmailTemplate(
+            subject="TranslateFlow 订阅已更新",
+            html=_render_base_html("订阅更新", html_content),
+            text=text_content
+        )
+    elif event == "cancelled":
+        html_content = f"""
+            <h2>订阅已取消</h2>
+            <p>你好 <strong>{username}</strong>,</p>
+            <p>您的订阅已被取消。</p>
+            <p>您的账户已降级为免费计划。</p>
+            <p>感谢您使用 TranslateFlow。我们希望未来能再次为您服务。</p>
+            <p><a href="https://translateflow.example.com/settings/billing" class="button">查看计划</a></p>
+        """
+
+        text_content = f"""订阅已取消
+
+你好 {username},
+
+您的订阅已被取消。
+
+您的账户已降级为免费计划。
+
+感谢您使用 TranslateFlow。我们希望未来能再次为您服务。
+https://translateflow.example.com/settings/billing
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+        return EmailTemplate(
+            subject="TranslateFlow 订阅已取消",
+            html=_render_base_html("订阅取消", html_content),
+            text=text_content
+        )
+
+    return EmailTemplate(
+        subject="TranslateFlow 订阅通知",
+        html=_render_base_html("订阅通知", "<p>您的订阅状态已变更。</p>"),
+        text="您的订阅状态已变更。"
+    )
+
+
+def get_invoice_notification_template(
+    username: str,
+    invoice_id: str,
+    status: str,
+    amount: float = None,
+    currency: str = None,
+    attempt_count: int = None
+) -> EmailTemplate:
+    """获取发票通知模板"""
+    if status == "已支付":
+        html_content = f"""
+            <h2>发票已支付</h2>
+            <p>你好 <strong>{username}</strong>,</p>
+            <p>您的发票已成功支付。</p>
+            <h3>发票详情</h3>
+            <ul>
+                <li>发票ID：{invoice_id}</li>
+                <li>金额：{currency} {amount:.2f if amount else '0.00'}</li>
+                <li>状态：已支付</li>
+            </ul>
+            <p>您可以在账单页面查看和下载发票。</p>
+            <p><a href="https://translateflow.example.com/settings/billing" class="button">查看发票</a></p>
+        """
+
+        text_content = f"""发票已支付
+
+你好 {username},
+
+您的发票已成功支付。
+
+发票详情：
+- 发票ID：{invoice_id}
+- 金额：{currency} {amount:.2f if amount else '0.00'}
+- 状态：已支付
+
+您可以在账单页面查看和下载发票。
+https://translateflow.example.com/settings/billing
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+        return EmailTemplate(
+            subject="TranslateFlow 发票已支付",
+            html=_render_base_html("发票支付", html_content),
+            text=text_content
+        )
+    elif status == "支付失败":
+        html_content = f"""
+            <h2>发票支付失败</h2>
+            <p>你好 <strong>{username}</strong>,</p>
+            <p>很抱歉，您的发票支付未能成功处理。</p>
+            <h3>发票详情</h3>
+            <ul>
+                <li>发票ID：{invoice_id}</li>
+                <li>尝试次数：{attempt_count or 1}</li>
+                <li>状态：支付失败</li>
+            </ul>
+            <p>请检查您的支付方式或更新付款信息。</p>
+            <p>我们将在接下来的几天内重试扣款。</p>
+            <p><a href="https://translateflow.example.com/settings/billing" class="button">更新支付方式</a></p>
+        """
+
+        text_content = f"""发票支付失败
+
+你好 {username},
+
+很抱歉，您的发票支付未能成功处理。
+
+发票详情：
+- 发票ID：{invoice_id}
+- 尝试次数：{attempt_count or 1}
+- 状态：支付失败
+
+请检查您的支付方式或更新付款信息。
+
+我们将在接下来的几天内重试扣款。
+https://translateflow.example.com/settings/billing
+
+---
+TranslateFlow - AI驱动的翻译工具
+"""
+
+        return EmailTemplate(
+            subject="TranslateFlow 发票支付失败",
+            html=_render_base_html("发票支付失败", html_content),
+            text=text_content
+        )
+
+    return EmailTemplate(
+        subject="TranslateFlow 发票通知",
+        html=_render_base_html("发票通知", "<p>您有一张新的发票。</p>"),
+        text="您有一张新的发票。"
+    )
