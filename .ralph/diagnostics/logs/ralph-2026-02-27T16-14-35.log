@@ -3,6 +3,7 @@
 
 ## 重要
 实现相关的功能，更新标记相关的实), spawning parallel loop in worktree
+<<<<<<< HEAD
 2026-02-27T08:14:36.207616Z  INFO ralph: Created worktree at /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl on branch ralph/able-owl
 2026-02-27T08:14:36.318249Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl"
 2026-02-27T08:14:36.318270Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl/.ralph/agent/memories.md" (exists: true)
@@ -39,3 +40,5 @@
 2026-02-27T08:38:28.488220Z  INFO ralph_tui::app: Ctrl+C detected, signaling main loop
 =======
 >>>>>>> ralph/chipper-crane
+=======
+>>>>>>> ralph/able-owl
