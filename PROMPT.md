@@ -1285,6 +1285,7 @@ class QualityEstimatorService:
 | **TUI 校对界面** | ✅ | - | ProofreadTUI.py 已实现，支持AI校对报告展示 |
 | **术语选择器** | ✅ | ✅ | TermSelector.py 已实现，跨平台支持 |
 | **UI配置模型名称修复** | ✅ | ✅ | TaskConfig.initialize() 支持可选参数，自动加载配置 |
+| **术语库TBX格式支持** | ✅ | - | TBXConverter.py 支持导入导出，菜单选项13/14 |
 
 ### 13.2 已验证实现细节
 
@@ -1317,7 +1318,6 @@ class QualityEstimatorService:
 
 | 功能模块 | 优先级 | 说明 |
 |----------|--------|------|
-| **术语库系统增强** | P1 | 支持 TBX 格式导入导出 |
 | **AI 质量评分** | P2 | 机器学习模型评估 |
 | **Qt 双语对照显示** | P2 | GUI 版本添加实时对照 |
 | **Qt 诊断系统** | P2 | 添加 SmartDiagnostic |
@@ -1335,7 +1335,7 @@ class QualityEstimatorService:
 
 ---
 
-**文档版本**: 3.3
+**文档版本**: 3.4
 **最后更新**: 2026-02-27
-**更新内容**: 添加UI配置模型名称修复说明
-**分析范围**: Bug修复状态更新
+**更新内容**: 添加术语库TBX格式导入导出支持
+**分析范围**: 功能实现状态更新
