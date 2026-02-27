@@ -4544,6 +4544,218 @@ async def get_daily_usage(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# --- OAuth API Routes ---
+
+
+class OAuthUrlResponse(BaseModel):
+    """OAuth 授权 URL 响应"""
+    authorization_url: str
+    state: str
+
+
+class OAuthCallbackRequest(BaseModel):
+    """OAuth 回调请求"""
+    code: str
+    state: str
+
+
+class OAuthLinkAccountRequest(BaseModel):
+    """OAuth 关联账户请求"""
+    provider: str
+    oauth_id: str
+    access_token: str
+    account_email: Optional[str] = None
+    account_username: Optional[str] = None
+    account_data: Optional[Dict[str, Any]] = None
+
+
+@app.get("/api/v1/auth/oauth/{provider}/authorize", response_model=OAuthUrlResponse)
+async def get_oauth_authorization_url(provider: str):
+    """
+    获取 OAuth 授权 URL
+
+    参数：
+    - provider: OAuth 提供商（github, google）
+
+    返回：
+    - authorization_url: OAuth 授权 URL（用户访问此 URL 进行授权）
+    - state: CSRF 防护状态码（需在回调时验证）
+
+    说明：
+    1. 前端使用返回的 authorization_url 重定向用户到 OAuth 提供商
+    2. 用户授权后，OAuth 提供商会重定向回回调 URL 并带上 code 和 state
+    3. 将 code 和 state 传递给 /api/v1/auth/oauth/callback 完成登录
+    """
+    try:
+        from ModuleFolders.Service.Auth import get_oauth_manager
+
+        # 验证提供商
+        if provider not in ["github", "google"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的 OAuth 提供商: {provider}。可选值: github, google"
+            )
+
+        oauth_manager = get_oauth_manager()
+
+        # 生成授权 URL
+        auth_url, state = oauth_manager.get_authorization_url(provider)
+
+        return {
+            "authorization_url": auth_url,
+            "state": state
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/auth/oauth/callback")
+async def oauth_callback(
+    provider: str,
+    code: str,
+    state: str,
+    request: Request
+):
+    """
+    OAuth 回调处理
+
+    参数：
+    - provider: OAuth 提供商（github, google）
+    - code: OAuth 授权码
+    - state: CSRF 防护状态码
+
+    返回：
+    - user: 用户信息
+    - access_token: JWT 访问令牌
+    - refresh_token: JWT 刷新令牌
+    - provider: OAuth 提供商
+
+    说明：
+    1. 验证 state 参数（前端应在 session 中存储 state 并验证）
+    2. 使用 code 交换 OAuth 访问令牌
+    3. 获取用户信息并创建或登录账户
+    4. 返回 JWT 令牌
+
+    注意：
+    - state 参数验证应由前端实现（建议在 session 中存储并验证）
+    - 新用户的邮箱自动标记为已验证
+    - OAuth 用户可以设置密码以支持密码登录
+    """
+    try:
+        from ModuleFolders.Service.Auth import get_oauth_manager
+
+        # 验证提供商
+        if provider not in ["github", "google"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的 OAuth 提供商: {provider}"
+            )
+
+        oauth_manager = get_oauth_manager()
+
+        # 获取客户端信息
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+
+        # 完成 OAuth 登录流程
+        result = await oauth_manager.oauth_login(
+            provider=provider,
+            code=code,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/auth/oauth/accounts", response_model=List[Dict[str, Any]])
+async def get_linked_oauth_accounts(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取已关联的 OAuth 账户列表
+
+    返回：
+    已关联的 OAuth 账户列表，每个账户包含：
+    - provider: OAuth 提供商（github, google）
+    - account_email: OAuth 账户邮箱
+    - account_username: OAuth 账户用户名
+    - linked_at: 关联时间
+    - last_login_at: 最后登录时间
+
+    说明：
+    - 用户可以关联多个 OAuth 提供商（如 GitHub 和 Google）
+    - 每个提供商只能关联一个账户
+    """
+    try:
+        from ModuleFolders.Service.Auth import get_oauth_manager
+
+        oauth_manager = get_oauth_manager()
+
+        accounts = oauth_manager.get_linked_accounts(user_id=str(user.id))
+
+        return accounts
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/auth/oauth/accounts/{provider}")
+async def unlink_oauth_account(
+    provider: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    解除 OAuth 账户关联
+
+    参数：
+    - provider: OAuth 提供商（github, google）
+
+    返回：
+    - message: 成功消息
+
+    说明：
+    - 解除关联后，用户将无法使用该 OAuth 提供商登录
+    - 如果这是最后一个 OAuth 账户且用户未设置密码，需要先设置密码
+    - 解除关联不会删除用户账户
+
+    错误：
+    - 400: 尝试解除最后一个 OAuth 账户（未设置密码）
+    - 404: 未找到关联的 OAuth 账户
+    """
+    try:
+        from ModuleFolders.Service.Auth import get_oauth_manager
+
+        # 验证提供商
+        if provider not in ["github", "google"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的 OAuth 提供商: {provider}"
+            )
+
+        oauth_manager = get_oauth_manager()
+
+        result = oauth_manager.unlink_oauth_account(
+            user_id=str(user.id),
+            provider=provider,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # --- Static File Serving for the React Frontend ---
 
 # This will serve the built React app (index.html, JS, CSS files)

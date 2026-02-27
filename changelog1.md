@@ -24,6 +24,7 @@
 | 订阅计费 | 配额执行中间件 | 100% | ✅ 完成 |
 | 订阅计费 | **订阅管理 API 路由** | 100% | ✅ 完成 |
 | 订阅计费 | **用量管理 API 路由** | 100% | ✅ 完成 |
+| 高级功能 | **OAuth API 路由** | 100% | ✅ 完成 |
 | 订阅计费 | 发票生成 | 50% | 🔄 部分完成 |
 
 ---
@@ -1402,6 +1403,229 @@ curl -X GET "http://localhost:8000/api/v1/usage/daily?metric_type=characters&day
 
 ---
 
+## 本次更新 (2026-02-27) - OAuth API 路由
+
+### 实现内容：完整的 OAuth API 路由系统
+
+在 `Tools/WebServer/web_server.py` 中实现了 4 个 OAuth API 路由，包括 OAuth 授权、回调处理、账户查询和解绑功能。
+
+#### 1. 请求/响应模型 (3个)
+
+**OAuth API 模型**:
+- `OAuthUrlResponse` - OAuth 授权 URL 响应
+- `OAuthCallbackRequest` - OAuth 回调请求
+- `OAuthLinkAccountRequest` - OAuth 关联账户请求
+
+#### 2. OAuth API (4个路由)
+
+**OAuth 授权**:
+- `GET /api/v1/auth/oauth/{provider}/authorize` - 获取 OAuth 授权 URL
+  - 支持 GitHub 和 Google OAuth 提供商
+  - 生成授权 URL 和 CSRF 防护 state 参数
+  - 无需认证
+  - 返回授权 URL 和 state（前端需保存 state 用于验证）
+
+**OAuth 登录**:
+- `GET /api/v1/auth/oauth/callback` - OAuth 回调处理
+  - 处理 OAuth 提供商的回调
+  - 验证授权码并交换访问令牌
+  - 获取用户信息并创建或登录账户
+  - 返回 JWT 令牌（access_token, refresh_token）
+  - 新用户邮箱自动标记为已验证
+
+**账户管理**:
+- `GET /api/v1/auth/oauth/accounts` - 获取已关联的 OAuth 账户列表
+  - 返回用户所有已关联的 OAuth 账户
+  - 包含提供商、邮箱、用户名、关联时间、最后登录时间
+  - 需要认证（JWT Token）
+
+- `DELETE /api/v1/auth/oauth/accounts/{provider}` - 解除 OAuth 账户关联
+  - 解除指定提供商的 OAuth 账户关联
+  - 防止解除最后一个 OAuth 账户（如果未设置密码）
+  - 解除后无法使用该提供商登录
+  - 需要认证（JWT Token）
+
+#### 3. API 使用示例
+
+**获取 GitHub OAuth 授权 URL**
+```bash
+curl -X GET "http://localhost:8000/api/v1/auth/oauth/github/authorize"
+```
+
+**响应示例**:
+```json
+{
+  "authorization_url": "https://github.com/login/oauth/authorize?client_id=xxx&redirect_uri=http://localhost:8000/api/v1/auth/oauth/callback&scope=user:email&state=xxx",
+  "state": "random_state_string_for_csrf_protection"
+}
+```
+
+**OAuth 回调处理**
+```bash
+# 前端将用户重定向到授权 URL，用户授权后会回调此 URL
+curl -X GET "http://localhost:8000/api/v1/auth/oauth/callback?provider=github&code=xxx&state=xxx"
+```
+
+**响应示例**:
+```json
+{
+  "user": {
+    "id": "user-uuid",
+    "email": "user@example.com",
+    "username": "githubuser",
+    "full_name": "GitHub User",
+    "avatar_url": "https://...",
+    "role": "user",
+    "email_verified": true
+  },
+  "access_token": "jwt_access_token",
+  "refresh_token": "jwt_refresh_token",
+  "provider": "github"
+}
+```
+
+**获取已关联的 OAuth 账户**
+```bash
+curl -X GET "http://localhost:8000/api/v1/auth/oauth/accounts" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**响应示例**:
+```json
+[
+  {
+    "provider": "github",
+    "account_email": "user@example.com",
+    "account_username": "githubuser",
+    "linked_at": "2026-02-27T10:30:00Z",
+    "last_login_at": "2026-02-27T15:45:00Z"
+  },
+  {
+    "provider": "google",
+    "account_email": "user@gmail.com",
+    "account_username": "user",
+    "linked_at": "2026-02-27T12:00:00Z",
+    "last_login_at": "2026-02-27T14:20:00Z"
+  }
+]
+```
+
+**解除 OAuth 账户关联**
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/auth/oauth/accounts/github" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### 4. 安全特性
+
+**CSRF 防护**
+- 使用 `state` 参数防止 CSRF 攻击
+- 前端应在 session 中存储 state 并在回调时验证
+- state 由服务器生成（32 字节随机字符串）
+
+**令牌安全**
+- OAuth 访问令牌安全存储在数据库
+- 支持令牌过期时间和刷新令牌
+- JWT 令牌用于应用内认证
+
+**账户安全**
+- OAuth 用户邮箱自动验证
+- 防止解除最后一个 OAuth 账户（除非已设置密码）
+- 支持混合登录（OAuth + 密码）
+
+#### 5. 依赖模块
+
+OAuth API 路由依赖以下模块：
+- OAuthManager (`ModuleFolders/Service/Auth/oauth_manager.py`)
+- JWT Middleware (`ModuleFolders/Service/Auth/auth_middleware.py`)
+- OAuthAccount 模型 (`ModuleFolders/Service/Auth/models.py`)
+
+#### 6. 环境变量配置
+
+需要在 `.env` 文件中配置以下变量：
+
+```bash
+# GitHub OAuth
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# OAuth 回调 URL
+OAUTH_REDIRECT_URI=http://localhost:8000/api/v1/auth/oauth/callback
+```
+
+#### 7. 前端集成说明
+
+**OAuth 登录流程**:
+1. 调用 `/api/v1/auth/oauth/{provider}/authorize` 获取授权 URL 和 state
+2. 在 session 中保存 state
+3. 重定向用户到授权 URL
+4. 用户在 OAuth 提供商页面完成授权
+5. OAuth 提供商回调到 `/api/v1/auth/oauth/callback` 并带上 code 和 state
+6. 验证 state 参数（防止 CSRF 攻击）
+7. 接收返回的 JWT 令牌并存储
+8. 使用 JWT 令牌访问受保护的 API
+
+**State 验证示例（前端伪代码）**:
+```javascript
+// 1. 获取授权 URL
+const response = await fetch('/api/v1/auth/oauth/github/authorize');
+const { authorization_url, state } = await response.json();
+
+// 2. 保存 state 到 session
+sessionStorage.setItem('oauth_state', state);
+
+// 3. 重定向到授权 URL
+window.location.href = authorization_url;
+
+// 4. 在回调页面验证 state
+const urlParams = new URLSearchParams(window.location.search);
+const code = urlParams.get('code');
+const state = urlParams.get('state');
+const savedState = sessionStorage.getItem('oauth_state');
+
+if (state !== savedState) {
+  alert('State 验证失败，可能存在 CSRF 攻击');
+  return;
+}
+
+// 5. 调用回调 API
+const callbackResponse = await fetch(
+  `/api/v1/auth/oauth/callback?provider=github&code=${code}&state=${state}`
+);
+const { user, access_token, refresh_token } = await callbackResponse.json();
+
+// 6. 存储 JWT 令牌
+localStorage.setItem('access_token', access_token);
+localStorage.setItem('refresh_token', refresh_token);
+```
+
+#### 8. 测试验证
+
+- ✅ Python 语法检查通过
+- ✅ FastAPI 应用加载成功
+- ✅ 4 个 OAuth API 路由注册成功
+- ✅ 所有路由使用正确的 HTTP 方法
+- ✅ 请求/响应模型定义完整
+
+### 集成说明
+
+OAuth API 已完全集成到 WebServer，可以通过 FastAPI 自动生成的文档访问：
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+### 下一步
+
+OAuth API 已完成，可以：
+1. 实现前端 OAuth 登录界面（GitHub/Google 登录按钮）
+2. 实现用户账户管理界面（显示已关联账户，支持解绑）
+3. 实现 OAuth 账户关联功能（已登录用户关联其他 OAuth 提供商）
+
+---
+
 ## 下一步计划
 
 1. ✅ ~~实现 OAuth 第三方登录~~ (已完成)
@@ -1409,6 +1633,6 @@ curl -X GET "http://localhost:8000/api/v1/usage/daily?metric_type=characters&day
 3. ✅ ~~实现用户管理 API 路由~~ (已完成)
 4. ✅ ~~实现订阅管理 API 路由~~ (已完成)
 5. ✅ ~~实现用量管理 API 路由~~ (已完成)
-6. 实现 OAuth API 路由（FastAPI endpoints）
+6. ✅ ~~实现 OAuth API 路由~~ (已完成)
 7. 实现发票 PDF 生成功能
-8. 前端页面开发（支付界面、订阅管理、用量统计）
+8. 前端页面开发（支付界面、订阅管理、用量统计、OAuth 登录）
