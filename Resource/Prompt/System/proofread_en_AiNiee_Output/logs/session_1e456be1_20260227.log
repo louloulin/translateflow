@@ -4697,3 +4697,420 @@ Stopping task... (Press Ctrl+C again to force quit)
 [11:22:52] 
 Force quitting immediately...
 
+[16:09:20] [LanguageFilter] 开始执行预处理 ...
+
+[16:09:20] [LanguageFilter] 使用指定语言模式...
+
+[16:09:20] [LanguageFilter] 项目主要使用语言: en
+
+[16:09:20]   0%|          | 0/9 [00:00<?, ?it/s]
+[16:09:20] 100%|##########| 9/9 [00:00<00:00, 194581.11it/s]
+[16:09:20] [LanguageFilter] 语言过滤已完成，共过滤 9 个不包含目标语言的条目 ...
+
+[16:09:20] [INFO] 正在生成翻译任务 ...
+
+[16:09:20] [INFO] 已经生成全部翻译任务 ...
+
+[16:09:20] [INFO] 检测到断点续传：正在恢复 proofread_en.txt 的任务状态...
+
+[16:09:20] [INFO] 即将开始执行任务，预计任务总数为 11，请注意保持网络通畅 ...
+
+[16:09:24] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:24] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:09:26] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:26] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:09:30] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:30] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:30] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:09:32] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:32] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:09:36] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:36] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:36] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:09:39] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:39] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:09:43] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:43] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:43] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:09:45] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:45] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:09:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:49] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:49] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:09:51] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:51] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:09:53] [LanguageFilter] 开始执行预处理 ...
+
+[16:09:53] [LanguageFilter] 使用指定语言模式...
+
+[16:09:53] [LanguageFilter] 项目主要使用语言: en
+
+[16:09:53]   0%|          | 0/9 [00:00<?, ?it/s]
+[16:09:53] 100%|##########| 9/9 [00:00<00:00, 245121.66it/s]
+[16:09:53] [LanguageFilter] 语言过滤已完成，共过滤 9 个不包含目标语言的条目 ...
+
+[16:09:53] [INFO] 正在生成翻译任务 ...
+
+[16:09:53] [INFO] 已经生成全部翻译任务 ...
+
+[16:09:53] [INFO] 检测到断点续传：正在恢复 proofread_en.txt 的任务状态...
+
+[16:09:53] [INFO] 即将开始执行任务，预计任务总数为 11，请注意保持网络通畅 ...
+
+[16:09:55] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:56] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:56] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:09:58] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:09:58] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:02] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:02] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:02] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:05] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:05] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:09] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:09] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:09] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:11] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:11] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:15] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:16] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:16] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:18] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:18] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:22] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:22] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:22] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:24] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:24] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:27] [LanguageFilter] 开始执行预处理 ...
+
+[16:10:27] [LanguageFilter] 使用指定语言模式...
+
+[16:10:27] [LanguageFilter] 项目主要使用语言: en
+
+[16:10:27]   0%|          | 0/9 [00:00<?, ?it/s]
+[16:10:27] 100%|##########| 9/9 [00:00<00:00, 230175.22it/s]
+[16:10:27] [LanguageFilter] 语言过滤已完成，共过滤 9 个不包含目标语言的条目 ...
+
+[16:10:27] [INFO] 正在生成翻译任务 ...
+
+[16:10:27] [INFO] 已经生成全部翻译任务 ...
+
+[16:10:27] [INFO] 检测到断点续传：正在恢复 proofread_en.txt 的任务状态...
+
+[16:10:27] [INFO] 即将开始执行任务，预计任务总数为 5，请注意保持网络通畅 ...
+
+[16:10:27] [ERROR] [01-007] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:28] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:28] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:28] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:31] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:31] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:31] [ERROR] [01-008] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:35] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:35] [INFO] 正在生成翻译任务 ...
+
+[16:10:35] [INFO] 已经生成全部翻译任务 ...
+
+[16:10:35] [INFO] 即将开始执行任务，预计任务总数为 27，请注意保持网络通畅 ...
+
+[16:10:38] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:38] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:39] [ERROR] [01-002] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:40] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:40] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:40] [ERROR] [01-010] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:44] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:44] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:44] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:44] [INFO] 正在生成翻译任务 ...
+
+[16:10:44] [INFO] 已经生成全部翻译任务 ...
+
+[16:10:44] [INFO] 即将开始执行任务，预计任务总数为 8，请注意保持网络通畅 ...
+
+[16:10:45] [ERROR] [01-004] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:46] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:46] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:50] [ERROR] [02-001] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:50] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:50] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:50] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:53] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:53] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:10:53] [ERROR] [02-006] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:55] [ERROR] [02-004] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:56] [ERROR] [01-003] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:56] [INFO] 正在生成翻译任务 ...
+
+[16:10:56] [INFO] 已经生成全部翻译任务 ...
+
+[16:10:56] [INFO] 即将开始执行任务，预计任务总数为 8，请注意保持网络通畅 ...
+
+[16:10:57] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:57] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:57] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:10:57] [ERROR] [02-002] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:10:59] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:10:59] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:11:00] [ERROR] [02-003] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:11:03] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:03] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:03] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:11:06] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:06] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:11:06] [ERROR] [02-001] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:11:07] [ERROR] [02-005] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:11:07] [INFO] 正在生成翻译任务 ...
+
+[16:11:07] [INFO] 已经生成全部翻译任务 ...
+
+[16:11:07] [INFO] 即将开始执行任务，预计任务总数为 12，请注意保持网络通畅 ...
+
+[16:11:09] [ERROR] [02-003] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:11:10] [ERROR] [02-008] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 
+模型已拒绝翻译或格式错误，回复内容：
+### 1.- 低：小问题，可选修复（格式错误，可能存在幻觉）
+
+[16:11:10] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:10] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:10] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:11:12] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:12] [RETRY] Request failed. Retrying in 4s... (2/2)
+
+[16:11:14] [ERROR] [02-006] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:11:15] [ERROR] [03-002] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:11:16] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:17] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:17] [RETRY] Request failed. Retrying in 2s... (1/2)
+
+[16:11:18] [ERROR] [02-004] [ERROR] 译文文本未通过检查，将在下一轮次的翻译中重新翻译 - 【漏翻检测】 - 
+译文疑似未翻译，将重试
+
+[16:11:19] [ERROR] Request error (HARD_ERROR) [URL: https://api.deepseek.com, Model: deepseek] ... Error 
+code: 400 - {'error': {'message': 'Model Not Exist', 'type': 'invalid_request_error', 'param': 
+None, 'code': 'invalid_request_error'}}
+
+[16:11:19] [RETRY] Request failed. Retrying in 4s... (2/2)
+

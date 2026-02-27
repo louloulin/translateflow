@@ -1,0 +1,2 @@
+{"id":"task-1772179769-5a2c","title":"验证双语对照功能是否正常工作","description":"检查 BilingualPlugin 是否启用，验证双语文件是否能正确生成","status":"closed","priority":1,"blocked_by":[],"loop_id":"primary-20260227-080423","created":"2026-02-27T08:09:29.154162+00:00","closed":"2026-02-27T09:53:02.745574+00:00"}
+{"id":"task-1772179789-c7ad","title":"检查 TUI 搜索功能实现状态","description":"检查 TUIEditor 是否已有搜索对话框功能","status":"closed","priority":2,"blocked_by":[],"loop_id":"primary-20260227-080423","created":"2026-02-27T08:09:49.444337+00:00","closed":"2026-02-27T09:55:22.505701+00:00"}

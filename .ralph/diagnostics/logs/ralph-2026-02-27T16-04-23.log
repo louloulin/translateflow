@@ -4,3 +4,7 @@
 2026-02-27T08:04:23.164620Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: false)
 2026-02-27T08:04:23.164629Z  INFO ralph_core::event_loop: Successfully loaded 0 memories from store
 2026-02-27T08:04:23.164634Z  INFO ralph_core::event_loop: Memory store is empty - no memories to inject
+2026-02-27T08:07:01.995539Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-27T08:07:01.995574Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: false)
+2026-02-27T08:07:01.995581Z  INFO ralph_core::event_loop: Successfully loaded 0 memories from store
+2026-02-27T08:07:01.995587Z  INFO ralph_core::event_loop: Memory store is empty - no memories to inject
