@@ -700,6 +700,25 @@ class LoginHistoryResponse(BaseModel):
     pagination: Dict[str, Any]
 
 
+# --- Subscription Management Models ---
+
+class CreateSubscriptionRequest(BaseModel):
+    """创建订阅请求"""
+    plan: str  # free, starter, pro, enterprise
+    success_url: str = "http://localhost:8000/billing/success"
+    cancel_url: str = "http://localhost:8000/billing/cancel"
+
+
+class UpdateSubscriptionRequest(BaseModel):
+    """更新订阅请求"""
+    new_plan: str  # starter, pro, enterprise
+
+
+class CancelSubscriptionRequest(BaseModel):
+    """取消订阅请求"""
+    at_period_end: bool = True  # True=周期结束时取消，False=立即取消
+
+
 # --- Auth Dependencies ---
 
 # Import JWT middleware from Auth module
@@ -3982,6 +4001,545 @@ async def update_user_status(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Subscription Management API Routes ---
+
+@app.get("/api/v1/subscriptions/plans", response_model=List[Dict[str, Any]])
+async def get_subscription_plans():
+    """
+    获取所有可用的订阅计划
+
+    返回所有订阅计划的详细信息，包括：
+    - plan: 计划名称
+    - daily_characters: 每日字符数限制
+    - monthly_price: 月费价格（CNY）
+    - features: 功能列表
+    """
+    try:
+        from ModuleFolders.Service.Billing import SubscriptionManager
+
+        manager = SubscriptionManager()
+        plans = manager.get_all_plans()
+
+        return plans
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/subscriptions", response_model=Dict[str, Any])
+async def create_subscription(
+    request: CreateSubscriptionRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    创建新的订阅
+
+    创建一个新的订阅，返回 Stripe Checkout Session URL。
+    用户需要访问返回的 URL 完成支付。
+
+    参数：
+    - plan: 订阅计划（starter, pro, enterprise）
+    - success_url: 支付成功后的跳转 URL
+    - cancel_url: 取消支付后的跳转 URL
+
+    返回：
+    - session_id: Stripe Checkout Session ID
+    - url: Stripe Checkout URL（用户访问此 URL 完成支付）
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import SubscriptionPlan
+
+        # 验证计划
+        try:
+            plan_enum = SubscriptionPlan(request.plan)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的订阅计划: {request.plan}。可选值: free, starter, pro, enterprise"
+            )
+
+        # Free 计划不需要 Stripe
+        if plan_enum == SubscriptionPlan.FREE:
+            return {
+                "message": "Free 计划无需订阅",
+                "plan": "free",
+                "url": None
+            }
+
+        processor = PaymentProcessor()
+
+        # 获取或创建 Stripe 客户 ID
+        from ModuleFolders.Service.Auth.models import Tenant
+        customer_id = None
+
+        if user.tenant_id:
+            try:
+                tenant = Tenant.get_by_id(user.tenant_id)
+                customer_id = tenant.stripe_customer_id
+            except Tenant.DoesNotExist:
+                pass
+
+        # 如果没有客户 ID，创建一个
+        if not customer_id:
+            customer_id = processor.create_customer(
+                user_id=str(user.id),
+                email=user.email
+            )
+
+        # 创建结账会话
+        result = processor.create_checkout_session(
+            user_id=str(user.id),
+            plan=plan_enum,
+            success_url=request.success_url,
+            cancel_url=request.cancel_url,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/subscriptions/current", response_model=Dict[str, Any])
+async def get_current_subscription(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户的订阅信息
+
+    返回当前用户的订阅详情，包括：
+    - plan: 当前计划
+    - status: 订阅状态
+    - expires_at: 过期时间
+    - stripe_subscription_id: Stripe 订阅 ID（如果有）
+    """
+    try:
+        from ModuleFolders.Service.Auth.models import Tenant, SubscriptionPlan
+
+        # 获取用户的租户信息
+        if not user.tenant_id:
+            return {
+                "plan": "free",
+                "status": "active",
+                "expires_at": None,
+                "stripe_subscription_id": None
+            }
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            return {
+                "plan": "free",
+                "status": "active",
+                "expires_at": None,
+                "stripe_subscription_id": None
+            }
+
+        result = {
+            "plan": tenant.plan,
+            "status": "active",
+            "expires_at": tenant.subscription_expires_at.isoformat() if tenant.subscription_expires_at else None,
+            "stripe_subscription_id": tenant.stripe_subscription_id,
+            "stripe_customer_id": tenant.stripe_customer_id,
+        }
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/subscriptions/current", response_model=Dict[str, Any])
+async def update_subscription(
+    request: UpdateSubscriptionRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前订阅（升降级）
+
+    更新用户的订阅计划，支持：
+    - 从 starter 升级到 pro
+    - 从 pro 降级到 starter
+    - 切换到 enterprise
+
+    参数：
+    - new_plan: 新的计划（starter, pro, enterprise）
+
+    返回：
+    - subscription_id: Stripe 订阅 ID
+    - status: 订阅状态
+    - current_period_start: 当前计费周期开始时间
+    - current_period_end: 当前计费周期结束时间
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import Tenant, SubscriptionPlan
+        import os
+
+        # 验证新计划
+        try:
+            new_plan = SubscriptionPlan(request.new_plan)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的订阅计划: {request.new_plan}。可选值: starter, pro, enterprise"
+            )
+
+        if new_plan == SubscriptionPlan.FREE:
+            raise HTTPException(
+                status_code=400,
+                detail="无法降级到 Free 计划，请使用取消订阅功能"
+            )
+
+        # 获取用户的租户和订阅信息
+        if not user.tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有租户信息，无法更新订阅"
+            )
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            raise HTTPException(
+                status_code=404,
+                detail="租户不存在"
+            )
+
+        if not tenant.stripe_subscription_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有活跃的订阅，请先创建订阅"
+            )
+
+        # 获取新计划的 Price ID
+        price_ids = {
+            SubscriptionPlan.STARTER: os.getenv("STRIPE_PRICE_STARTER"),
+            SubscriptionPlan.PRO: os.getenv("STRIPE_PRICE_PRO"),
+            SubscriptionPlan.ENTERPRISE: os.getenv("STRIPE_PRICE_ENTERPRISE"),
+        }
+
+        new_price_id = price_ids.get(new_plan)
+        if not new_price_id:
+            raise HTTPException(
+                status_code=500,
+                detail=f"未配置 {new_plan.value} 计划的 Price ID"
+            )
+
+        # 更新订阅
+        processor = PaymentProcessor()
+        result = processor.update_subscription(
+            subscription_id=tenant.stripe_subscription_id,
+            new_price_id=new_price_id,
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/subscriptions/current", response_model=Dict[str, Any])
+async def cancel_subscription(
+    request: CancelSubscriptionRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    取消当前订阅
+
+    取消用户的订阅，可以选择：
+    - at_period_end=true: 在当前计费周期结束时取消（默认）
+    - at_period_end=false: 立即取消
+
+    取消后，订阅将降级到 Free 计划。
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import Tenant
+
+        # 获取用户的租户和订阅信息
+        if not user.tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有租户信息，无法取消订阅"
+            )
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            raise HTTPException(
+                status_code=404,
+                detail="租户不存在"
+            )
+
+        if not tenant.stripe_subscription_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有活跃的订阅"
+            )
+
+        # 取消订阅
+        processor = PaymentProcessor()
+        result = processor.cancel_subscription(
+            subscription_id=tenant.stripe_subscription_id,
+            at_period_end=request.at_period_end,
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/subscriptions/invoices", response_model=List[Dict[str, Any]])
+async def get_subscription_invoices(
+    limit: int = 12,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取订阅发票列表
+
+    返回当前用户的发票列表，包括：
+    - id: 发票 ID
+    - number: 发票编号
+    - status: 发票状态（paid, open, void, uncollectible）
+    - amount_due: 应付金额
+    - currency: 货币
+    - created: 创建时间
+    - due_date: 到期日期
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import Tenant
+
+        # 获取用户的 Stripe 客户 ID
+        if not user.tenant_id:
+            return []
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            return []
+
+        if not tenant.stripe_customer_id:
+            return []
+
+        # 获取发票列表
+        processor = PaymentProcessor()
+        invoices = processor.list_invoices(
+            customer_id=tenant.stripe_customer_id,
+            limit=limit,
+        )
+
+        return invoices
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/subscriptions/invoices/{invoice_id}")
+async def get_invoice_pdf(
+    invoice_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取发票 PDF 下载链接
+
+    返回指定发票的详细信息，包括 PDF 下载链接。
+
+    参数：
+    - invoice_id: Stripe 发票 ID（通常以 in_ 开头）
+
+    返回：
+    - id: 发票 ID
+    - number: 发票编号
+    - status: 发票状态
+    - amount_due: 应付金额
+    - amount_paid: 已付金额
+    - currency: 货币
+    - invoice_pdf: PDF 下载链接
+    - hosted_invoice_url: 发票托管页面 URL
+    - created: 创建时间
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import Tenant
+
+        # 获取用户的 Stripe 客户 ID
+        if not user.tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有租户信息"
+            )
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            raise HTTPException(
+                status_code=404,
+                detail="租户不存在"
+            )
+
+        # 获取发票详情
+        processor = PaymentProcessor()
+        invoice = processor.get_invoice(invoice_id)
+
+        # 验证发票是否属于该用户
+        if not invoice.get("hosted_invoice_url"):
+            raise HTTPException(
+                status_code=404,
+                detail="发票不存在或无法访问"
+            )
+
+        return invoice
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Usage Management API Routes ---
+
+@app.get("/api/v1/usage/current", response_model=Dict[str, Any])
+async def get_current_usage(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户的用量汇总
+
+    返回用户今日、本月和总计的使用量，包括：
+    - characters: 翻译字符数
+    - api_calls: API调用次数
+    - storage_mb: 存储使用(MB)
+    - concurrent_tasks: 并发任务数
+    - team_members: 团队成员数
+    """
+    try:
+        from ModuleFolders.Service.Billing.UsageTracker import UsageTracker
+
+        tracker = UsageTracker()
+        summary = tracker.get_usage_summary(user.id)
+
+        return {
+            "user_id": user.id,
+            "today": summary["today"],
+            "month": summary["month"],
+            "total": summary["total"],
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/usage/history", response_model=Dict[str, Any])
+async def get_usage_history(
+    metric_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 50,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取用户使用历史记录（分页）
+
+    参数：
+    - metric_type: 指标类型过滤（可选: characters, api_calls, storage_mb, concurrent_tasks, team_members）
+    - start_date: 开始日期 (YYYY-MM-DD)
+    - end_date: 结束日期 (YYYY-MM-DD)
+    - page: 页码（从1开始，默认1）
+    - per_page: 每页记录数（默认50，最大100）
+
+    返回：
+    - records: 使用记录列表
+    - pagination: 分页信息
+    """
+    try:
+        from ModuleFolders.Service.Billing.UsageTracker import UsageTracker
+
+        # 验证指标类型
+        if metric_type and metric_type not in UsageTracker.METRIC_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的指标类型: {metric_type}. 支持的类型: {list(UsageTracker.METRIC_TYPES.keys())}"
+            )
+
+        # 限制每页数量
+        per_page = min(per_page, 100)
+
+        tracker = UsageTracker()
+        history = tracker.get_usage_history(
+            user_id=user.id,
+            metric_type=metric_type,
+            start_date=start_date,
+            end_date=end_date,
+            page=page,
+            per_page=per_page,
+        )
+
+        return history
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/usage/daily", response_model=List[Dict[str, Any]])
+async def get_daily_usage(
+    metric_type: str = "characters",
+    days: int = 30,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取每日使用量统计（用于趋势图）
+
+    参数：
+    - metric_type: 指标类型（默认: characters）
+      可选: characters, api_calls, storage_mb, concurrent_tasks, team_members
+    - days: 统计天数（默认30天，最大90天）
+
+    返回：
+    每日使用量列表，包含：
+    - date: 日期 (YYYY-MM-DD)
+    - quantity: 使用量
+    """
+    try:
+        from ModuleFolders.Service.Billing.UsageTracker import UsageTracker
+
+        # 验证指标类型
+        if metric_type not in UsageTracker.METRIC_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的指标类型: {metric_type}. 支持的类型: {list(UsageTracker.METRIC_TYPES.keys())}"
+            )
+
+        # 限制天数
+        days = min(days, 90)
+
+        tracker = UsageTracker()
+        stats = tracker.get_daily_usage_stats(
+            user_id=user.id,
+            metric_type=metric_type,
+            days=days,
+        )
+
+        return stats
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
