@@ -19,8 +19,8 @@
 | 订阅计费 | **支付方式管理** | 100% | ✅ 完成 |
 | 订阅计费 | **订阅生命周期管理** | 100% | ✅ 完成 |
 | 订阅计费 | **发票邮件通知** | 100% | ✅ 完成 |
-| 订阅计费 | 用量追踪系统 | 50% | 🔄 部分完成 |
-| 订阅计费 | 配额执行器 | 50% | 🔄 部分完成 |
+| 订阅计费 | 用量追踪系统 | 100% | ✅ 完成 |
+| 订阅计费 | 配额执行中间件 | 100% | ✅ 完成 |
 | 订阅计费 | 发票生成 | 50% | 🔄 部分完成 |
 
 ---
@@ -77,13 +77,29 @@
 - [ ] 完整 API 路由集成
 - [ ] 前端支付界面
 
-#### 3.2 用量追踪系统 (50%)
-- [x] UsageTracker - 基础结构
-- [ ] 完整计量逻辑
+#### 3.2 用量追踪系统 ✅ (100%) - 本次实现
+- [x] UsageTracker - 完整的用量追踪服务
+- [x] record_usage - 记录使用事件
+- [x] get_today_usage - 今日使用量查询
+- [x] get_month_usage - 本月使用量查询
+- [x] get_usage_history - 历史记录查询（分页、时间范围）
+- [x] get_daily_usage_stats - 每日使用统计（趋势图）
+- [x] get_usage_summary - 使用量汇总（今日/本月/总计）
+- [x] get_top_users_by_usage - 使用量排名（管理员）
+- [x] delete_old_records - 旧数据清理
+- [x] 支持多种指标类型 (characters, api_calls, storage_mb, etc.)
 
-#### 3.3 配额执行器 (50%)
-- [x] QuotaEnforcer - 基础结构
-- [ ] 完整配额验证逻辑
+#### 3.3 配额执行中间件 ✅ (100%) - 本次实现
+- [x] QuotaEnforcer - 完整的配额执行器
+- [x] check_before_operation - 操作前配额检查
+- [x] record_and_check - 记录并返回配额状态
+- [x] check_and_record - 检查并记录（原子操作）
+- [x] is_quota_available - 简单配额检查
+- [x] get_usage_percentage - 使用百分比计算
+- [x] 配额缓存机制（减少数据库查询）
+- [x] 详细错误消息和升级引导
+- [x] QuotaExceededError - 完整的异常信息
+- [x] require_quota 装饰器（FastAPI 集成）
 
 #### 3.4 发票生成 (50%)
 - [x] InvoiceGenerator - 基础结构
@@ -392,12 +408,222 @@ OAuth 系统已完成，可以：
 
 ## 总体进度
 
-**整体完成度: 70%**
+**整体完成度: 80%**
 
 - 认证系统: 100% ✅ **完成**
-- 用户管理: 100% ✅
-- 订阅计费: 70% (Stripe 集成完成，缺 API 路由和前端)
+- 用户管理: 100% ✅ **完成**
+- 订阅计费: 85% (Stripe 集成完成，用量追踪和配额执行完成，缺 API 路由和前端)
 - 高级功能: 20% (OAuth 完成，缺多租户和团队管理)
+
+---
+
+## 本次更新 (2026-02-27) - 用量追踪与配额执行系统
+
+### 实现内容：完整的用量追踪与配额执行系统
+
+实现了完整的用量追踪系统（UsageTracker）和配额执行中间件（QuotaEnforcer），支持多种指标类型、缓存优化和 FastAPI 集成。
+
+#### 1. UsageTracker (`ModuleFolders/Service/Billing/UsageTracker.py`)
+
+完整的用量追踪服务，提供以下功能：
+
+**支持的指标类型**
+- `characters` - 翻译字符数
+- `api_calls` - API调用次数
+- `storage_mb` - 存储使用(MB)
+- `concurrent_tasks` - 并发任务数
+- `team_members` - 团队成员数
+
+**核心方法**
+- `record_usage()` - 记录使用事件（支持元数据）
+- `get_today_usage()` - 今日使用量查询
+- `get_month_usage()` - 本月使用量查询
+
+**高级分析**
+- `get_usage_history()` - 历史记录查询（分页、时间范围过滤）
+- `get_daily_usage_stats()` - 每日使用统计（用于趋势图，支持自定义天数）
+- `get_usage_summary()` - 使用量汇总（今日/本月/总计，所有指标）
+
+**管理功能**
+- `get_top_users_by_usage()` - 使用量排名（管理员功能）
+- `delete_old_records()` - 旧数据清理（数据保留策略）
+
+#### 2. QuotaEnforcer (`ModuleFolders/Service/Billing/QuotaEnforcer.py`)
+
+完整的配额执行中间件，提供以下功能：
+
+**配额检查**
+- `check_before_operation()` - 操作前配额检查（支持预估使用量）
+- `is_quota_available()` - 简单配额可用性检查
+- `get_usage_percentage()` - 配额使用百分比计算
+
+**原子操作**
+- `record_and_check()` - 记录使用量并返回更新后配额
+- `check_and_record()` - 先检查后记录（原子操作，失败不记录）
+
+**性能优化**
+- 配额缓存机制（默认60秒TTL，减少数据库查询）
+- 自动缓存失效（记录使用后立即使缓存失效）
+
+**错误处理**
+- `QuotaExceededError` - 完整的异常信息（包含限制、已用、剩余、升级链接）
+- 详细的错误消息（中文，包含使用量和升级引导）
+
+**FastAPI 集成**
+- `require_quota` 装饰器 - 自动检查配额并记录使用量
+- 支持自定义指标类型和使用量参数
+
+#### 3. API 使用示例
+
+**记录使用量**
+```python
+from ModuleFolders.Service.Billing import UsageTracker
+
+tracker = UsageTracker()
+
+# 记录翻译字符数
+result = tracker.record_usage(
+    user_id="user-123",
+    metric_type="characters",
+    quantity=1500,
+    metadata={"task_id": "task-456", "source_lang": "en", "target_lang": "zh"},
+)
+```
+
+**查询使用历史**
+```python
+# 获取最近30天的使用历史
+history = tracker.get_usage_history(
+    user_id="user-123",
+    metric_type="characters",
+    days=30,
+    page=1,
+    per_page=50,
+)
+
+# 返回格式：
+# {
+#     "records": [...],
+#     "pagination": {
+#         "page": 1,
+#         "per_page": 50,
+#         "total_count": 150,
+#         "total_pages": 3,
+#         "has_next": true,
+#         "has_prev": false,
+#     }
+# }
+```
+
+**获取每日统计（趋势图）**
+```python
+# 获取最近30天的每日使用统计
+daily_stats = tracker.get_daily_usage_stats(
+    user_id="user-123",
+    metric_type="characters",
+    days=30,
+)
+
+# 返回格式：
+# [
+#     {"date": "2026-02-01", "quantity": 5000},
+#     {"date": "2026-02-02", "quantity": 3200},
+#     ...
+# ]
+```
+
+**配额检查**
+```python
+from ModuleFolders.Service.Billing import QuotaEnforcer
+
+enforcer = QuotaEnforcer()
+
+# 检查配额
+result = enforcer.check_before_operation(
+    user_id="user-123",
+    estimated_quantity=1000,
+    metric_type="characters",
+    raise_on_exceeded=True,  # 超额时抛出异常
+)
+
+# 返回格式：
+# {
+#     "allowed": true,
+#     "remaining": 49000,
+#     "limit": 50000,
+#     "used": 1000,
+#     "requested": 1000,
+#     "exceeded": false,
+# }
+```
+
+**使用装饰器（FastAPI 集成）**
+```python
+from ModuleFolders.Service.Billing import require_quota
+
+@require_quota(metric_type="characters", quantity_param="char_count")
+async def translate_text(user_id: str, char_count: int, text: str):
+    # 配额检查通过后才会执行此函数
+    # 执行完成后自动记录使用量
+    result = await do_translation(text)
+    return result
+```
+
+**处理配额超限**
+```python
+from ModuleFolders.Service.Billing import QuotaEnforcer, QuotaExceededError
+
+enforcer = QuotaEnforcer()
+
+try:
+    enforcer.check_before_operation(
+        user_id="user-123",
+        estimated_quantity=10000,
+        raise_on_exceeded=True,
+    )
+    # 执行操作...
+except QuotaExceededError as e:
+    # 返回友好的错误信息
+    return {
+        "error": e.to_dict(),
+        # e.to_dict() 返回：
+        # {
+        #     "error": "quota_exceeded",
+        #     "message": "您的翻译字符配额已用完...",
+        #     "limit": 50000,
+        #     "used": 50000,
+        #     "remaining": 0,
+        #     "upgrade_url": "/pricing",
+        # }
+    }
+```
+
+#### 4. 数据库要求
+
+需要 `usage_records` 表来存储使用记录：
+
+```sql
+CREATE TABLE usage_records (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    metric_type VARCHAR(50) NOT NULL,
+    quantity INTEGER NOT NULL,
+    recorded_at TIMESTAMP NOT NULL,
+    metadata TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_usage_records_user ON usage_records(user_id);
+CREATE INDEX idx_usage_records_metric ON usage_records(metric_type);
+CREATE INDEX idx_usage_records_date ON usage_records(date(recorded_at));
+```
+
+#### 5. 集成说明
+
+用量追踪和配额执行系统依赖以下模块：
+- SubscriptionManager (ModuleFolders/Service/Billing/SubscriptionManager.py)
+- Database (ModuleFolders/Infrastructure/Database/pgsql.py)
+- User/Tenant 模型 (ModuleFolders/Service/Auth/models.py)
 
 ### 实现内容：用户资料管理服务
 
@@ -680,20 +906,10 @@ Stripe 集成依赖以下模块：
 
 ---
 
-## 总体进度
-
-**整体完成度: 65%**
-
-- 认证系统: 85% (缺少 OAuth)
-- 用户管理: 100% ✅
-- 订阅计费: 70% (Stripe 集成完成，缺 API 路由和前端)
-- 高级功能: 0%
-
----
-
 ## 下一步计划
 
-1. 实现 OAuth 第三方登录
-2. 完善 Stripe API 路由集成
-3. 完善用量追踪和配额验证逻辑
-4. 前端页面开发
+1. ✅ ~~实现 OAuth 第三方登录~~ (已完成)
+2. ✅ ~~完善用量追踪和配额验证逻辑~~ (已完成)
+3. 完善 Stripe API 路由集成（FastAPI endpoints）
+4. 实现发票 PDF 生成功能
+5. 前端页面开发（支付界面、订阅管理、用量统计）

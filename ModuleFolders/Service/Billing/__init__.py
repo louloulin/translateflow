@@ -7,7 +7,7 @@ Provides subscription management, payment processing, and quota enforcement.
 from .SubscriptionManager import SubscriptionManager
 from .UsageTracker import UsageTracker
 from .PaymentProcessor import PaymentProcessor
-from .QuotaEnforcer import QuotaEnforcer, QuotaExceededError
+from .QuotaEnforcer import QuotaEnforcer, QuotaExceededError, require_quota
 from .InvoiceGenerator import InvoiceGenerator
 from .stripe_webhook import StripeWebhookHandler
 
@@ -17,6 +17,7 @@ __all__ = [
     "PaymentProcessor",
     "QuotaEnforcer",
     "QuotaExceededError",
+    "require_quota",
     "InvoiceGenerator",
     "StripeWebhookHandler",
 ]
