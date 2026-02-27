@@ -590,15 +590,20 @@ export const TaskQueue: React.FC = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2"><Cpu size={12}/> {t('label_model_override')}</label>
-                                    <select 
+                                    <select
                                         value={taskForm.model || ''}
                                         onChange={e => setTaskForm({...taskForm, model: e.target.value})}
                                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-xs text-white outline-none"
                                     >
                                         <option value="">{t('tip_follow_profile')}</option>
-                                        {taskForm.platform && config?.platforms[taskForm.platform]?.model_datas?.map(m => (
-                                            <option key={m} value={m}>{m}</option>
-                                        ))}
+                                        {/* Show models from the selected platform override, or from the current config's default translation platform */}
+                                        {(() => {
+                                            const platformKey = taskForm.platform || config?.api_settings?.translate;
+                                            const modelDatas = platformKey && config?.platforms?.[platformKey]?.model_datas;
+                                            return modelDatas?.map((m: string) => (
+                                                <option key={m} value={m}>{m}</option>
+                                            )) || null;
+                                        })()}
                                     </select>
                                 </div>
                                 {/* Performance Overrides */}

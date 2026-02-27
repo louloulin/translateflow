@@ -3,6 +3,7 @@
 
 ## 重要
 实现相关的功能，更新标记相关的实), spawning parallel loop in worktree
+<<<<<<< HEAD
 2026-02-27T08:11:19.482664Z  INFO ralph: Created worktree at /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf on branch ralph/agile-wolf
 2026-02-27T08:11:19.593753Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf"
 2026-02-27T08:11:19.593772Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf/.ralph/agent/memories.md" (exists: false)
@@ -14,3 +15,5 @@
 2026-02-27T08:17:23.898253Z  INFO ralph_core::event_loop: Successfully loaded 1 memories from store
 2026-02-27T08:17:23.898282Z  INFO ralph_core::event_loop: Injecting 1 memories (346 chars) into prompt
 2026-02-27T08:17:23.898555Z  INFO ralph_core::event_loop: Injecting ready tasks (2 ready, 2 open, 0 closed) into prompt
+=======
+>>>>>>> ralph/agile-wolf
