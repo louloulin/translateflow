@@ -481,6 +481,7 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     // Web Editor specific
     "menu_parallel_editor": "对照编辑器",
     "menu_cache_editor": "缓存编辑器",
+    "ui_theme_switch": "菜单",
     "editor_original_text": "原文",
     "editor_translation": "译文",
 
@@ -1000,6 +1001,7 @@ export const EN_LOCALE: Record<string, string> = {
     // Web Editor specific
     "menu_parallel_editor": "Parallel Editor",
     "menu_cache_editor": "Cache Editor",
+    "ui_theme_switch": "Theme Switch",
     "editor_original_text": "Original Text",
     "editor_translation": "Translation",
 

@@ -9,7 +9,8 @@ export function getDefaultUiPreferences(): UiPreferences {
   return {
     contentWidthMode: 'fluid',
     density: 'comfortable',
-    themeMode: 'light', // Default to light theme
+    themeMode: 'light',
+    sidebarCollapsed: false,
     taskConsole: {
       splitRatio: 0.45,
       minTerminalPx: 260,
@@ -28,6 +29,7 @@ export function normalizeUiPreferences(raw: unknown): UiPreferences {
   const contentWidthMode = obj.contentWidthMode === 'contained' ? 'contained' : 'fluid'
   const density = obj.density === 'compact' ? 'compact' : 'comfortable'
   const themeMode = ['light', 'dark', 'system'].includes(obj.themeMode) ? obj.themeMode : defaults.themeMode
+  const sidebarCollapsed = typeof obj.sidebarCollapsed === 'boolean' ? obj.sidebarCollapsed : defaults.sidebarCollapsed
 
   const splitRatioNum = typeof obj?.taskConsole?.splitRatio === 'number' ? obj.taskConsole.splitRatio : defaults.taskConsole.splitRatio
   const splitRatio = Math.min(0.8, Math.max(0.2, splitRatioNum))
@@ -41,6 +43,7 @@ export function normalizeUiPreferences(raw: unknown): UiPreferences {
     contentWidthMode,
     density,
     themeMode,
+    sidebarCollapsed,
     taskConsole: {
       splitRatio,
       minTerminalPx,

@@ -17,6 +17,7 @@ export interface UiPreferences {
   contentWidthMode: ContentWidthMode;
   density: UiDensityMode;
   themeMode: UiThemeMode;
+  sidebarCollapsed: boolean;
   taskConsole: {
     splitRatio: number;
     minTerminalPx: number;

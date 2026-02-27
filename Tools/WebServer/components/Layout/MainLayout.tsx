@@ -44,10 +44,19 @@ const useLocation = () => {
 export const MainLayout: React.FC = () => {
   const { pathname } = useLocation();
   const { t, language, setLanguage, availableLanguages } = useI18n();
-  const { config, activeTheme, rippleData, triggerRipple, uiPrefs } = useGlobal();
+  const { config, activeTheme, rippleData, triggerRipple, uiPrefs, setUiPrefs } = useGlobal();
   const [systemMode, setSystemMode] = useState<'full' | 'monitor' | 'loading'>('loading');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const elysiaActive = activeTheme === 'elysia';
+
+  // Toggle sidebar collapsed state
+  const toggleSidebar = () => {
+    setUiPrefs((prev: any) => ({
+      ...prev,
+      sidebarCollapsed: !prev.sidebarCollapsed,
+      updatedAt: Date.now(),
+    }));
+  };
 
   // --- Theme Logic (Simplified for Layout) ---
   const handleNavigate = (path: string) => {
@@ -168,12 +177,17 @@ export const MainLayout: React.FC = () => {
       <ElysiaGuide />
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:block w-64 h-full shrink-0">
-         <AppSidebar 
-            activePath={pathname} 
-            activeTheme={activeTheme} 
-            onNavigate={handleNavigate} 
+      <div className={cn(
+        "hidden md:block h-full shrink-0 transition-all duration-300",
+        uiPrefs.sidebarCollapsed ? "w-16" : "w-64"
+      )}>
+         <AppSidebar
+            activePath={pathname}
+            activeTheme={activeTheme}
+            onNavigate={handleNavigate}
             onThemeToggle={handleThemeToggle}
+            isCollapsed={uiPrefs.sidebarCollapsed}
+            onToggleCollapse={toggleSidebar}
          />
       </div>
 
