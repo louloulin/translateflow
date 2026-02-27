@@ -1,7 +1,0 @@
-2026-02-27T10:58:03.439742Z  WARN ralph::preflight: Config file "ralph.yml" not found, using defaults
-2026-02-27T10:58:03.547984Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
-2026-02-27T10:58:03.548006Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
-2026-02-27T10:58:03.548686Z  INFO ralph_core::event_loop: Successfully loaded 1 memories from store
-2026-02-27T10:58:03.548699Z  INFO ralph_core::event_loop: Injecting 1 memories (239 chars) into prompt
-2026-02-27T10:58:03.548787Z  INFO ralph_core::event_loop: Injecting ready tasks (6 ready, 6 open, 10 closed) into prompt
-2026-02-27T11:12:39.732261Z  INFO ralph_tui::app: Ctrl+C detected, signaling main loop
