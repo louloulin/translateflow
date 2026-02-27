@@ -646,6 +646,9 @@ class UserResponse(BaseModel):
 
 # --- Auth Dependencies ---
 
+# Import JWT middleware from Auth module
+from ModuleFolders.Service.Auth import jwt_middleware, User
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
@@ -763,34 +766,69 @@ async def logout(refresh_token: str = Body(..., embed=True)):
 
 
 @app.get("/api/v1/auth/me", response_model=UserResponse)
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
     """Get current user information."""
-    try:
-        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "username": user.username,
+        "role": user.role,
+        "status": user.status,
+    }
 
-        try:
-            init_database()
-        except Exception:
-            pass
 
-        auth_manager = get_auth_manager()
-        user = auth_manager.get_current_user(token)
+# --- Protected Route Examples ---
 
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+@app.get("/api/v1/auth/protected")
+async def protected_route(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    Example of a protected route that requires authentication.
+    Only authenticated users can access this endpoint.
+    """
+    return {
+        "message": "This is a protected endpoint",
+        "user_id": str(user.id),
+        "username": user.username,
+    }
 
+
+@app.get("/api/v1/auth/optional")
+async def optional_auth_route(
+    user: Optional[User] = Depends(jwt_middleware.get_current_user_optional)
+):
+    """
+    Example of a route with optional authentication.
+    Returns user info if authenticated, otherwise returns anonymous response.
+    """
+    if user:
         return {
-            "id": str(user.id),
-            "email": user.email,
+            "authenticated": True,
+            "user_id": str(user.id),
             "username": user.username,
-            "role": user.role,
-            "status": user.status,
         }
+    return {
+        "authenticated": False,
+        "message": "Anonymous user"
+    }
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+@app.get("/api/v1/auth/admin")
+async def admin_only_route(
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    Example of an admin-only route.
+    Only users with 'admin' or 'superuser' role can access.
+    """
+    return {
+        "message": "Welcome, admin!",
+        "user_id": str(user.id),
+        "username": user.username,
+    }
 
 
 @app.get("/api/version")

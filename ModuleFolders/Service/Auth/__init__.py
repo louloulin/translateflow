@@ -22,6 +22,14 @@ from .models import (
 from .auth_manager import AuthManager, get_auth_manager, AuthError
 from .jwt_handler import JWTHandler
 from .password_manager import PasswordManager
+from .auth_middleware import (
+    JWTAuthMiddleware,
+    get_jwt_middleware,
+    jwt_middleware,
+    get_current_user,
+    get_current_user_optional,
+    oauth2_scheme,
+)
 
 __all__ = [
     "User",
@@ -42,4 +50,10 @@ __all__ = [
     "AuthError",
     "JWTHandler",
     "PasswordManager",
+    "JWTAuthMiddleware",
+    "get_jwt_middleware",
+    "jwt_middleware",
+    "get_current_user",
+    "get_current_user_optional",
+    "oauth2_scheme",
 ]
