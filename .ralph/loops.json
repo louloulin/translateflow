@@ -1,12 +1,3 @@
 {
-  "loops": [
-    {
-      "id": "wise-palm",
-      "pid": 22090,
-      "started": "2026-02-27T10:06:00.264346Z",
-      "prompt": "将相关的worktree合并到feature-ai分支",
-      "worktree_path": "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/wise-palm",
-      "workspace": "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/wise-palm"
-    }
-  ]
+  "loops": []
 }
