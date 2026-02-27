@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主题切换测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+
+        // Theme initialization script (same as in index.html)
+        (function() {
+            try {
+                const stored = localStorage.getItem('ainiee_ui_prefs_v1');
+                const prefs = stored ? JSON.parse(stored) : null;
+                const mode = prefs?.themeMode || 'light';
+
+                let effectiveTheme = mode;
+                if (mode === 'system') {
+                    effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                document.documentElement.classList.remove('light', 'dark');
+                document.documentElement.classList.add(effectiveTheme);
+                console.log('Initial theme applied:', effectiveTheme);
+            } catch (e) {
+                console.error('Theme initialization error:', e);
+                document.documentElement.classList.add('light');
+            }
+        })();
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .theme-transition {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+    </style>
+</head>
+<body class="theme-transition bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto space-y-8">
+        <!-- Header -->
+        <div class="text-center space-y-4">
+            <h1 class="text-4xl font-bold">主题切换测试页面</h1>
+            <p class="text-slate-600 dark:text-slate-400">验证主题系统是否正常工作</p>
+        </div>
+
+        <!-- Current Theme Display -->
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-6 border-2 border-slate-200 dark:border-slate-700">
+            <h2 class="text-lg font-semibold mb-4">当前状态</h2>
+            <div class="space-y-2 font-mono text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-600 dark:text-slate-400">HTML Classes:</span>
+                    <span id="htmlClasses" class="text-primary font-bold">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-600 dark:text-slate-400">Local Storage:</span>
+                    <span id="localStorage" class="text-primary font-bold">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-600 dark:text-slate-400">System Preference:</span>
+                    <span id="systemPref" class="text-primary font-bold">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Controls -->
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-6 border-2 border-slate-200 dark:border-slate-700">
+            <h2 class="text-lg font-semibold mb-4">主题控制</h2>
+            <div class="flex gap-4">
+                <button onclick="setTheme('light')" class="px-6 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg border-2 border-slate-200 dark:border-slate-600 hover:border-primary font-medium transition-all">
+                    ☀️ Light
+                </button>
+                <button onclick="setTheme('dark')" class="px-6 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg border-2 border-slate-200 dark:border-slate-600 hover:border-primary font-medium transition-all">
+                    🌙 Dark
+                </button>
+                <button onclick="setTheme('system')" class="px-6 py-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg border-2 border-slate-200 dark:border-slate-600 hover:border-primary font-medium transition-all">
+                    💻 System
+                </button>
+            </div>
+        </div>
+
+        <!-- Color Samples -->
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-6 border-2 border-slate-200 dark:border-slate-700">
+            <h2 class="text-lg font-semibold mb-4">颜色样本</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="space-y-2">
+                    <div class="h-20 bg-primary rounded-lg"></div>
+                    <p class="text-xs text-center">Primary</p>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-20 bg-accent rounded-lg"></div>
+                    <p class="text-xs text-center">Accent</p>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-20 bg-secondary rounded-lg"></div>
+                    <p class="text-xs text-center">Secondary</p>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-20 bg-destructive rounded-lg"></div>
+                    <p class="text-xs text-center">Destructive</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI Elements -->
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-6 border-2 border-slate-200 dark:border-slate-700">
+            <h2 class="text-lg font-semibold mb-4">UI 元素测试</h2>
+            <div class="space-y-4">
+                <!-- Card -->
+                <div class="bg-card text-card-foreground border border-border rounded-lg p-4">
+                    <h3 class="font-semibold mb-2">卡片标题</h3>
+                    <p class="text-muted-foreground text-sm">这是卡片内容，测试背景和文字颜色。</p>
+                </div>
+
+                <!-- Button Group -->
+                <div class="flex gap-2">
+                    <button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg">Primary Button</button>
+                    <button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg">Secondary Button</button>
+                    <button class="px-4 py-2 bg-accent text-accent-foreground rounded-lg">Accent Button</button>
+                </div>
+
+                <!-- Input -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">输入框</label>
+                    <input type="text" placeholder="Type here..." class="w-full px-4 py-2 bg-background border border-input rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent">
+                </div>
+            </div>
+        </div>
+
+        <!-- Debug Console -->
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-6 border-2 border-slate-200 dark:border-slate-700">
+            <h2 class="text-lg font-semibold mb-4">调试控制台</h2>
+            <div class="space-y-2">
+                <button onclick="clearStorage()" class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg text-sm">
+                    🗑️ 清除 LocalStorage 并刷新
+                </button>
+                <button onclick="checkCSSVars()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-sm">
+                    🔍 检查 CSS 变量
+                </button>
+                <div id="console" class="mt-4 font-mono text-xs bg-black text-green-400 rounded-lg p-4 max-h-40 overflow-y-auto">
+                    <div>> Console ready</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-800">
+            <h2 class="text-lg font-semibold mb-4 text-blue-900 dark:text-blue-100">📋 测试步骤</h2>
+            <ol class="list-decimal list-inside space-y-2 text-blue-800 dark:text-blue-200 text-sm">
+                <li>点击上方的主题按钮切换主题</li>
+                <li>观察页面颜色是否正确切换</li>
+                <li>检查"当前状态"区域的信息是否正确</li>
+                <li>刷新页面，验证主题是否持久化</li>
+                <li>打开浏览器控制台 (F12) 查看日志</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Update status display
+        function updateStatus() {
+            document.getElementById('htmlClasses').textContent = document.documentElement.className || 'none';
+
+            const stored = localStorage.getItem('ainiee_ui_prefs_v1');
+            try {
+                const prefs = stored ? JSON.parse(stored) : null;
+                document.getElementById('localStorage').textContent = prefs ? prefs.themeMode : 'not set';
+            } catch (e) {
+                document.getElementById('localStorage').textContent = 'error';
+            }
+
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.getElementById('systemPref').textContent = systemDark ? 'dark' : 'light';
+        }
+
+        // Set theme
+        function setTheme(mode) {
+            try {
+                // Update localStorage
+                const prefs = {
+                    themeMode: mode,
+                    updatedAt: Date.now()
+                };
+                localStorage.setItem('ainiee_ui_prefs_v1', JSON.stringify(prefs));
+
+                // Calculate effective theme
+                let effectiveTheme = mode;
+                if (mode === 'system') {
+                    effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                // Apply to DOM
+                document.documentElement.classList.remove('light', 'dark');
+                document.documentElement.classList.add(effectiveTheme);
+
+                log(`Theme changed to: ${mode} (effective: ${effectiveTheme})`);
+                updateStatus();
+            } catch (e) {
+                log('Error setting theme: ' + e.message, 'error');
+            }
+        }
+
+        // Clear storage
+        function clearStorage() {
+            localStorage.removeItem('ainiee_ui_prefs_v1');
+            log('LocalStorage cleared, reloading...');
+            setTimeout(() => location.reload(), 500);
+        }
+
+        // Check CSS variables
+        function checkCSSVars() {
+            const styles = getComputedStyle(document.documentElement);
+            const vars = ['--background', '--foreground', '--primary', '--accent', '--secondary'];
+            vars.forEach(v => {
+                const value = styles.getPropertyValue(v).trim();
+                log(`${v}: ${value}`);
+            });
+        }
+
+        // Console log
+        function log(message, type = 'info') {
+            const consoleDiv = document.getElementById('console');
+            const line = document.createElement('div');
+            line.textContent = `> ${message}`;
+            if (type === 'error') {
+                line.style.color = '#f87171';
+            }
+            consoleDiv.appendChild(line);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        // Initial update
+        updateStatus();
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            log(`System preference changed to: ${e.matches ? 'dark' : 'light'}`);
+            updateStatus();
+
+            // Re-apply if in system mode
+            const stored = localStorage.getItem('ainiee_ui_prefs_v1');
+            if (stored) {
+                const prefs = JSON.parse(stored);
+                if (prefs.themeMode === 'system') {
+                    setTheme('system');
+                }
+            }
+        });
+
+        log('Test page loaded successfully');
+    </script>
+</body>
+</html>

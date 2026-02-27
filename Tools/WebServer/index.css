@@ -45,7 +45,7 @@
     
     /* Primary Teal #00d084 -> HSL 158 100% 41% */
     --primary: 158 100% 41%;
-    --primary-foreground: 213 51% 11%; /* Dark text on bright teal */
+    --primary-foreground: 210 40% 98%; /* White text on teal */
     
     /* Secondary */
     --secondary: 213 30% 20%;

@@ -11,10 +11,13 @@ import {
 import { UiThemeMode } from '@/types';
 
 export const ModeToggle: React.FC = () => {
-  const { uiPrefs, setUiPrefs } = useGlobal();
+  const { uiPrefs, setUiPrefs, setActiveTheme } = useGlobal();
 
   const setTheme = (theme: UiThemeMode) => {
     setUiPrefs((prev) => ({ ...prev, themeMode: theme }));
+    // Reset active theme to default when manually switching modes to ensure the change is visible
+    // otherwise character themes (like Elysia) might override the background with !important
+    setActiveTheme('default');
   };
 
   return (

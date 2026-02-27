@@ -1,12 +1,7 @@
-import { AppConfig, TaskPayload, TaskStats, LogEntry } from '../types';
+import { AppConfig, TaskPayload, TaskStats, LogEntry, TaskStatusResponse } from '../types';
 
 // Base API URL
 const API_BASE = '/api';
-
-interface TaskStatusResponse {
-    stats: TaskStats;
-    logs: LogEntry[];
-}
 
 export const DataService = {
     // --- Config & System ---
@@ -502,14 +497,15 @@ export const DataService = {
                 stats: {
                     rpm: 0,
                     tpm: 0,
-                    totalProgress: 0, // Fixed property name
-                    completedProgress: 0, // Fixed property name
+                    totalProgress: 0,
+                    completedProgress: 0,
                     totalTokens: 0,
                     elapsedTime: 0,
                     status: 'error',
                     currentFile: 'Connection Lost'
                 },
-                logs: []
+                logs: [],
+                chart_data: []
             };
         }
     },

@@ -389,130 +389,121 @@ export const TaskRunner: React.FC = () => {
       <div className="bg-card border border-border p-4 rounded-xl space-y-4 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-4 w-full md:w-auto flex-1">
-                <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center border border-border shrink-0">
-                    <FileText size={24} className="text-muted-foreground" />
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20 shrink-0 text-primary">
+                    <FileText size={20} />
                 </div>
                 <div className="flex-1 min-w-[300px] space-y-2">
                     <div className="flex gap-2">
                         <button 
                             disabled={taskState.isRunning}
                             onClick={() => setTaskType(TaskType.TRANSLATE)} 
-                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.TRANSLATE ? 'bg-primary text-primary-foreground font-bold' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+                            className={`text-[10px] px-3 py-1 rounded-full transition-all font-bold tracking-wide uppercase ${taskState.taskType === TaskType.TRANSLATE ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
                         >
                             {t('ui_task_translate')}
                         </button>
                         <button 
                             disabled={taskState.isRunning}
                             onClick={() => setTaskType(TaskType.POLISH)} 
-                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.POLISH ? 'bg-accent text-accent-foreground font-bold' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+                            className={`text-[10px] px-3 py-1 rounded-full transition-all font-bold tracking-wide uppercase ${taskState.taskType === TaskType.POLISH ? 'bg-accent text-accent-foreground shadow-md shadow-accent/20' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
                         >
                             {t('ui_task_polish')}
                         </button>
                         <button 
                             disabled={taskState.isRunning}
                             onClick={() => setTaskType(TaskType.EXPORT)} 
-                            className={`text-xs px-3 py-1 rounded transition-colors ${taskState.taskType === TaskType.EXPORT ? 'bg-emerald-500 text-white font-bold' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+                            className={`text-[10px] px-3 py-1 rounded-full transition-all font-bold tracking-wide uppercase ${taskState.taskType === TaskType.EXPORT ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
                         >
                             {t('ui_task_export')}
                         </button>
                     </div>
-                    <div className="relative">
+                    <div className="relative group">
+                         <div className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            <Upload size={14} /> 
+                         </div>
                          <input 
                             type="text" 
                             placeholder={t('prompt_input_path')} 
                             value={taskState.customInputPath}
                             onChange={(e) => setCustomInputPath(e.target.value)}
-                            className="bg-transparent border-b border-border p-1 text-foreground font-semibold focus:ring-0 focus:border-primary placeholder:text-muted-foreground w-full outline-none transition-colors pr-8"
+                            className="bg-muted/50 border border-border rounded-md py-1.5 pl-8 pr-8 text-sm text-foreground font-medium w-full outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-muted-foreground/50"
                         />
-                         <div className="absolute right-0 top-0">
+                         <div className="absolute right-0 top-0 h-full flex items-center pr-1">
                             <button 
                                 onClick={() => setShowTempFileList(!showTempFileList)}
                                 className={`text-muted-foreground hover:text-foreground p-1 transition-transform ${showTempFileList ? 'rotate-180 text-primary' : ''}`}
                             >
                                 <ChevronDown size={14} />
                             </button>
-                             {showTempFileList && (
-                                 <div className="absolute right-0 top-full mt-1 w-80 bg-popover border border-border rounded shadow-xl z-20 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-                                     <div className="px-3 py-2 text-xs font-bold text-muted-foreground border-b border-border bg-muted flex justify-between items-center">
-                                         <span>{t('ui_task_temp_uploaded')}</span>
-                                         <button onClick={() => setShowTempFileList(false)} className="hover:text-foreground transition-colors"><X size={12} /></button>
-                                     </div>
-                                     {tempFiles.length === 0 ? (
-                                         <div className="p-3 text-xs text-muted-foreground text-center italic">{t('msg_no_files_found')}</div>
-                                     ) : (
-                                         tempFiles.map((f, i) => (
-                                             <div 
-                                                key={i} 
-                                                className="px-3 py-2 hover:bg-accent cursor-pointer text-xs text-foreground truncate border-b border-border/50 last:border-0"
-                                                onClick={() => {
-                                                    setCustomInputPath(f.path);
-                                                    setShowTempFileList(false);
-                                                }}
-                                                title={f.path}
-                                             >
-                                                 {f.name} <span className="text-muted-foreground ml-1">({(f.size/1024).toFixed(1)} KB)</span>
-                                             </div>
-                                         ))
-                                     )}
-                                 </div>
-                             )}
                          </div>
-                    </div>
-                    {/* Resume Switch */}
-                    <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-2 cursor-pointer group">
-                            <input 
-                                type="checkbox" 
-                                checked={taskState.isResuming}
-                                onChange={(e) => setTaskState(prev => ({ ...prev, isResuming: e.target.checked }))}
-                                className="w-4 h-4 rounded border-input text-primary focus:ring-primary bg-background"
-                            />
-                            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{t('ui_resume')} / {t('option_resume')}</span>
-                        </label>
+                         {showTempFileList && (
+                             <div className="absolute left-0 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-xl z-20 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                                 <div className="px-3 py-2 text-xs font-bold text-muted-foreground border-b border-border bg-muted/50 flex justify-between items-center">
+                                     <span>{t('ui_task_temp_uploaded')}</span>
+                                     <button onClick={() => setShowTempFileList(false)} className="hover:text-foreground transition-colors"><X size={12} /></button>
+                                 </div>
+                                 {tempFiles.length === 0 ? (
+                                     <div className="p-3 text-xs text-muted-foreground text-center italic">{t('msg_no_files_found')}</div>
+                                 ) : (
+                                     tempFiles.map((f, i) => (
+                                         <div 
+                                            key={i} 
+                                            className="px-3 py-2 hover:bg-accent cursor-pointer text-xs text-foreground truncate border-b border-border/50 last:border-0"
+                                            onClick={() => {
+                                                setCustomInputPath(f.path);
+                                                setShowTempFileList(false);
+                                            }}
+                                            title={f.path}
+                                         >
+                                             {f.name} <span className="text-muted-foreground ml-1">({(f.size/1024).toFixed(1)} KB)</span>
+                                         </div>
+                                     ))
+                                 )}
+                             </div>
+                         )}
                     </div>
                 </div>
             </div>
             
-            <div className="flex gap-3 w-full md:w-auto justify-end">
+            <div className="flex gap-2 w-full md:w-auto justify-end items-end h-full pt-6">
                  <button 
                     disabled={taskState.isRunning}
                     onClick={() => setShowUploadArea(!showUploadArea)} 
-                    className={`flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all border ${showUploadArea ? 'bg-blue-500 text-slate-900 border-blue-400' : 'bg-blue-500/10 text-blue-400 border-blue-500/50 hover:bg-blue-500/20'}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all text-sm border ${showUploadArea ? 'bg-blue-600 text-white border-blue-500' : 'bg-blue-600 text-white hover:bg-blue-500 border-transparent shadow-lg shadow-blue-500/20'}`}
                 >
-                    <Upload size={18} /> {t('ui_task_upload')}
+                    <Upload size={16} /> {t('ui_task_upload')}
                 </button>
 
                  {!taskState.isRunning ? (
-                    <div className="flex gap-2">
+                    <>
                         <button 
                             onClick={() => handleStart(false)}
-                            className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all bg-accent/10 text-accent-foreground border border-accent/50 hover:bg-accent/20 hover:shadow-lg hover:shadow-accent/10"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all text-sm bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20 border border-transparent"
                         >
-                            <Play size={18} /> {t('ui_task_start')} {taskState.taskType.toUpperCase()}
+                            <Play size={16} fill="currentColor" /> {t('ui_task_start')}
                         </button>
                         
                         <button 
                             onClick={() => handleStart(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/50 hover:bg-green-500/20 hover:shadow-lg"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all text-sm bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-500/20 border border-transparent"
                             title={t('menu_start_all_in_one')}
                         >
-                            <Sparkles size={18} /> {t('menu_start_all_in_one')?.split('【')[0]}
+                            <Sparkles size={16} /> {t('menu_start_all_in_one')?.split('【')[0]}
                         </button>
 
                         <button 
                             onClick={() => window.location.hash = '/queue'}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/50 hover:bg-blue-500/20"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all text-sm border border-blue-500 text-blue-500 hover:bg-blue-500/10"
                             title={t('menu_task_queue')}
                         >
-                            <ListPlus size={18} /> {t('ui_process_queue') || 'Queue'}
+                            <ListPlus size={16} /> {t('ui_process_queue') || 'Queue'}
                         </button>
-                    </div>
+                    </>
                 ) : (
                     <button 
                         onClick={handleStop}
-                        className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all bg-red-500/10 text-red-600 dark:text-red-500 border border-red-500/50 hover:bg-red-500/20 hover:shadow-lg hover:shadow-red-500/10"
+                        className="flex items-center gap-2 px-6 py-2 rounded-lg font-bold transition-all text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/20"
                     >
-                        <Square size={18} fill="currentColor" /> {t('ui_task_stop')}
+                        <Square size={16} fill="currentColor" /> {t('ui_task_stop')}
                     </button>
                 )}
             </div>
@@ -554,10 +545,10 @@ export const TaskRunner: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-muted border border-border rounded-lg p-3 font-mono text-xs text-muted-foreground flex items-start gap-3 overflow-x-auto whitespace-nowrap">
-        <TerminalIcon size={14} className="mt-0.5 text-primary shrink-0" />
+      <div className="bg-muted/30 border border-cyan-500/50 rounded-lg p-3 font-mono text-xs text-muted-foreground flex items-start gap-3 overflow-x-auto whitespace-nowrap shadow-sm shadow-cyan-500/10">
+        <TerminalIcon size={14} className="mt-0.5 text-cyan-600 dark:text-cyan-500 shrink-0" />
         <span className="text-muted-foreground select-none">$</span>
-        <span className="text-primary">{generateCLIPreview()}</span>
+        <span className="text-cyan-600 dark:text-cyan-400">{generateCLIPreview()}</span>
       </div>
 
       {/* Tabs */}
@@ -618,7 +609,7 @@ export const TaskRunner: React.FC = () => {
                               <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t('label_translation_output')}</span>
                               <span className="text-[10px] text-muted-foreground font-mono">{(taskState.comparison?.translation?.split('\n').length || 0)} {t('label_lines')}</span>
                           </div>
-                          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-primary-light leading-relaxed scrollbar-thin scrollbar-thumb-primary/20 whitespace-pre-wrap">
+                          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-primary leading-relaxed scrollbar-thin scrollbar-thumb-primary/20 whitespace-pre-wrap">
                               {taskState.comparison?.translation || <span className="text-muted-foreground italic animate-pulse">{t('msg_processing_batch')}</span>}
                           </div>
                       </div>
