@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, Sparkles, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/toaster";
 
 // Pages
 import { Dashboard } from '@/pages/Dashboard';
@@ -25,6 +26,7 @@ import { Server } from '@/pages/Server';
 import { DataService } from '@/services/DataService';
 import { ProjectDetails } from '@/pages/ProjectDetails';
 import { Editor } from '@/pages/Editor';
+import { Teams } from '@/pages/Teams';
 
 // Custom hook to track hash based location for navigation
 const useLocation = () => {
@@ -143,6 +145,7 @@ export const MainLayout: React.FC = () => {
           case '/stev': content = <StevExtraction />; break;
           case '/server': content = <Server />; break;
           case '/settings': content = <Settings />; break;
+          case '/teams': content = <Teams />; break;
           case '/monitor': content = <Monitor />; break;
           case '/export': content = <div className="text-muted-foreground text-center mt-20">{t('menu_export_only')} (Placeholder)</div>; break;
           case '/logs': content = <div className="text-muted-foreground text-center mt-20">System Logs (Placeholder)</div>; break;
@@ -241,6 +244,7 @@ export const MainLayout: React.FC = () => {
             </div>
          </main>
       </div>
+      <Toaster />
     </div>
   );
 };

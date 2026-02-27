@@ -2,7 +2,8 @@ import * as React from "react"
 import {
   LayoutDashboard, PlayCircle, Settings, Archive, Terminal,
   BookOpen, Puzzle, ListPlus, Database, Clock, Sparkles,
-  Menu, X, Paintbrush, Wand2, FileText, Server, ChevronLeft, ChevronRight
+  Menu, X, Paintbrush, Wand2, FileText, Server, ChevronLeft, ChevronRight,
+  Users
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -41,6 +42,12 @@ const navGroups: { title: string, items: NavItem[] }[] = [
     title: "menu_group_task_config",
     items: [
       { title: "Settings", icon: Settings, path: "/settings", labelKey: "menu_settings" },
+    ]
+  },
+  {
+    title: "menu_group_collaboration",
+    items: [
+      { title: "Teams", icon: Users, path: "/teams", labelKey: "menu_teams" },
     ]
   },
   {
