@@ -57,8 +57,8 @@ def process_dictionary_list(self, event_data: CacheProject):
 ### 2.2 双语对照未生效的根本原因分析（深度调查结果）
 
 #### 🔴 核心问题：配置默认值
-- **最关键原因**: `enable_bilingual_output` 在 `Resource/platforms/preset.json` 中默认为 `false`
-- 当前配置值: `false`, `bilingual_text_order`: `"translation_first"`
+- **配置状态**: `enable_bilingual_output` 在 `Resource/platforms/preset.json` 中已设置为 `true`
+- 当前配置值: `true`, `bilingual_text_order`: `"translation_first"`
 
 #### 原因 1: 插件未启用
 - `BilingualPlugin.default_enable = False`
@@ -462,7 +462,7 @@ bilingual_config=TranslationOutputConfig(enable_bilingual, bilingual_suffix, ...
 
 | 配置项 | Source GUI | ModuleFolders CLI/TUI | Web 版本 | 默认值 |
 |--------|------------|----------------------|----------|--------|
-| enable_bilingual_output | 无配置项 | preset.json 中存在 | preset.json 中存在 | **false** |
+| enable_bilingual_output | 无配置项 | preset.json 中存在 ✅ | preset.json 中存在 ✅ | **true** |
 | bilingual_text_order | ✓ | ✓ | ✓ | translation_first |
 | bilingual_suffix | ✓ | ✓ | ✓ | _bilingual |
 | bilingual_order | ✓ | ✓ | ✓ | source_first |
@@ -852,7 +852,7 @@ bilingual_config=TranslationOutputConfig(enable_bilingual, bilingual_suffix, ...
 
 1. **双语对照功能分析**
    - ✅ 功能已完整实现（BilingualPlugin + FileOutputer）
-   - ❌ 配置默认值导致不生效（`enable_bilingual_output: false`）
+   - ⚠️ 需修复配置默认值（enable_bilingual_output 已设为 true，但 BilingualPlugin 需手动启用）
    - 📊 TUI/Web 已超越 Qt（有实时对照，Qt 无）
 
 2. **核心翻译功能对比**
@@ -877,30 +877,37 @@ bilingual_config=TranslationOutputConfig(enable_bilingual, bilingual_suffix, ...
 | 🟢 P2 | Web 添加定时任务UI | 8小时 | TaskQueue |
 | 🟢 P2 | Qt 添加双语对照显示 | 12小时 | MonitoringPage |
 
-### 11.3 配置修复方案
+### 11.3 配置修复方案 (已更新: 2026-02-27)
 
-**立即执行**:
-```bash
-# 修改 Resource/platforms/preset.json
-# "enable_bilingual_output": false → true
-```
+**✅ 已完成**:
+- `enable_bilingual_output` 在 preset.json 中已设置为 `true`
+- BilingualPlugin 代码已实现，需在 UI 中手动启用
+
+**注意**: BilingualPlugin 需要在插件设置中手动启用（`default_enable = False`）
 
 **验证步骤**:
-1. 翻译测试文件
-2. 检查是否生成 `_bilingual` 文件
-3. 验证双语文件内容格式
+1. 在插件设置中启用 BilingualPlugin
+2. 翻译测试文件
+3. 检查是否生成 `_bilingual` 文件
+4. 验证双语文件内容格式
 
-### 11.4 后续改造路线图
+### 11.4 后续改造路线图 (已更新: 2026-02-27)
 
-**第1阶段（1周）**: 配置修复 + 基础功能补齐
-- 修复双语配置
-- 添加 TUI 搜索
-- 添加 Web 编辑器基础
+**✅ 第1阶段已完成**:
+- ✅ 双语配置已修复（preset.json 中 enable_bilingual_output: true）
+- ✅ TUI 搜索功能已实现（SearchDialog.py）
+- ✅ Web 编辑器已实现（Editor.tsx）
+- ✅ Web 定时任务 UI 已实现（Scheduler.tsx）
+- ✅ Web 断点续传检测已实现（TaskRunner.tsx）
 
-**第2阶段（2周）**: 功能增强
-- TUI 定时任务 UI
-- Web 断点续传
-- Web 定时任务 UI
+**第2阶段**: 功能增强
+- 术语库系统增强
+- AI 质量评估
+
+**第3阶段**: Qt 追赶
+- Qt 添加双语对照显示
+- Qt 添加诊断系统
+- Qt 添加自动化功能
 
 **第3阶段（3-4周）**: Qt 追赶
 - Qt 添加双语对照显示
@@ -1263,7 +1270,40 @@ class QualityEstimatorService:
 
 ---
 
-**文档版本**: 3.0
+## 十三、功能实现状态总结 (2026-02-27 更新)
+
+### 13.1 已实现功能 ✅
+
+| 功能模块 | CLI/TUI | Web | 说明 |
+|----------|---------|-----|------|
+| **双语配置** | ✅ | ✅ | preset.json 中 enable_bilingual_output: true |
+| **BilingualPlugin** | ✅ | ✅ | 代码已实现，需手动启用 |
+| **TUI 搜索对话框** | ✅ | - | SearchDialog.py 已实现 |
+| **Web 定时任务 UI** | - | ✅ | Scheduler.tsx 已实现 |
+| **Web 在线编辑器** | - | ✅ | Editor.tsx 已实现 |
+| **Web 断点续传** | - | ✅ | TaskRunner.tsx 已实现 |
+| **TUI 校对界面** | ✅ | - | ProofreadTUI.py 已实现 |
+| **术语选择器** | ✅ | - | TermSelector.py 已实现 |
+
+### 13.2 待实现功能 🔲
+
+| 功能模块 | 优先级 | 说明 |
+|----------|--------|------|
+| **术语库系统增强** | P1 | 支持 TBX 格式导入导出 |
+| **AI 质量评分** | P2 | 机器学习模型评估 |
+| **Qt 双语对照显示** | P2 | GUI 版本添加实时对照 |
+| **Qt 诊断系统** | P2 | 添加 SmartDiagnostic |
+
+### 13.3 配置说明
+
+**双语功能启用步骤**:
+1. 在 Web/CLI 的插件设置中启用 `BilingualPlugin`
+2. 确保 `enable_bilingual_output: true`（已在 preset.json 中设置）
+3. 翻译文件后会自动生成 `_bilingual` 后缀的双语文件
+
+---
+
+**文档版本**: 3.1
 **最后更新**: 2026-02-27
-**新增内容**: AI翻译平台市场分析、未来架构设计、功能优先级规划
+**更新内容**: 添加功能实现状态总结，修正双语配置状态
 **分析范围**: Smartcat、DeepL等专业平台对比，功能差距分析，实施路线图
