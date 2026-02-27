@@ -9,3 +9,13 @@
 2026-02-27T08:11:19.593778Z  INFO ralph_core::event_loop: Successfully loaded 0 memories from store
 2026-02-27T08:11:19.593781Z  INFO ralph_core::event_loop: Memory store is empty - no memories to inject
 2026-02-27T08:11:19.593965Z  INFO ralph_core::event_loop: Injecting ready tasks (2 ready, 2 open, 0 closed) into prompt
+2026-02-27T08:17:23.897339Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf"
+2026-02-27T08:17:23.897411Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf/.ralph/agent/memories.md" (exists: true)
+2026-02-27T08:17:23.898253Z  INFO ralph_core::event_loop: Successfully loaded 1 memories from store
+2026-02-27T08:17:23.898282Z  INFO ralph_core::event_loop: Injecting 1 memories (346 chars) into prompt
+2026-02-27T08:17:23.898555Z  INFO ralph_core::event_loop: Injecting ready tasks (2 ready, 2 open, 0 closed) into prompt
+2026-02-27T08:37:18.999634Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf"
+2026-02-27T08:37:18.999689Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf/.ralph/agent/memories.md" (exists: true)
+2026-02-27T08:37:18.999784Z  INFO ralph_core::event_loop: Successfully loaded 1 memories from store
+2026-02-27T08:37:18.999791Z  INFO ralph_core::event_loop: Injecting 1 memories (346 chars) into prompt
+2026-02-27T08:37:19.000272Z  INFO ralph_core::event_loop: Injecting ready tasks (2 ready, 2 open, 0 closed) into prompt

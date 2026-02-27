@@ -7,14 +7,6 @@
       "prompt": "分析为什么通过ui配置模型名称没生效修复问题",
       "worktree_path": "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf",
       "workspace": "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/agile-wolf"
-    },
-    {
-      "id": "able-owl",
-      "pid": 17386,
-      "started": "2026-02-27T08:14:36.207818Z",
-      "prompt": "全面分析整个代码，搜索相关的资料，实现用户管理功能和登陆功能，搜索相关大模型订阅功能设计整个商业化功能，搜索相关的资料，搜索AI翻译的相关的功能，制定完善的计划写入login1.md 搜索企业级...",
-      "worktree_path": "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl",
-      "workspace": "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/able-owl"
     }
   ]
 }
