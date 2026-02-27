@@ -75,3 +75,7 @@
 2026-02-27T08:54:38.101988Z  INFO ralph::loop_runner: Completion event LOOP_COMPLETE detected.
 2026-02-27T08:54:38.102004Z  INFO ralph_core::event_loop: Wrapping up: completed. 12 iterations in 39m 28s. reason=completed iterations=12 duration=39m 28s
 2026-02-27T08:54:38.155204Z  INFO ralph_core::landing: Beginning landing sequence loop_id=primary
+2026-02-27T08:54:38.269277Z  INFO ralph_core::landing: Auto-committed changes during landing loop_id=primary commit=Some("22285797176d8c377f8ceb797901dc082aef7889") files=19
+2026-02-27T08:54:40.121647Z  INFO ralph_core::landing: Generated handoff file loop_id=primary path=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md completed=3 open=0
+2026-02-27T08:54:40.149712Z  INFO ralph_core::loop_completion: Landing completed with auto-commit commit=Some("22285797176d8c377f8ceb797901dc082aef7889") handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md
+2026-02-27T08:54:40.149732Z  INFO ralph::loop_runner: Primary loop landed successfully committed=true handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md open_tasks=0
