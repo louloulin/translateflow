@@ -33,7 +33,7 @@ stop:
 # Start backend API server
 start-api:
     @echo "Starting TranslateFlow API server..."
-    python -c "from Tools.WebServer.web_server import run_server; run_server(host='0.0.0.0', port=8000)"
+    cd {{ justfile_directory() }} && python -m uvicorn Tools.WebServer.web_server:app --host 0.0.0.0 --port 8000 &
 
 # Stop backend API server
 stop-api:
@@ -43,37 +43,13 @@ stop-api:
 # Run database migrations
 migrate:
     @echo "Running database migrations..."
-    python -c "
-from ModuleFolders.Infrastructure.Database.pgsql import database
-from ModuleFolders.Service.Auth.models import User
-from ModuleFolders.Service.Team.team_repository import Team, TeamMember
-database.connect()
-try:
-    database.create_tables([User, Team, TeamMember])
-    print('Migration completed successfully!')
-except Exception as e:
-    print(f'Migration error: {e}')
-finally:
-    database.close()
-"
+    @cd {{ justfile_directory() }} && python -c "from ModuleFolders.Infrastructure.Database.pgsql import database; from ModuleFolders.Service.Auth.models import User; from ModuleFolders.Service.Team.team_repository import Team, TeamMember; database.connect(); database.create_tables([User, Team, TeamMember]); print('Migration completed!'); database.close()"
 
 # Reset database (drops all tables)
 reset-db:
     @echo "Resetting database..."
     @echo "This will delete all data! Are you sure? (y/N)"
-    python -c "
-from ModuleFolders.Infrastructure.Database.pgsql import database
-from ModuleFolders.Service.Auth.models import User
-from ModuleFolders.Service.Team.team_repository import Team, TeamMember
-database.connect()
-try:
-    database.drop_tables([User, Team, TeamMember])
-    print('Database reset completed!')
-except Exception as e:
-    print(f'Reset error: {e}')
-finally:
-    database.close()
-"
+    @cd {{ justfile_directory() }} && python -c "from ModuleFolders.Infrastructure.Database.pgsql import database; from ModuleFolders.Service.Auth.models import User; from ModuleFolders.Service.Team.team_repository import Team, TeamMember; database.connect(); database.drop_tables([User, Team, TeamMember]); print('Database reset!'); database.close()"
 
 # Start all services (frontend + backend)
 start-all: start start-api
