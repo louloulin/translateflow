@@ -32,6 +32,13 @@ TEMP_EDIT_PATH = os.path.join(PROJECT_ROOT, "output", "temp_edit") # Define draf
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+# Import language mapper
+from Tools.WebServer.language_mapper import (
+    normalize_language_input,
+    map_display_name_to_code,
+    validate_language_code
+)
+
 # --- Global State & Task Management ---
 
 class TaskManager:
@@ -154,10 +161,20 @@ class TaskManager:
             # Add optional arguments based on the payload
             if payload.get("output_path"):
                 cli_args.extend(["--output", payload["output_path"]])
-            if payload.get("source_lang"):
-                cli_args.extend(["--source", payload["source_lang"]])
-            if payload.get("target_lang"):
-                cli_args.extend(["--target", payload["target_lang"]])
+
+            # Normalize language codes from frontend display names to backend codes
+            source_lang = payload.get("source_lang")
+            target_lang = payload.get("target_lang")
+
+            if source_lang:
+                normalized_source = normalize_language_input(source_lang)
+                cli_args.extend(["--source", normalized_source])
+                self.logs.append({"timestamp": time.time(), "message": f"[DEBUG] Source language normalized: {source_lang} -> {normalized_source}"})
+
+            if target_lang:
+                normalized_target = normalize_language_input(target_lang)
+                cli_args.extend(["--target", normalized_target])
+                self.logs.append({"timestamp": time.time(), "message": f"[DEBUG] Target language normalized: {target_lang} -> {normalized_target}"})
             if payload.get("resume"):
                 cli_args.append("--resume")
             
