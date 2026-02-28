@@ -55,8 +55,8 @@ check_required_files() {
         missing_files+=(".env.dokploy.example")
     fi
 
-    if [[ ! -f "$PROJECT_ROOT/Dockerfile.production" ]]; then
-        missing_files+=("Dockerfile.production")
+    if [[ ! -f "$PROJECT_ROOT/Dockerfile" ]]; then
+        missing_files+=("Dockerfile")
     fi
 
     if [[ ${#missing_files[@]} -gt 0 ]]; then
@@ -122,7 +122,7 @@ build_image() {
 
     cd "$PROJECT_ROOT"
 
-    if docker build -f Dockerfile.production -t translateflow:test .; then
+    if docker build -f Dockerfile -t translateflow:test .; then
         log_success "Docker image built successfully"
         log_info "Test the image with: docker run -p 8000:8000 translateflow:test"
         return 0
@@ -182,12 +182,12 @@ preflight_check() {
 
     # Check 3: Production Dockerfile
     echo -n "  [3/6] Production Dockerfile... "
-    if [[ -f "$PROJECT_ROOT/Dockerfile.production" ]]; then
+    if [[ -f "$PROJECT_ROOT/Dockerfile" ]]; then
         echo -e "${GREEN}✓${NC}"
-        checklist+=("Dockerfile.production: PASS")
+        checklist+=("Dockerfile: PASS")
     else
         echo -e "${RED}✗${NC}"
-        checklist+=("Dockerfile.production: FAIL")
+        checklist+=("Dockerfile: FAIL")
         all_passed=false
     fi
 
