@@ -1,31 +1,32 @@
-# Task Plan
+# Task Summary
 
-## Objective
-UI still lacks user info in the top right corner. Implement:
-1. User info display in top right corner (Already implemented ✓)
-2. Redirect to login page when not authenticated (NEEDS WORK)
-3. Default admin account with username "admin" and password "admin" (NEEDS WORK)
+## Completed Tasks
 
-## Analysis
+1. **User info in top right corner** - Already implemented in MainLayout.tsx (lines 254-308)
+   - Shows username, email, avatar
+   - Dropdown menu with profile, settings, logout options
 
-### Current State
-- User info display IS already implemented in MainLayout.tsx (lines 244-297)
-- Login/Register buttons show for unauthenticated users
-- NO redirect to login when accessing protected routes
-- NO default admin user exists
+2. **Auth redirect to login page** - Already implemented in MainLayout.tsx (lines 103-109)
+   - Redirects to /login if not authenticated
 
-### Work Needed
-1. **Add redirect logic**: MainLayout needs to redirect unauthenticated users to /login
-2. **Create default admin**: Backend startup should create admin user if not exists
+3. **Default admin account (admin/admin)**:
+   - Fixed startup event in web_server.py to call init_database() before creating admin
+   - Fixed auth_manager.py login to support both email and username authentication
+   - Admin user is created on first server startup
 
-## Implementation Plan
+4. **Justfile** - Created with common commands:
+   - `just install` - Install dependencies
+   - `just build` - Build frontend
+   - `just start` - Start dev server
+   - `just stop` - Stop servers
+   - `just start-api` - Start backend API
+   - `just migrate` - Run database migrations
+   - `just reset-db` - Reset database
+   - `just start-all` - Start all services
+   - `just stop-all` - Stop all services
+   - `just restart` - Restart all services
 
-### Task 1: Add auth redirect in MainLayout
-- Add useEffect to check isAuthenticated
-- Redirect to /login when not authenticated and not on auth pages
-- Must handle loading state properly
-
-### Task 2: Create default admin user
-- Add startup logic in web_server.py or auth_manager.py
-- Create admin user with username="admin", password="admin"
-- Run once on startup
+## Test Results
+- Admin login works with username "admin" and password "admin"
+- Frontend accessible at http://localhost:4202
+- Backend API accessible at http://localhost:8000
