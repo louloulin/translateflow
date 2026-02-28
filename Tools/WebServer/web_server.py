@@ -886,6 +886,25 @@ async def reset_password(request: ResetPasswordRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.get("/api/v1/auth/verify-email")
+async def verify_email(token: str = Query(..., description="Email verification token")):
+    """Verify user's email using the verification token."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        result = auth_manager.verify_email(token=token)
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/api/v1/auth/me", response_model=UserResponse)
 async def get_current_user(
     user: User = Depends(jwt_middleware.get_current_user)
