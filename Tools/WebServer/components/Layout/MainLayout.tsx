@@ -6,7 +6,7 @@ import { ElysiaGuide } from '@/components/ElysiaGuide';
 import { AppSidebar } from './AppSidebar';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Sparkles, LayoutDashboard, CircleUser, LogOut, Settings, User } from "lucide-react";
+import { Menu, Sparkles, LayoutDashboard, CircleUser, LogOut, Settings as SettingsIcon, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/toaster";
 import {
@@ -271,7 +271,7 @@ export const MainLayout: React.FC = () => {
                     {t('profile') || '个人资料'}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleNavigate('/settings')}>
-                    <Settings className="h-4 w-4 mr-2" />
+                    <SettingsIcon className="h-4 w-4 mr-2" />
                     {t('settings') || '设置'}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
