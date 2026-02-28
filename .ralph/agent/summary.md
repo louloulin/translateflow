@@ -2,7 +2,7 @@
 
 **Status:** Completed successfully
 **Iterations:** 1
-**Duration:** 2m 30s
+**Duration:** 4m 26s
 
 ## Tasks
 
@@ -14,4 +14,4 @@ _No events recorded._
 
 ## Final Commit
 
-249f0cc0: fix: correct target_language from display name to language code
+35b35720: fix: correct default bilingual and language configuration
