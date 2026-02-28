@@ -690,6 +690,14 @@ class UpdateUserStatusRequest(BaseModel):
     reason: Optional[str] = None
 
 
+class UpdateUserRequest(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
 class UserListResponse(BaseModel):
     users: List[Dict[str, Any]]
     pagination: Dict[str, Any]
@@ -4020,6 +4028,95 @@ async def update_user_status(
 
         return result
 
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/{user_id}", response_model=Dict[str, Any])
+async def update_user(
+    user_id: str,
+    request: UpdateUserRequest,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    更新用户信息（仅管理员）
+
+    允许更新：
+    - username（必须唯一）
+    - email（必须唯一）
+    - full_name
+    - bio
+    - avatar_url
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+        from ModuleFolders.Service.Auth.models import User as AuthUser
+
+        user_manager = get_user_manager()
+
+        # Get the target user
+        target_user = AuthUser.get_by_id(user_id)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Build update dict with only provided fields
+        update_data = {}
+        if request.username is not None:
+            update_data['username'] = request.username
+        if request.email is not None:
+            update_data['email'] = request.email
+        if request.full_name is not None:
+            update_data['full_name'] = request.full_name
+        if request.bio is not None:
+            update_data['bio'] = request.bio
+        if request.avatar_url is not None:
+            update_data['avatar_url'] = request.avatar_url
+
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        # Update user fields directly
+        if 'username' in update_data:
+            # Check if username is already taken
+            existing = AuthUser.get_or_none(AuthUser.username == update_data['username'])
+            if existing and str(existing.id) != user_id:
+                raise HTTPException(status_code=400, detail="Username already taken")
+            target_user.username = update_data['username']
+
+        if 'email' in update_data:
+            # Check if email is already taken
+            existing = AuthUser.get_or_none(AuthUser.email == update_data['email'])
+            if existing and str(existing.id) != user_id:
+                raise HTTPException(status_code=400, detail="Email already taken")
+            target_user.email = update_data['email']
+
+        if 'full_name' in update_data:
+            target_user.full_name = update_data['full_name']
+
+        if 'bio' in update_data:
+            target_user.bio = update_data['bio']
+
+        if 'avatar_url' in update_data:
+            target_user.avatar_url = update_data['avatar_url']
+
+        target_user.save()
+
+        return {
+            "id": str(target_user.id),
+            "email": target_user.email,
+            "username": target_user.username,
+            "full_name": target_user.full_name,
+            "bio": target_user.bio,
+            "avatar_url": target_user.avatar_url,
+            "role": target_user.role,
+            "status": target_user.status,
+            "email_verified": target_user.email_verified,
+        }
+
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
