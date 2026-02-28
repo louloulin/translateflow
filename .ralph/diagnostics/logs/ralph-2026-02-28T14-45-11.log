@@ -1,0 +1,49 @@
+2026-02-28T06:45:11.475000Z  WARN ralph::preflight: Config file "ralph.yml" not found, using defaults
+2026-02-28T06:45:11.586550Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T06:45:11.586573Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T06:45:11.587645Z  INFO ralph_core::event_loop: Successfully loaded 25 memories from store
+2026-02-28T06:45:11.587675Z  INFO ralph_core::event_loop: Injecting 25 memories (13811 chars) into prompt
+2026-02-28T06:45:11.588247Z  INFO ralph_core::event_loop: Injecting ready tasks (1 ready, 1 open, 78 closed) into prompt
+2026-02-28T07:06:58.788132Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T07:06:58.788164Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T07:06:58.789046Z  INFO ralph_core::event_loop: Successfully loaded 29 memories from store
+2026-02-28T07:06:58.789066Z  INFO ralph_core::event_loop: Injecting 29 memories (15094 chars) into prompt
+2026-02-28T07:06:58.789284Z  INFO ralph_core::event_loop: Injecting scratchpad (4665 chars) into prompt
+2026-02-28T07:06:58.789724Z  INFO ralph_core::event_loop: Injecting ready tasks (1 ready, 4 open, 79 closed) into prompt
+2026-02-28T07:16:39.440566Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T07:16:39.440601Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T07:16:39.442023Z  INFO ralph_core::event_loop: Successfully loaded 29 memories from store
+2026-02-28T07:16:39.442043Z  INFO ralph_core::event_loop: Injecting 29 memories (15094 chars) into prompt
+2026-02-28T07:16:39.442282Z  INFO ralph_core::event_loop: Injecting scratchpad (5506 chars) into prompt
+2026-02-28T07:16:39.442631Z  INFO ralph_core::event_loop: Injecting ready tasks (1 ready, 4 open, 79 closed) into prompt
+2026-02-28T07:19:20.819747Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T07:19:20.819776Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T07:19:20.820658Z  INFO ralph_core::event_loop: Successfully loaded 29 memories from store
+2026-02-28T07:19:20.820679Z  INFO ralph_core::event_loop: Injecting 29 memories (15094 chars) into prompt
+2026-02-28T07:19:20.820712Z  INFO ralph_core::event_loop: Injecting scratchpad (6815 chars) into prompt
+2026-02-28T07:19:20.821200Z  INFO ralph_core::event_loop: Injecting ready tasks (1 ready, 4 open, 79 closed) into prompt
+2026-02-28T07:37:41.400061Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T07:37:41.400098Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T07:37:41.400474Z  INFO ralph_core::event_loop: Successfully loaded 33 memories from store
+2026-02-28T07:37:41.400516Z  INFO ralph_core::event_loop: Injecting 33 memories (16913 chars) into prompt
+2026-02-28T07:37:41.400720Z  INFO ralph_core::event_loop: Injecting scratchpad (13960 chars) into prompt
+2026-02-28T07:37:41.401007Z  INFO ralph_core::event_loop: Injecting ready tasks (2 ready, 5 open, 82 closed) into prompt
+2026-02-28T07:44:47.458739Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T07:44:47.458787Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T07:44:47.459773Z  INFO ralph_core::event_loop: Successfully loaded 34 memories from store
+2026-02-28T07:44:47.459799Z  INFO ralph_core::event_loop: Injecting 34 memories (17442 chars) into prompt
+2026-02-28T07:44:47.460161Z  INFO ralph_core::event_loop: Injecting scratchpad (16126 chars) into prompt
+2026-02-28T07:44:47.460685Z  INFO ralph_core::event_loop: Injecting ready tasks (2 ready, 5 open, 82 closed) into prompt
+2026-02-28T07:48:38.939202Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T07:48:38.939233Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T07:48:38.939601Z  INFO ralph_core::event_loop: Successfully loaded 36 memories from store
+2026-02-28T07:48:38.939634Z  INFO ralph_core::event_loop: Injecting 36 memories (18246 chars) into prompt
+2026-02-28T07:48:38.939836Z  INFO ralph_core::event_loop: Injecting scratchpad (16372 chars) into prompt
+2026-02-28T07:48:38.939965Z  INFO ralph_core::event_loop: Injecting ready tasks (2 ready, 6 open, 84 closed) into prompt
+2026-02-28T07:52:59.918291Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T07:52:59.918326Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T07:52:59.918528Z  INFO ralph_core::event_loop: Successfully loaded 37 memories from store
+2026-02-28T07:52:59.918563Z  INFO ralph_core::event_loop: Injecting 37 memories (18761 chars) into prompt
+2026-02-28T07:52:59.918600Z  INFO ralph_core::event_loop: Injecting scratchpad (16585 chars) into prompt
+2026-02-28T07:52:59.919441Z  INFO ralph_core::event_loop: Injecting ready tasks (2 ready, 5 open, 85 closed) into prompt
+2026-02-28T08:16:31.367525Z  INFO ralph_tui::app: Ctrl+C detected, signaling main loop

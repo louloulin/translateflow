@@ -20,38 +20,32 @@ on:
         default: 'latest'
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Aliyun Container Registry
+  REGISTRY: crpi-e8rx4zmw033zfnrz.cn-hangzhou.personal.cr.aliyuncs.com
+  IMAGE_NAME: linchong/translateflow
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 【修改】从 read 改为 write，否则无法上传文件到 Release
-      packages: write
-      id-token: write
+      contents: write
+      packages: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # --- 保留原有的 Docker 构建逻辑 ---
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20
-        with:
-          cosign-release: 'v2.2.4'
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226
 
-      - name: Log into registry ${{ env.REGISTRY }}
+      - name: Log into Aliyun Container Registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
+          password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
 
       - name: Extract Docker metadata
         id: meta
@@ -76,13 +70,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Sign the published Docker image
-        if: ${{ github.event_name != 'pull_request' }}
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
-
       # --- 【新增步骤】打包并上传 Docker 部署文件到 Release ---
       
       - name: Package Docker Deployment Files
@@ -93,8 +80,9 @@ jobs:
 
           cp Dockerfile.production pyproject.toml README.md deploy_package/
 
-          # 如果有 docker-compose.yml 也拷进去
+          # 复制 docker-compose 文件
           [ -f docker-compose.yml ] && cp docker-compose.yml deploy_package/
+          [ -f docker-compose.production.yml ] && cp docker-compose.production.yml deploy_package/
 
           # 压缩
           zip -r docker-deploy.zip deploy_package/

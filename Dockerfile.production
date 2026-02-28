@@ -55,6 +55,7 @@ WORKDIR /app
 # - libgomp1: OpenMP support (for NumPy, pandas)
 # - libjpeg-dev, zlib1g, libfreetype6, liblcms2-2, libwebp-dev, libtiff-dev: Image codecs for Pillow
 # - curl, ca-certificates: For HTTP requests and SSL
+# - build-essential, cmake: For compiling packages without wheels (e.g., opencc on ARM64)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     libjpeg-dev \
@@ -65,6 +66,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libtiff-dev \
     curl \
     ca-certificates \
+    build-essential \
+    cmake \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

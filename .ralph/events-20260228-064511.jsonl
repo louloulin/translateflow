@@ -1,0 +1,8 @@
+{"ts":"2026-02-28T06:45:11.484043+00:00","iteration":0,"hat":"loop","topic":"task.start","triggered":"planner","payload":"打包最新的版本带阿构建doker镜像支持arm/amd64双平台,构建后通过docker-compose启动"}
+{"payload":"docker:single-platform-arm64,stage:dependencies,status:running,time:15min,log:/tmp/docker-build-single.log","topic":"build.in_progress","ts":"2026-02-28T07:05:08.324702+00:00"}
+{"payload":"id:task-1772261167-918a,title:fix-docker-compose,status:completed,commit:ef5c158d","topic":"task.done","ts":"2026-02-28T07:06:49.423947+00:00"}
+{"payload":"exit_code:100, apt_get_error, debian_mirror_issue, dependencies_reduced_from_73_to_9","topic":"docker.build.failed","ts":"2026-02-28T07:44:29.548904+00:00"}
+{"payload":"reason: debian_mirror_timeout, solution: github_actions_cicd, task_id: task-1772264718-8f65","topic":"build.strategy.pivot","ts":"2026-02-28T07:45:53.635237+00:00"}
+{"payload":"method: github_actions_cicd, platforms: linux/amd64,linux/arm64, registry: ghcr.io, workflow: .github/workflows/docker-publish.yml, compose_file: docker-compose.production.yml, commit: db92a8ad","topic":"build.configured","ts":"2026-02-28T07:48:22.243954+00:00"}
+{"payload":"method: github_actions, repo: louloulin/translateflow, run_id: 22516588730, platforms: linux/amd64,linux/arm64, registry: ghcr.io","topic":"docker.build.started","ts":"2026-02-28T07:52:49.831689+00:00"}
+{"payload":"issue=debian_package_names, packages=libjpeg8,libwebp7,libtiff5, run_id=22516698002, status=in_progress","topic":"docker.build.fix","ts":"2026-02-28T08:00:32.718005+00:00"}

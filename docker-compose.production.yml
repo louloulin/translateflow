@@ -1,15 +1,15 @@
-# Production docker-compose: Pull images from GitHub Container Registry (GHCR)
+# Production docker-compose: Pull images from Aliyun Container Registry (ACR)
 # Usage: IMAGE_TAG=v2.4.5B docker-compose -f docker-compose.production.yml up -d
 #
 # Prerequisites:
 # 1. Run GitHub Actions workflow to build and push images
-# 2. Login to GHCR: echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+# 2. Login to Aliyun ACR: docker login --username=<aliyun-account> crpi-e8rx4zmw033zfnrz.cn-hangzhou.personal.cr.aliyuncs.com
 # 3. Update IMAGE_TAG below to your desired version (e.g., v2.4.5B, latest)
 
 services:
   # TranslateFlow Application
   app:
-    image: ghcr.io/${GITHUB_REPOSITORY:-shadowloveelysia/translateflow}:${IMAGE_TAG:-latest}
+    image: crpi-e8rx4zmw033zfnrz.cn-hangzhou.personal.cr.aliyuncs.com/linchong/translateflow:${IMAGE_TAG:-latest}
     container_name: translateflow-app
     ports:
       - "${PORT:-8000}:8000"

@@ -1,0 +1,7 @@
+2026-02-28T06:27:19.683540Z  INFO ralph: Auto-detected backend: claude
+2026-02-28T06:27:19.796792Z  INFO ralph::loop_runner: Merge loop started, marked as merging loop_id=sharp-birch pid=84210
+2026-02-28T06:27:19.796908Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next"
+2026-02-28T06:27:19.796922Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md" (exists: true)
+2026-02-28T06:27:19.797775Z  INFO ralph_core::event_loop: Successfully loaded 22 memories from store
+2026-02-28T06:27:19.797802Z  INFO ralph_core::event_loop: Injecting 22 memories (9419 chars) into prompt
+2026-02-28T06:27:19.798429Z  INFO ralph_core::event_loop: Injecting ready tasks (0 ready, 0 open, 90 closed) into prompt

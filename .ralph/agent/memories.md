@@ -1,6 +1,30 @@
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md
 ## Patterns
 
+### mem-1772265173-8407
+> GitHub Actions Docker build triggered: Created louloulin/translateflow repo, added github remote, pushed main branch (db92a8ad), manually triggered Docker workflow (run_id: 22516588730). Building multi-platform images (linux/amd64,linux/arm64) for GHCR. Monitor with: gh run watch --repo louloulin/translateflow. After build, use docker-compose.production.yml to pull from ghcr.io/louloulin/translateflow.
+<!-- tags: docker, github-actions, cicd, multi-platform | created: 2026-02-28 -->
+
+### mem-1772264885-8142
+> GitHub Actions Docker multi-platform build workflow configured: .github/workflows/docker-publish.yml builds ARM64/AMD64 images and pushes to GHCR. Use docker-compose.production.yml to pull from registry. Supports manual trigger via workflow_dispatch. Build args: VERSION, BUILD_DATE, VCS_REF.
+<!-- tags: docker, github-actions, ci-cd, multi-platform | created: 2026-02-28 -->
+
+### mem-1772264160-18dd
+> Minimal Docker dependencies for TranslateFlow: PIL/Pillow needs libjpeg8, zlib1g, libfreetype6, liblcms2-2 (image codecs). NumPy/pandas may need libgomp1 (OpenMP). X11 libraries (libgl1, libglib2.0-0, libsm6, libxext6, libxrender-dev) are NOT needed for headless server - they're for GUI display. Can reduce from 73 packages to ~20 by removing X11 dependencies.
+<!-- tags: docker, dependencies, pillow, numpy | created: 2026-02-28 -->
+
+### mem-1772264138-4473
+> Pillow system dependencies analysis: PIL is used in batch ebook processing. Pillow requires libjpeg8, zlib1g, libfreetype6, liblcms2-2, libwebp6, libtiff5 for image operations. Current Dockerfile includes X11 libraries (libgl1, libglib2.0-0, libsm6, libxext6, libxrender-dev) which are for display, not image processing. These can be removed for headless Docker environment.
+<!-- tags: docker, pillow, dependencies | created: 2026-02-28 -->
+
+### mem-1772262287-4e3c
+> TranslateFlow Docker build uses multi-stage: Node 20-alpine for frontend build, Python 3.12-slim for runtime. Install takes 15+ minutes due to large dependencies (libllvm19 23MB, mesa-libgallium 8MB, graphics libraries). BuildKit container runs during build.
+<!-- tags: docker, translateflow, performance | created: 2026-02-28 -->
+
+### mem-1772262287-4561
+> Docker multi-platform builds with buildx require --push to registry for best results. Local multi-platform builds with --output type=image,push=false may fail due to Docker Hub timeouts. For ARM/AMD dual-platform, push to GitHub Container Registry (ghcr.io) recommended
+<!-- tags: docker, buildx, multi-platform | created: 2026-02-28 -->
+
 ### mem-1772255648-c5c4
 > Comprehensive deployment master guide created (planx.md): 1,250 lines consolidating all deployment information. 12 major sections: Project Overview, Architecture Design, Deployment Comparison (4 platforms), Quick Start Guide, Platform Deployment Details, Automation Scripts (6 scripts documented), Security Checklist (Critical/Important/Optional), Monitoring & Operations, Troubleshooting (5 common issues), CI/CD Integration (GitHub Actions/GitLab CI), Cost Estimation, Best Practices. Features: ASCII architecture diagrams, platform selection decision tree, 30+ code examples, 10+ comparison tables, cost comparison table (¥35-1000/mo). Total deployment documentation: 2,968+ lines across 5 files. Total deployment assets: 5,979+ lines (docs + scripts + config). Bilingual (Chinese primary, English secondary). All 7 deployment tasks completed (100%). Committed as cf773b62.
 <!-- tags: deployment, documentation, planx | created: 2026-02-28 -->
@@ -86,6 +110,34 @@
 <!-- tags: branding, config | created: 2026-02-27 -->
 ## Fixes
 
+### mem-1772269441-e578
+> Docker build blocked by network timeouts and mediapipe ARM64 incompatibility. mediapipe 0.10.31 only supports x86_64 Linux not ARM64. Solutions: build on x86_64 or make mediapipe optional
+<!-- tags: docker, arm64, mediapipe, network | created: 2026-02-28 -->
+
+### mem-1772265638-2fc9
+> Debian Trixie package names for Docker builds: python:3.12-slim uses Debian Trixie. Correct package names for Pillow dependencies: libjpeg8 (NOT libjpeg62-turbo), libwebp7 (NOT libwebp8), libtiff5 (NOT libtiff6). These are the actual package names in Debian Trixie repositories. Previous names caused GitHub Actions build failure: 'Unable to locate package libwebp8'. Fixed in commit 2aaa882f.
+<!-- tags: docker, debian, packages | created: 2026-02-28 -->
+
+### mem-1772264762-9aa7
+> Docker build network issue: Debian mirrors fail (deb.debian.org timeout) even with minimal dependencies (9 packages). Solution: Use GitHub Actions CI/CD which has excellent network connectivity and native multi-platform (ARM64/AMD64) build support. Can push to GitHub Container Registry (ghcr.io).
+<!-- tags: docker, network, ci-cd, github-actions | created: 2026-02-28 -->
+
+### mem-1772264663-c154
+> Docker build network issue: Debian apt-get mirrors fail with exit code 100 even with minimal dependencies (9 packages). Pre-pulling Docker Hub images works, but deb.debian.org connectivity fails. Options: 1) Use Alpine python:3.12-alpine (apk instead of apt), 2) Use CI/CD (GitHub Actions) with better network, 3) Use different Debian mirror, 4) Pre-build with wheels cache. Base images work fine - issue is specifically apt package downloads.
+<!-- tags: docker, network, apt | created: 2026-02-28 -->
+
+### mem-1772263235-e416
+> Docker Hub network timeout solution: Pre-pull base images (docker pull python:3.12-slim node:20-alpine) before build to cache locally. This avoids repeated timeout errors during Dockerfile builds. Images are small (python:202MB, node:192MB) and cache speeds up subsequent builds.
+<!-- tags: docker, network, timeout | created: 2026-02-28 -->
+
+### mem-1772262288-39af
+> Docker Hub network timeout (registry-1.docker.io:443 i/o timeout) can occur during multi-platform builds. Solution: use --push with registry, or retry single-platform build for current architecture
+<!-- tags: docker, network, troubleshooting | created: 2026-02-28 -->
+
+### mem-1772261219-571d
+> docker-compose.yml must use Dockerfile.production (not Dockerfile) for production builds. Dockerfile doesn't exist, only Dockerfile.production and Dockerfile.development
+<!-- tags: docker, compose, configuration | created: 2026-02-28 -->
+
 ### mem-1772252903-3f11
 > Frontend-backend language code mismatch fixed: Created language_mapper.py to convert display names (e.g., 'Chinese (Simplified)') to backend codes (e.g., 'chinese_simplified'). Integrated in web_server.py TaskManager.start_task() with debug logging. Supports 40+ languages with bidirectional mapping and validation.
 <!-- tags: bilingual, i18n, language-mapper | created: 2026-02-28 -->
@@ -101,3 +153,8 @@
 ### mem-1772205752-dd76
 > 成功解决reportlab缺失问题：使用pip install --break-system-packages reportlab安装。macOS externally-managed-environment需要特殊处理。修复后/api/v1/subscriptions/plans端点正常工作，发票PDF生成功能恢复。
 <!-- tags: dependencies, pdf, stripe | created: 2026-02-27 -->
+## Decisions
+
+### mem-1772264078-74cc
+> Docker build network constraints: Even with pre-pulled base images, apt-get downloads from Debian mirrors are slow (69.5 kB/s). Building TranslateFlow with all dependencies (73 packages, 51.4 MB) takes 6-8 hours on slow network. Solution: 1) Use CI/CD with better network, 2) Reduce dependencies in Dockerfile (remove graphics libraries if not needed), 3) Build during off-peak hours, 4) Use local package cache.
+<!-- tags: docker, performance, network | created: 2026-02-28 -->

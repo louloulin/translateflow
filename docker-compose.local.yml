@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # TranslateFlow Application
+  app:
+    image: translateflow:syntax-check
+    container_name: translateflow-app
+    ports:
+      - "8000:8000"
+    environment:
+      # Use SQLite for local testing (no PostgreSQL needed)
+      - USE_SQLITE=true
+      - SECRET_KEY=local-dev-key-change-in-production
+      - PYTHONUNBUFFERED=1
+      - RUNNING_IN_DOCKER=true
+      - HOST=0.0.0.0
+      - PORT=8000
+
+    volumes:
+      - ./output:/app/output
+      - ./updatetemp:/app/updatetemp
+
+    restart: unless-stopped
+

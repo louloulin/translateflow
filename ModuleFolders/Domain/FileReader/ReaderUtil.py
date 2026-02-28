@@ -9,8 +9,15 @@ import chardet
 import charset_normalizer
 import rich
 from bs4 import BeautifulSoup
-from mediapipe.tasks.python import text, BaseOptions
-from mediapipe.tasks.python.text import LanguageDetector
+
+# MediaPipe is platform-specific (Linux x86_64 only)
+# Import with fallback for other platforms
+try:
+    from mediapipe.tasks.python import text, BaseOptions
+    from mediapipe.tasks.python.text import LanguageDetector
+    MEDIAPIPE_AVAILABLE = True
+except ImportError:
+    MEDIAPIPE_AVAILABLE = False
 
 from ModuleFolders.Infrastructure.Cache.CacheFile import CacheFile
 from ModuleFolders.Infrastructure.Cache.CacheItem import CacheItem
@@ -80,6 +87,14 @@ def _print(msg):
 def get_lang_detector():
     """获取语言检测器的全局单例实例"""
     global _LANG_DETECTOR_INSTANCE
+
+    if not MEDIAPIPE_AVAILABLE:
+        raise RuntimeError(
+            "MediaPipe is not available on this platform. "
+            "Language detection requires Linux x86_64 platform. "
+            "Please use an alternative language detection method or run on a supported platform."
+        )
+
     if _LANG_DETECTOR_INSTANCE is None:
         _print("[[green]INFO[/]] 加载 MediaPipe 文本语言检测器中...")
         # Record start time
