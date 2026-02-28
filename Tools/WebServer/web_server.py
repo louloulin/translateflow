@@ -4123,6 +4123,69 @@ async def update_user(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.delete("/api/v1/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    删除用户（仅管理员）
+
+    永久删除用户账户及其所有相关数据。
+    此操作不可撤销，请谨慎使用。
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+        from ModuleFolders.Service.Auth.models import User as AuthUser
+        from peewee import IntegrityError
+
+        user_manager = get_user_manager()
+
+        # Get the target user
+        target_user = AuthUser.get_by_id(user_id)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Prevent self-deletion
+        if str(target_user.id) == str(user.id):
+            raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+        # Store user info for response
+        user_info = {
+            "id": str(target_user.id),
+            "email": target_user.email,
+            "username": target_user.username,
+        }
+
+        # Delete related data first (cascading)
+        # Delete login history
+        from ModuleFolders.Service.Auth.models import LoginHistory
+        LoginHistory.delete().where(LoginHistory.user == target_user).execute()
+
+        # Delete email verifications
+        from ModuleFolders.Service.Auth.models import EmailVerification
+        EmailVerification.delete().where(EmailVerification.user == target_user).execute()
+
+        # Delete password resets
+        from ModuleFolders.Service.Auth.models import PasswordReset
+        PasswordReset.delete().where(PasswordReset.user == target_user).execute()
+
+        # Delete the user
+        target_user.delete_instance()
+
+        return {
+            "message": "User deleted successfully",
+            "deleted_user": user_info,
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # --- Subscription Management API Routes ---
 
 @app.get("/api/v1/subscriptions/plans", response_model=List[Dict[str, Any]])
