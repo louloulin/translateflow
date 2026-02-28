@@ -1,4 +1,4 @@
-# Production docker-compose: Pull images from Aliyun Container Registry (ACR)
+# Production docker-compose: Simple single-container deployment with SQLite
 # Usage: IMAGE_TAG=v2.4.5B docker-compose -f docker-compose.production.yml up -d
 #
 # Prerequisites:
@@ -7,28 +7,21 @@
 # 3. Update IMAGE_TAG below to your desired version (e.g., v2.4.5B, latest)
 
 services:
-  # TranslateFlow Application
+  # TranslateFlow Application (SQLite mode)
   app:
     image: crpi-e8rx4zmw033zfnrz.cn-hangzhou.personal.cr.aliyuncs.com/linchong/translateflow:${IMAGE_TAG:-latest}
     container_name: translateflow-app
     ports:
       - "${PORT:-8000}:8000"
     environment:
-      # Database Configuration
-      - DATABASE_URL=postgresql://${DB_USER:-translateflow}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-translateflow}
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME:-translateflow}
-      - DB_USER=${DB_USER:-translateflow}
-      - DB_PASSWORD=${DB_PASSWORD:-changeme}
-      - USE_SQLITE=false
-
       # Application Configuration
       - SECRET_KEY=${SECRET_KEY:-changeme-in-production-please-generate-a-secure-key}
       - PYTHONUNBUFFERED=1
       - RUNNING_IN_DOCKER=true
       - HOST=0.0.0.0
       - PORT=${PORT:-8000}
+      # SQLite mode (default, no PostgreSQL needed)
+      - USE_SQLITE=true
 
       # Email Configuration (Optional - choose one provider)
       - EMAIL_PROVIDER=${EMAIL_PROVIDER:-}
@@ -62,15 +55,8 @@ services:
       # Mount output directories for persistence
       - ./output:/app/output
       - ./updatetemp:/app/updatetemp
-      # Optional: Mount SQLite database if not using PostgreSQL
-      # - ./ainiee.db:/app/ainiee.db
-
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-    networks:
-      - translateflow-network
+      # SQLite database persistence
+      - ./data:/app/data
 
     restart: unless-stopped
 
@@ -80,34 +66,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: translateflow-postgres
-    environment:
-      - POSTGRES_DB=${DB_NAME:-translateflow}
-      - POSTGRES_USER=${DB_USER:-translateflow}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - translateflow-network
-
-    restart: unless-stopped
-
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-translateflow} -d ${DB_NAME:-translateflow}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-# Named Volumes
-volumes:
-  postgres-data:
-    driver: local
-
-# Networks
-networks:
-  translateflow-network:
-    driver: bridge
