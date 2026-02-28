@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import { useGlobal } from '@/contexts/GlobalContext';
 import { ThemeManager } from '@/components/Themes/ThemeManager';
@@ -58,7 +58,7 @@ export const MainLayout: React.FC = () => {
   const { pathname } = useLocation();
   const { t, language, setLanguage, availableLanguages } = useI18n();
   const { config, activeTheme, rippleData, triggerRipple, uiPrefs, setUiPrefs } = useGlobal();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, isLoading } = useAuth();
   const [systemMode, setSystemMode] = useState<'full' | 'monitor' | 'loading'>('loading');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const elysiaActive = activeTheme === 'elysia';
@@ -97,6 +97,16 @@ export const MainLayout: React.FC = () => {
       });
     return () => { mounted = false; };
   }, []);
+
+  // --- Auth Redirect ---
+  // Redirect to login if not authenticated (except on auth pages)
+  useEffect(() => {
+    // isAuthPage is defined later, use pathname directly here
+    const isAuth = pathname === '/login' || pathname === '/register';
+    if (!isLoading && !isAuthenticated && !isAuth) {
+      window.location.hash = '/login';
+    }
+  }, [isLoading, isAuthenticated, pathname]);
 
   // Sync language
   const isInitialLangSync = useRef(true);

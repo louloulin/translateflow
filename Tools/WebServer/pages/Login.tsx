@@ -11,13 +11,20 @@ interface LoginProps {
 
 export const Login: React.FC<LoginProps> = ({ registerMode = false }) => {
   const { t } = useI18n();
-  const { login, register, error, clearError, isLoading } = useAuth();
+  const { login, register, error, clearError, isLoading, isAuthenticated } = useAuth();
   const [isRegisterMode, setIsRegisterMode] = useState(registerMode);
 
   // Sync state with prop when prop changes
   useEffect(() => {
     setIsRegisterMode(registerMode);
   }, [registerMode]);
+
+  // Redirect to home if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      window.location.hash = '/';
+    }
+  }, [isAuthenticated]);
   const [formData, setFormData] = useState({
     username: '',
     email: '',

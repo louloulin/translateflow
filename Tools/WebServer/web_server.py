@@ -487,6 +487,35 @@ class TaskPayload(BaseModel):
 
 app = FastAPI(title="AiNiee CLI Backend API")
 
+# --- Default Admin User Creation ---
+@app.on_event("startup")
+def create_default_admin():
+    """Create default admin user on startup if not exists."""
+    try:
+        from uuid import uuid4
+        from ModuleFolders.Service.Auth.models import UserRole, UserStatus
+        from ModuleFolders.Service.Auth.password_manager import PasswordManager
+
+        # Check if admin already exists
+        admin_user = User.get_or_none(User.username == "admin")
+        if admin_user is None:
+            # Create default admin user
+            password_manager = PasswordManager()
+            admin_user = User.create(
+                id=str(uuid4()),
+                email="admin@translateflow.local",
+                username="admin",
+                password_hash=password_manager.hash_password("admin"),
+                role=UserRole.SUPER_ADMIN.value,
+                status=UserStatus.ACTIVE.value,
+                email_verified=True,  # Admin doesn't need email verification
+            )
+            print(f"Default admin user created with username: admin")
+        else:
+            print(f"Admin user already exists")
+    except Exception as e:
+        print(f"Warning: Could not create default admin user: {e}")
+
 # --- Paths to Resources ---
 RESOURCE_PATH = os.path.join(PROJECT_ROOT, "Resource")
 VERSION_FILE = os.path.join(RESOURCE_PATH, "Version", "version.json")
