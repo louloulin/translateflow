@@ -1,0 +1,172 @@
+# Docker Compose Configuration for Dokploy PaaS Deployment
+#
+# This configuration is optimized for Dokploy deployment with:
+# - External database support (via Dokploy services)
+# - Health checks for automatic recovery
+# - Resource limits for fair resource sharing
+# - Production-optimized settings
+#
+# Usage in Dokploy:
+# 1. Create a new application in Dokploy
+# 2. Select "Docker Compose" deployment type
+# 3. Upload this file
+# 4. Configure environment variables in Dokploy UI
+# 5. Deploy
+#
+# Database Configuration:
+# - Option 1: Use Dokploy's managed PostgreSQL service (recommended)
+#   Set DATABASE_URL to the connection string provided by Dokploy
+# - Option 2: Use the included postgres service (for smaller deployments)
+#   Uncomment the postgres service below
+
+version: '3.8'
+
+services:
+  # TranslateFlow Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.production
+    container_name: translateflow-app
+
+    # Resource limits for PaaS environment
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Environment variables - configure these in Dokploy UI
+    environment:
+      # Database Configuration
+      # IMPORTANT: If using Dokploy's PostgreSQL service, set DATABASE_URL in UI
+      # and remove the DB_* variables below
+      - DATABASE_URL=${DATABASE_URL:-}
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-translateflow}
+      - DB_USER=${DB_USER:-translateflow}
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - USE_SQLITE=false
+
+      # Application Configuration
+      - SECRET_KEY=${SECRET_KEY:-changeme-in-production-please-generate-secure-key}
+      - PYTHONUNBUFFERED=1
+      - RUNNING_IN_DOCKER=true
+      - HOST=0.0.0.0
+      - PORT=${PORT:-8000}
+
+      # Email Configuration (choose one provider)
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@translateflow.local}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-TranslateFlow}
+      - EMAIL_REPLY_TO=${EMAIL_REPLY_TO:-}
+
+      # Stripe Payment Configuration
+      - STRIPE_API_KEY=${STRIPE_API_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_PRICE_FREE=${STRIPE_PRICE_FREE:-}
+      - STRIPE_PRICE_STARTER=${STRIPE_PRICE_STARTER:-}
+      - STRIPE_PRICE_PRO=${STRIPE_PRICE_PRO:-}
+      - STRIPE_PRICE_ENTERPRISE=${STRIPE_PRICE_ENTERPRISE:-}
+
+      # OAuth Providers (optional)
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI:-}
+
+    # Port configuration
+    ports:
+      - "${PORT:-8000}:8000"
+
+    # Volumes for persistent storage
+    volumes:
+      - output-data:/app/output
+      - update-temp:/app/updatetemp
+
+    # Health check for automatic recovery
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Logging configuration for Dokploy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL Database (optional - use Dokploy's managed service if available)
+  #
+  # IMPORTANT: Only use this service if Dokploy doesn't provide managed PostgreSQL.
+  # If using Dokploy's PostgreSQL, remove this service and configure DATABASE_URL
+  # in the app service environment variables.
+  #
+  # Uncomment the following section to use the included PostgreSQL:
+  #
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: translateflow-postgres
+  #
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '1'
+  #         memory: 1G
+  #       reservations:
+  #         cpus: '0.25'
+  #         memory: 256M
+  #
+  #   environment:
+  #     - POSTGRES_DB=${DB_NAME:-translateflow}
+  #     - POSTGRES_USER=${DB_USER:-translateflow}
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+  #
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-translateflow} -d ${DB_NAME:-translateflow}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #
+  #   restart: unless-stopped
+  #
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
+
+# Named Volumes
+volumes:
+  output-data:
+    driver: local
+  update-temp:
+    driver: local
+  # postgres-data:  # Uncomment if using included PostgreSQL
+  #   driver: local
+
+# Networks
+networks:
+  default:
+    driver: bridge

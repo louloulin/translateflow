@@ -1,0 +1,1 @@
+团队管理 API 路由已完成实现。10个 RESTful 端点涵盖团队 CRUD、成员管理、邀请机制。三级权限控制 (Owner/Admin/Member)。支持多租户。根据订阅计划自动设置成员配额 (Free:5, Starter:10, Pro:50, Enterprise:无限制)。依赖 TeamManager/TeamRepository/JWTMiddleware。路由: /api/v1/teams/*。整体进度: 92%

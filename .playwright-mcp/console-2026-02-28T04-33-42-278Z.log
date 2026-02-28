@@ -1,0 +1,14 @@
+[    3800ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/cache/load:0
+[    3800ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/cache/load:0
+[    3800ms] [ERROR] API Error: loadCache Error: Cache directory not found: /Users/louloulin/Documents/linchong/ai/AiNiee-Next/output/demo_project/cache. Please check if the project path is correct.
+    at Object.loadCache (http://localhost:4200/services/DataService.ts:718:15)
+    at async loadProjectAndCache (http://localhost:4200/pages/Editor.tsx:73:9) @ http://localhost:4200/services/DataService.ts:721
+[    3801ms] [ERROR] Failed to load project Error: Cache directory not found: /Users/louloulin/Documents/linchong/ai/AiNiee-Next/output/demo_project/cache. Please check if the project path is correct.
+    at Object.loadCache (http://localhost:4200/services/DataService.ts:718:15)
+    at async loadProjectAndCache (http://localhost:4200/pages/Editor.tsx:73:9) @ http://localhost:4200/pages/Editor.tsx:76
+[    3801ms] [ERROR] API Error: loadCache Error: Cache directory not found: /Users/louloulin/Documents/linchong/ai/AiNiee-Next/output/demo_project/cache. Please check if the project path is correct.
+    at Object.loadCache (http://localhost:4200/services/DataService.ts:718:15)
+    at async loadProjectAndCache (http://localhost:4200/pages/Editor.tsx:73:9) @ http://localhost:4200/services/DataService.ts:721
+[    3801ms] [ERROR] Failed to load project Error: Cache directory not found: /Users/louloulin/Documents/linchong/ai/AiNiee-Next/output/demo_project/cache. Please check if the project path is correct.
+    at Object.loadCache (http://localhost:4200/services/DataService.ts:718:15)
+    at async loadProjectAndCache (http://localhost:4200/pages/Editor.tsx:73:9) @ http://localhost:4200/pages/Editor.tsx:76

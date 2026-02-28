@@ -34,6 +34,7 @@ class TaskExecutor(Base):
         self.file_reader = file_reader
         self.file_writer = file_writer
         self.config = TaskConfig()
+        self.config.initialize()  # 初始化TaskConfig，加载配置文件
         self.request_limiter = RequestLimiter()
 
         # 注册事件
@@ -352,9 +353,9 @@ class TaskExecutor(Base):
 
         # 输出配置包
         output_config = {
-            "translated_suffix": config.get('output_filename_suffix'),
+            "translated_suffix": config.get('output_filename_suffix', ''),
             "bilingual_suffix": "_bilingual",
-            "bilingual_order": config.get('bilingual_text_order','translation_first'),
+            "bilingual_order": config.get('bilingual_text_order', 'translation_first'),
             "enable_bilingual_output": config.get('enable_bilingual_output', False)
         }
 

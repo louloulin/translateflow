@@ -50,7 +50,7 @@ class EditorMenu:
 
             # 检查是否有可用的项目缓存
             output_path = self.config.get("label_output_path", "./output")
-            cache_file = os.path.join(output_path, "cache", "AinieeCacheData.json")
+            cache_file = os.path.join(output_path, "cache", "TranslateFlowCacheData.json")
 
             if not os.path.exists(cache_file):
                 console.print(f"[yellow]{self.i18n.get('editor_no_cache')}[/yellow]")
@@ -142,7 +142,7 @@ class EditorMenu:
                 return
 
             # 检查缓存文件是否存在
-            cache_file = os.path.join(project_path, "cache", "AinieeCacheData.json")
+            cache_file = os.path.join(project_path, "cache", "TranslateFlowCacheData.json")
             if not os.path.exists(cache_file):
                 console.print(f"[red]{self.i18n.get('editor_cache_not_found')}: {cache_file}[/red]")
                 console.print(f"[dim]{self.i18n.get('editor_cache_path_tip')}[/dim]")

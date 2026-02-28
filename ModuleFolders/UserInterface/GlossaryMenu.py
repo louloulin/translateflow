@@ -130,10 +130,14 @@ class GlossaryMenu:
             table.add_row("[cyan]11.[/]", f"{self.i18n.get('menu_ai_glossary_analysis') or 'AI自动分析术语表'}")
             table.add_row("[cyan]12.[/]", f"{self.i18n.get('menu_prompt_test') or '提示词测试'}")
 
+            table.add_section()
+            table.add_row("[cyan]13.[/]", f"{self.i18n.get('menu_tbx_export') or '导出术语库 (TBX格式)'}")
+            table.add_row("[cyan]14.[/]", f"{self.i18n.get('menu_tbx_import') or '导入术语库 (TBX格式)'}")
+
             console.print(table)
             console.print(f"\n[dim]0. {self.i18n.get('menu_exit')}[/dim]")
 
-            choice = IntPrompt.ask(self.i18n.get('prompt_select'), choices=[str(i) for i in range(13)], show_choices=False)
+            choice = IntPrompt.ask(self.i18n.get('prompt_select'), choices=[str(i) for i in range(15)], show_choices=False)
             console.print("\n")
 
             if choice == 0:
@@ -162,6 +166,10 @@ class GlossaryMenu:
                 self.run_glossary_analysis_task()
             elif choice == 12:
                 self.run_prompt_test()
+            elif choice == 13:
+                self.run_tbx_export()
+            elif choice == 14:
+                self.run_tbx_import()
 
     def run_glossary_analysis_task(self):
         """AI自动分析术语表功能入口"""
@@ -957,3 +965,159 @@ class GlossaryMenu:
             time.sleep(1)
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]"); time.sleep(2)
+
+    def run_tbx_export(self):
+        """导出术语库为 TBX 格式"""
+        from rich.prompt import Prompt, Confirm
+
+        self.display_banner()
+        console.print(Panel(f"[bold]{self.i18n.get('menu_tbx_export') or '导出术语库 (TBX格式)'}[/bold]"))
+
+        # 获取当前术语表
+        terms = self.config.get("prompt_dictionary_data", [])
+
+        if not terms:
+            console.print(f"[yellow]当前没有术语表数据[/yellow]")
+            Prompt.ask(f"\n{self.i18n.get('msg_press_enter')}")
+            return
+
+        console.print(f"[green]当前术语数量: {len(terms)}[/green]\n")
+
+        # 获取源语言和目标语言
+        source_lang = Prompt.ask(
+            "源语言代码 (如 en, zh, ja)",
+            default="en"
+        ).strip() or "en"
+
+        target_lang = Prompt.ask(
+            "目标语言代码 (如 zh, en, ja)",
+            default="zh"
+        ).strip() or "zh"
+
+        collection_name = Prompt.ask(
+            "术语库名称",
+            default="AiNiee Glossary"
+        ).strip() or "AiNiee Glossary"
+
+        # 选择保存路径
+        console.print(f"\n请输入保存路径:")
+        default_filename = f"glossary_{source_lang}_{target_lang}.tbx"
+        save_path = Prompt.ask(
+            "保存路径",
+            default=default_filename
+        ).strip()
+
+        if not save_path:
+            console.print(f"[red]无效路径[/red]")
+            return
+
+        # 确保路径是绝对路径
+        if not os.path.isabs(save_path):
+            save_path = os.path.abspath(save_path)
+
+        # 导入 TBX 转换器
+        try:
+            from ModuleFolders.Service.GlossaryAnalysis.TBXConverter import TBXConverter
+
+            success = TBXConverter.export_to_tbx(
+                terms, save_path,
+                source_lang=source_lang,
+                target_lang=target_lang,
+                collection_name=collection_name
+            )
+
+            if success:
+                console.print(f"\n[bold green]✅ TBX术语库导出成功[/bold green]")
+                console.print(f"[green]保存位置: {save_path}[/green]")
+            else:
+                console.print(f"\n[bold red]❌ TBX术语库导出失败[/bold red]")
+
+        except Exception as e:
+            console.print(f"\n[bold red]❌ TBX术语库导出失败: {e}[/bold red]")
+            import traceback
+            traceback.print_exc()
+
+        Prompt.ask(f"\n{self.i18n.get('msg_press_enter')}")
+
+    def run_tbx_import(self):
+        """从 TBX 格式导入术语库"""
+        from rich.prompt import Prompt, Confirm
+
+        self.display_banner()
+        console.print(Panel(f"[bold]{self.i18n.get('menu_tbx_import') or '导入术语库 (TBX格式)'}[/bold]"))
+
+        # 选择 TBX 文件
+        console.print(f"\n请选择 TBX 文件:")
+        tbx_path = self.file_selector.select_path(select_file=True, select_dir=False)
+
+        if not tbx_path or not os.path.exists(tbx_path):
+            console.print(f"[red]错误: 文件不存在[/red]")
+            Prompt.ask(f"\n{self.i18n.get('msg_press_enter')}")
+            return
+
+        # 导入 TBX 文件
+        try:
+            from ModuleFolders.Service.GlossaryAnalysis.TBXConverter import TBXConverter
+
+            terms = TBXConverter.import_from_tbx(tbx_path)
+
+            if terms is None or len(terms) == 0:
+                console.print(f"\n[bold red]❌ TBX术语库导入失败: 无法解析文件[/bold red]")
+                Prompt.ask(f"\n{self.i18n.get('msg_press_enter')}")
+                return
+
+            console.print(f"\n[green]成功解析 TBX 文件: {len(terms)} 个术语[/green]\n")
+
+            # 显示预览
+            table = Table(show_header=True, box=None)
+            table.add_column("No.", style="cyan", width=4)
+            table.add_column("源语言", style="yellow")
+            table.add_column("目标语言", style="green")
+            table.add_column("类型/备注", style="dim")
+
+            for i, term in enumerate(terms[:10], 1):
+                table.add_row(
+                    str(i),
+                    term.get("src", ""),
+                    term.get("dst", ""),
+                    term.get("info", "")
+                )
+
+            console.print(table)
+
+            if len(terms) > 10:
+                console.print(f"[dim]... 还有 {len(terms) - 10} 个术语[/dim]")
+
+            # 确认导入
+            console.print(f"\n")
+            if Confirm.ask(f"确认导入 {len(terms)} 个术语到当前配置?", default=True):
+                # 获取现有术语
+                existing_terms = self.config.get("prompt_dictionary_data", [])
+                existing_srcs = {item.get("src", "").lower() for item in existing_terms if item.get("src")}
+
+                # 合并术语（去重）
+                added_count = 0
+                for term in terms:
+                    src = term.get("src", "").strip()
+                    if src and src.lower() not in existing_srcs:
+                        existing_terms.append(term)
+                        existing_srcs.add(src.lower())
+                        added_count += 1
+
+                # 保存到配置
+                self.config["prompt_dictionary_data"] = existing_terms
+                self.config["prompt_dictionary_switch"] = True
+                self.save_config()
+
+                console.print(f"\n[bold green]✅ TBX术语库导入成功[/bold green]")
+                console.print(f"[green]新增术语: {added_count}[/green]")
+                console.print(f"[green]总计术语: {len(existing_terms)}[/green]")
+            else:
+                console.print(f"[yellow]已取消导入[/yellow]")
+
+        except Exception as e:
+            console.print(f"\n[bold red]❌ TBX术语库导入失败: {e}[/bold red]")
+            import traceback
+            traceback.print_exc()
+
+        Prompt.ask(f"\n{self.i18n.get('msg_press_enter')}")

@@ -1,0 +1,51 @@
+[      21ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[   38533ms] Error: useI18n must be used within an I18nProvider
+    at useI18n (http://localhost:4200/contexts/I18nContext.tsx?t=1772210337522:44:11)
+    at MainLayout (http://localhost:4200/components/Layout/MainLayout.tsx?t=1772210337522:48:60)
+    at Object.react_stack_bottom_frame (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:18509:20)
+    at renderWithHooks (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:5654:24)
+    at updateFunctionComponent (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:7475:21)
+    at beginWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:8525:20)
+    at runWithFiberInDEV (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:997:72)
+    at performUnitOfWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12561:98)
+    at workLoopSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12424:43)
+    at renderRootSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12408:13)
+[   38533ms] [WARNING] %s
+
+%s
+ An error occurred in the <MainLayout> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:6965
+[   99634ms] Error: useI18n must be used within an I18nProvider
+    at useI18n (http://localhost:4200/contexts/I18nContext.tsx?t=1772210578773:44:11)
+    at MainLayout (http://localhost:4200/components/Layout/MainLayout.tsx?t=1772210578773:48:60)
+    at Object.react_stack_bottom_frame (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:18509:20)
+    at renderWithHooks (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:5654:24)
+    at updateFunctionComponent (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:7475:21)
+    at beginWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:8525:20)
+    at runWithFiberInDEV (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:997:72)
+    at performUnitOfWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12561:98)
+    at workLoopSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12424:43)
+    at renderRootSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12408:13)
+[   99634ms] [WARNING] %s
+
+%s
+ An error occurred in the <MainLayout> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:6965
+[  132986ms] Error: useAuth must be used within an AuthProvider
+    at useAuth (http://localhost:4200/contexts/AuthContext.tsx?t=1772210287404:114:11)
+    at AppSidebar (http://localhost:4200/components/Layout/AppSidebar.tsx?t=1772210639873:76:45)
+    at Object.react_stack_bottom_frame (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:18509:20)
+    at renderWithHooks (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:5654:24)
+    at updateFunctionComponent (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:7475:21)
+    at beginWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:8525:20)
+    at runWithFiberInDEV (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:997:72)
+    at performUnitOfWork (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12561:98)
+    at workLoopSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12424:43)
+    at renderRootSync (http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:12408:13)
+[  132986ms] [WARNING] %s
+
+%s
+ An error occurred in the <AppSidebar> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:4200/node_modules/.vite/deps/react-dom_client.js?v=47659610:6965
+[  132999ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:4200/api/v1/auth/me:0
+[  133021ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:4200/api/v1/auth/me:0

@@ -80,7 +80,7 @@ class AIProofreadMenu:
         """开始AI校对当前项目"""
         try:
             output_path = self.config.get("label_output_path", "./output")
-            cache_file = os.path.join(output_path, "cache", "AinieeCacheData.json")
+            cache_file = os.path.join(output_path, "cache", "TranslateFlowCacheData.json")
 
             if not os.path.exists(cache_file):
                 console.print(f"[red]{self.i18n.get('proofread_no_cache') or '未找到缓存文件'}[/red]")
@@ -104,7 +104,7 @@ class AIProofreadMenu:
         tui = ProofreadTUI(self.i18n)
 
         # 加载缓存
-        cache_file = os.path.join(project_path, "cache", "AinieeCacheData.json")
+        cache_file = os.path.join(project_path, "cache", "TranslateFlowCacheData.json")
         with open(cache_file, "r", encoding="utf-8") as f:
             cache_data = json.load(f)
 
@@ -398,7 +398,7 @@ class AIProofreadMenu:
             return
 
         # 加载原始cache文件
-        cache_path = os.path.join(project_path, "cache", "AinieeCacheData.json")
+        cache_path = os.path.join(project_path, "cache", "TranslateFlowCacheData.json")
         if not os.path.exists(cache_path):
             console.print("[red]找不到原始cache文件[/red]")
             return
@@ -426,7 +426,7 @@ class AIProofreadMenu:
                             break
 
             # 保存为AI校对版本的cache文件
-            proofread_cache_path = os.path.join(project_path, "cache", "AinieeCacheData_proofread.json")
+            proofread_cache_path = os.path.join(project_path, "cache", "TranslateFlowCacheData_proofread.json")
             import msgspec
             content_bytes = msgspec.json.encode(project)
             with open(proofread_cache_path, "wb") as f:
@@ -510,7 +510,7 @@ class AIProofreadMenu:
             if not path or path.lower() == 'q':
                 return
 
-            cache_file = os.path.join(path, "cache", "AinieeCacheData.json")
+            cache_file = os.path.join(path, "cache", "TranslateFlowCacheData.json")
             if not os.path.exists(cache_file):
                 console.print(f"[red]未找到缓存文件: {cache_file}[/red]")
                 input("\nPress Enter to continue...")

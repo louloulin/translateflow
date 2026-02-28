@@ -66,7 +66,7 @@ export const Monitor: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">
-              AiNiee <span className="text-primary">{t('ui_monitor_title') || 'Monitor'}</span>
+              TranslateFlow <span className="text-primary">{t('ui_monitor_title') || 'Monitor'}</span>
             </h1>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">{t('ui_monitor_subtitle') || 'Real-time Performance Metrics'}</p>
           </div>
@@ -154,7 +154,7 @@ export const Monitor: React.FC = () => {
 
       {/* Footer info */}
       <div className="flex justify-between items-center text-[10px] text-slate-600 font-mono px-2 uppercase tracking-tighter">
-        <span>&copy; 2026 AiNiee Project</span>
+        <span>&copy; 2026 TranslateFlow Project</span>
         <div className="flex gap-4">
           <span className="truncate max-w-[200px]">{taskState.stats?.currentFile || t('ui_no_file_active') || 'No file active'}</span>
           <span>S-Rate: <span className="text-green-500/80">{(taskState.stats?.successRate || 0).toFixed(1)}%</span></span>

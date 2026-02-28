@@ -13,10 +13,12 @@ from typing import List, Dict, Any, Optional
 # --- Pre-emptive Import for FastAPI & Pydantic ---
 try:
     import uvicorn
-    from fastapi import FastAPI, HTTPException, Body, File, UploadFile, Response, BackgroundTasks
+    from fastapi import FastAPI, HTTPException, Body, File, UploadFile, Response, BackgroundTasks, Depends, Header, Request, Query
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse
+    from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
     from pydantic import BaseModel
+    from typing import Optional
 except ImportError:
     # This error will be caught and handled in ainiee_cli.py
     raise ImportError("Required packages are missing. Please run 'uv add fastapi uvicorn[standard] pydantic python-multipart'.,Or run 'uv sync'")
@@ -29,6 +31,13 @@ TEMP_EDIT_PATH = os.path.join(PROJECT_ROOT, "output", "temp_edit") # Define draf
 
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+
+# Import language mapper
+from Tools.WebServer.language_mapper import (
+    normalize_language_input,
+    map_display_name_to_code,
+    validate_language_code
+)
 
 # --- Global State & Task Management ---
 
@@ -117,12 +126,81 @@ class TaskManager:
                             self.logs.append({"timestamp": time.time(), "message": line})
 
 
+
+    def validate_payload(self, payload: Dict[str, Any]) -> tuple:
+        """
+        Validate task payload before starting.
+
+        Returns:
+            Tuple of (is_valid, warnings, corrections)
+        """
+        warnings = []
+        corrections = {}
+
+        # Validate languages
+        source_lang = payload.get("source_lang")
+        target_lang = payload.get("target_lang")
+
+        if source_lang:
+            normalized_source = normalize_language_input(source_lang)
+            if normalized_source != source_lang:
+                corrections["source_lang"] = {
+                    "old": source_lang,
+                    "new": normalized_source
+                }
+                warnings.append(f"Source language normalized: '{source_lang}' → '{normalized_source}'")
+                payload["source_lang"] = normalized_source
+
+            if not validate_language_code(normalized_source):
+                warnings.append(f"Invalid source language: '{source_lang}'")
+
+        if target_lang:
+            normalized_target = normalize_language_input(target_lang)
+            if normalized_target != target_lang:
+                corrections["target_lang"] = {
+                    "old": target_lang,
+                    "new": normalized_target
+                }
+                warnings.append(f"Target language normalized: '{target_lang}' → '{normalized_target}'")
+                payload["target_lang"] = normalized_target
+
+            if normalized_target == "auto":
+                return False, ["Target language cannot be 'auto'"], corrections
+
+            if not validate_language_code(normalized_target):
+                return False, [f"Invalid target language: '{target_lang}'"], corrections
+
+        # Validate required fields
+        if not payload.get("input_path"):
+            return False, ["Input path is required"], corrections
+
+        if not payload.get("task"):
+            return False, ["Task type is required"], corrections
+
+        return True, warnings, corrections
+
     def start_task(self, payload: Dict[str, Any]) -> bool:
         """Starts the ainiee_cli.py script as a subprocess with config overrides."""
         with self._lock:
             if self.status == "running":
                 return False
-            
+
+            # Validate payload before starting
+            is_valid, warnings, corrections = self.validate_payload(payload)
+
+            # Log validation results
+            if warnings:
+                for warning in warnings:
+                    self.logs.append({"timestamp": time.time(), "message": f"[VALIDATION] {warning}", "type": "warning"})
+
+            if corrections:
+                for key, change in corrections.items():
+                    self.logs.append({"timestamp": time.time(), "message": f"[CORRECTION] {key}: '{change['old']}' → '{change['new']}'", "type": "info"})
+
+            if not is_valid:
+                self.logs.append({"timestamp": time.time(), "message": "[VALIDATION] Failed - cannot start task", "type": "error"})
+                return False
+
             self.status = "running"
             self.logs.clear()
             self.chart_data.clear()
@@ -142,12 +220,21 @@ class TaskManager:
                 "-y",  # Crucial for non-interactive mode
                 "--web-mode" # Activate parsable output
             ]
+
+            # Debug: Log the command being executed
+            import shutil
+            uv_path = shutil.which("uv")
+            self.logs.append({"timestamp": time.time(), "message": f"[DEBUG] UV Path: {uv_path}"})
+            self.logs.append({"timestamp": time.time(), "message": f"[DEBUG] Command: {' '.join(cli_args)}"})
             
             # Add optional arguments based on the payload
             if payload.get("output_path"):
                 cli_args.extend(["--output", payload["output_path"]])
+
+            # Use normalized languages (already corrected in validate_payload)
             if payload.get("source_lang"):
                 cli_args.extend(["--source", payload["source_lang"]])
+
             if payload.get("target_lang"):
                 cli_args.extend(["--target", payload["target_lang"]])
             if payload.get("resume"):
@@ -235,6 +322,7 @@ class TaskManager:
             for line in iter(self.process.stdout.readline, ''):
                 line = line.strip()
                 if line:
+                    print(f"[SUBPROCESS OUT] {line}") # DEBUG: Print to server console
                     self.logs.append({"timestamp": time.time(), "message": line})
                     
                     # 1. Parsing current file
@@ -478,6 +566,42 @@ class TaskPayload(BaseModel):
 
 app = FastAPI(title="AiNiee CLI Backend API")
 
+# --- Default Admin User Creation ---
+@app.on_event("startup")
+def create_default_admin():
+    """Create default admin user on startup if not exists."""
+    try:
+        from uuid import uuid4
+        from ModuleFolders.Service.Auth.models import UserRole, UserStatus
+        from ModuleFolders.Service.Auth.password_manager import PasswordManager
+        from ModuleFolders.Service.Auth import init_database
+
+        # Initialize database tables first
+        try:
+            init_database()
+        except Exception as e:
+            print(f"Database init in startup: {e}")
+
+        # Check if admin already exists
+        admin_user = User.get_or_none(User.username == "admin")
+        if admin_user is None:
+            # Create default admin user
+            password_manager = PasswordManager()
+            admin_user = User.create(
+                id=str(uuid4()),
+                email="admin@translateflow.local",
+                username="admin",
+                password_hash=password_manager.hash_password("admin"),
+                role=UserRole.SUPER_ADMIN.value,
+                status=UserStatus.ACTIVE.value,
+                email_verified=True,  # Admin doesn't need email verification
+            )
+            print(f"Default admin user created with username: admin")
+        else:
+            print(f"Admin user already exists")
+    except Exception as e:
+        print(f"Warning: Could not create default admin user: {e}")
+
 # --- Paths to Resources ---
 RESOURCE_PATH = os.path.join(PROJECT_ROOT, "Resource")
 VERSION_FILE = os.path.join(RESOURCE_PATH, "Version", "version.json")
@@ -563,6 +687,412 @@ def save_config_generic(key: str, value: Any):
 @app.get("/api/system/mode")
 async def get_system_mode():
     return {"mode": SYSTEM_MODE}
+
+@app.get("/api/system/status")
+async def get_system_status():
+    try:
+        import psutil
+        return {
+            "cpu_percent": psutil.cpu_percent(),
+            "memory_percent": psutil.virtual_memory().percent,
+            "disk_percent": psutil.disk_usage('/').percent,
+            "boot_time": psutil.boot_time()
+        }
+    except ImportError:
+        return {
+            "cpu_percent": 0,
+            "memory_percent": 0,
+            "disk_percent": 0,
+            "boot_time": 0,
+            "error": "psutil not installed"
+        }
+
+@app.post("/api/system/update")
+async def update_system():
+    try:
+        # Run git pull
+        result = subprocess.run(["git", "pull"], capture_output=True, text=True, cwd=PROJECT_ROOT)
+        return {"success": result.returncode == 0, "output": result.stdout + "\n" + result.stderr}
+    except Exception as e:
+        return {"success": False, "output": str(e)}
+
+@app.post("/api/system/restart")
+async def restart_system():
+    """Restarts the server process."""
+    def restart():
+        time.sleep(1)
+        # Re-execute the current script
+        # Note: This might not work perfectly in all environments (e.g. docker, supervisor)
+        # But for local dev it's usually fine.
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+    
+    threading.Thread(target=restart).start()
+    return {"message": "Server is restarting..."}
+
+
+# --- Auth Models ---
+
+class RegisterRequest(BaseModel):
+    email: str
+    username: str
+    password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    reset_url_base: Optional[str] = "https://translateflow.example.com/reset-password"
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class PasswordResetResponse(BaseModel):
+    message: str
+
+
+class LoginResponse(BaseModel):
+    user: Dict[str, Any]
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    username: str
+    role: str
+    status: str
+
+
+# --- User Management Request/Response Models ---
+
+class UpdateProfileRequest(BaseModel):
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class UpdateEmailRequest(BaseModel):
+    new_email: str
+    password: str
+
+
+class UpdatePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class DeleteAccountRequest(BaseModel):
+    password: Optional[str] = None
+
+
+class UpdateUserRoleRequest(BaseModel):
+    new_role: str
+
+
+class UpdateUserStatusRequest(BaseModel):
+    new_status: str
+    reason: Optional[str] = None
+
+
+class UpdateUserRequest(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class UserListResponse(BaseModel):
+    users: List[Dict[str, Any]]
+    pagination: Dict[str, Any]
+
+
+class LoginHistoryResponse(BaseModel):
+    records: List[Dict[str, Any]]
+    pagination: Dict[str, Any]
+
+
+# --- Subscription Management Models ---
+
+class CreateSubscriptionRequest(BaseModel):
+    """创建订阅请求"""
+    plan: str  # free, starter, pro, enterprise
+    success_url: str = "http://localhost:8000/billing/success"
+    cancel_url: str = "http://localhost:8000/billing/cancel"
+
+
+class UpdateSubscriptionRequest(BaseModel):
+    """更新订阅请求"""
+    new_plan: str  # starter, pro, enterprise
+
+
+class CancelSubscriptionRequest(BaseModel):
+    """取消订阅请求"""
+    at_period_end: bool = True  # True=周期结束时取消，False=立即取消
+
+
+# --- Auth Dependencies ---
+
+# Import JWT middleware from Auth module
+from ModuleFolders.Service.Auth import jwt_middleware, User
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+
+def get_client_ip(request):
+    """Get client IP from request."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+# --- Auth Routes ---
+
+@app.post("/api/v1/auth/register", response_model=LoginResponse)
+async def register(request: RegisterRequest, background_tasks: BackgroundTasks):
+    """Register a new user account."""
+    try:
+        # Import here to avoid circular imports
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        # Initialize database if needed
+        try:
+            init_database()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Database init error: {e}")
+            pass  # Database might already be initialized
+
+        auth_manager = get_auth_manager()
+
+        # Get client info
+        ip_address = "127.0.0.1"  # Will be updated with actual IP in production
+        user_agent = "Web UI"
+
+        result = auth_manager.register(
+            email=request.email,
+            username=request.username,
+            password=request.password,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/auth/login", response_model=LoginResponse)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Login with email and password."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+
+        # Get client info
+        ip_address = "127.0.0.1"  # Will be updated with actual IP in production
+        user_agent = "Web UI"
+
+        result = auth_manager.login(
+            email=form_data.username,  # OAuth2 uses username field for email
+            password=form_data.password,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.post("/api/v1/auth/refresh", response_model=RefreshResponse)
+async def refresh_token(refresh_token: str = Body(..., embed=True)):
+    """Refresh access token using refresh token."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+
+        result = auth_manager.refresh_access_token(refresh_token)
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.post("/api/v1/auth/logout")
+async def logout(refresh_token: str = Body(..., embed=True)):
+    """Logout user and revoke refresh token."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        auth_manager.logout(refresh_token)
+
+        return {"message": "Successfully logged out"}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/auth/forgot-password", response_model=PasswordResetResponse)
+async def forgot_password(request: ForgotPasswordRequest, background_tasks: BackgroundTasks):
+    """Request a password reset email."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        result = auth_manager.forgot_password(
+            email=request.email,
+            reset_url_base=request.reset_url_base,
+        )
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/auth/reset-password", response_model=PasswordResetResponse)
+async def reset_password(request: ResetPasswordRequest):
+    """Reset password using the reset token."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        result = auth_manager.reset_password(
+            token=request.token,
+            new_password=request.new_password,
+        )
+        return {"message": result.get("message", "Password reset successfully")}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/v1/auth/verify-email")
+async def verify_email(token: str = Query(..., description="Email verification token")):
+    """Verify user's email using the verification token."""
+    try:
+        from ModuleFolders.Service.Auth import init_database, get_auth_manager
+
+        try:
+            init_database()
+        except Exception:
+            pass
+
+        auth_manager = get_auth_manager()
+        result = auth_manager.verify_email(token=token)
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/v1/auth/me", response_model=UserResponse)
+async def get_current_user(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """Get current user information."""
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "username": user.username,
+        "role": user.role,
+        "status": user.status,
+    }
+
+
+# --- Protected Route Examples ---
+
+@app.get("/api/v1/auth/protected")
+async def protected_route(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    Example of a protected route that requires authentication.
+    Only authenticated users can access this endpoint.
+    """
+    return {
+        "message": "This is a protected endpoint",
+        "user_id": str(user.id),
+        "username": user.username,
+    }
+
+
+@app.get("/api/v1/auth/optional")
+async def optional_auth_route(
+    user: Optional[User] = Depends(jwt_middleware.get_current_user_optional)
+):
+    """
+    Example of a route with optional authentication.
+    Returns user info if authenticated, otherwise returns anonymous response.
+    """
+    if user:
+        return {
+            "authenticated": True,
+            "user_id": str(user.id),
+            "username": user.username,
+        }
+    return {
+        "authenticated": False,
+        "message": "Anonymous user"
+    }
+
+
+@app.get("/api/v1/auth/admin")
+async def admin_only_route(
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    Example of an admin-only route.
+    Only users with 'admin' or 'superuser' role can access.
+    """
+    return {
+        "message": "Welcome, admin!",
+        "user_id": str(user.id),
+        "username": user.username,
+    }
+
 
 @app.get("/api/version")
 async def get_version():
@@ -1208,6 +1738,80 @@ async def save_analysis_results(request: SaveAnalysisRequest):
         "count": len(glossary_data)
     }
 
+# --- Stev Extraction Endpoints ---
+
+stev_status = "idle"
+stev_logs = []
+stev_lock = threading.Lock()
+
+class StevLogCapture:
+    def __init__(self):
+        self.logs = []
+    def write(self, message):
+        if message.strip():
+            self.logs.append(message.rstrip())
+    def flush(self):
+        pass
+
+def run_stev_task(task_type: str, config: dict):
+    global stev_status, stev_logs
+    
+    with stev_lock:
+        stev_status = "running"
+        stev_logs = [f"[{datetime.now().strftime('%H:%M:%S')}] Task '{task_type}' started."]
+    
+    # Capture stdout
+    import sys
+    from io import StringIO
+    
+    capture = StevLogCapture()
+    original_stdout = sys.stdout
+    sys.stdout = capture
+    
+    try:
+        from source.AiNiee.StevExtraction.jtpp import Jr_Tpp
+        
+        # Jr_Tpp expects a config dict with some defaults if not present
+        # We pass the payload directly as config
+        tpp = Jr_Tpp(config) 
+        
+        if task_type == 'extract':
+            tpp.FromGame(config.get('game_dir'), config.get('save_path'), config.get('data_path'))
+        elif task_type == 'inject':
+            tpp.ToGame(config.get('game_dir'), config.get('path'), config.get('output_path'), "")
+        elif task_type == 'update':
+            tpp.Update(config.get('game_dir'), config.get('path'), config.get('save_path'), config.get('data_path'))
+            
+        with stev_lock:
+            stev_status = "completed"
+            stev_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Task completed successfully.")
+    except Exception as e:
+        with stev_lock:
+            stev_status = "error"
+            stev_logs.append(f"[{datetime.now().strftime('%H:%M:%S')}] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        sys.stdout = original_stdout
+        # Copy captured logs
+        with stev_lock:
+            stev_logs.extend(capture.logs)
+
+@app.post("/api/stev/{task_type}")
+def start_stev_task(task_type: str, payload: dict, background_tasks: BackgroundTasks):
+    global stev_status
+    if stev_status == "running":
+        raise HTTPException(status_code=400, detail="A Stev task is already running")
+    
+    background_tasks.add_task(run_stev_task, task_type, payload)
+    return {"status": "started"}
+
+@app.get("/api/stev/status")
+def get_stev_status():
+    global stev_status, stev_logs
+    with stev_lock:
+        return {"status": stev_status, "logs": list(stev_logs)}
+
 # --- Plugin Management Endpoints ---
 
 @app.get("/api/plugins")
@@ -1647,6 +2251,96 @@ async def internal_update_comparison(payload: InternalComparisonPayload):
     task_manager.current_translation = payload.translation
     return {"status": "ok"}
 
+@app.get("/api/task/breakpoint-status")
+async def get_breakpoint_status(input_path: str = ""):
+    """
+    Check if there's an incomplete translation task that can be resumed.
+    Reads ProjectStatistics.json from the cache folder to detect breakpoint.
+    """
+    try:
+        config = await get_config()
+        output_path = config.get("label_output_path", os.path.join(PROJECT_ROOT, "output"))
+        cache_folder_path = os.path.join(output_path, "cache")
+
+        # Check if cache folder exists
+        if not os.path.isdir(cache_folder_path):
+            return {
+                "can_resume": False,
+                "has_incomplete": False,
+                "message": "No cache folder found"
+            }
+
+        json_file_path = os.path.join(cache_folder_path, "ProjectStatistics.json")
+        if not os.path.isfile(json_file_path):
+            return {
+                "can_resume": False,
+                "has_incomplete": False,
+                "message": "No project statistics found"
+            }
+
+        # Try to read the statistics file
+        try:
+            # Check file size to avoid reading empty files
+            if os.path.getsize(json_file_path) == 0:
+                return {
+                    "can_resume": False,
+                    "has_incomplete": False,
+                    "message": "Project statistics file is empty"
+                }
+
+            with open(json_file_path, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    return {
+                        "can_resume": False,
+                        "has_incomplete": False,
+                        "message": "Project statistics content is empty"
+                    }
+
+                data = json.loads(content)
+
+            # Get statistics
+            project_name = data.get("project_name", "Unknown")
+            total_line = data.get("total_line", 0)
+            line = data.get("line", 0)
+            total_requests = data.get("total_requests", 0)
+            success_requests = data.get("success_requests", 0)
+            token = data.get("token", 0)
+            time_elapsed = data.get("time", 0)
+
+            # Check if there's incomplete work
+            has_incomplete = total_line > 0 and line < total_line
+            can_resume = total_line > 0
+
+            # Format progress percentage
+            progress = 0
+            if total_line > 0:
+                progress = (line / total_line) * 100
+
+            return {
+                "can_resume": can_resume,
+                "has_incomplete": has_incomplete,
+                "project_name": project_name,
+                "progress": round(progress, 2),
+                "total_line": total_line,
+                "completed_line": line,
+                "total_requests": total_requests,
+                "success_requests": success_requests,
+                "token": token,
+                "time_elapsed": round(time_elapsed, 2),
+                "message": f"Found incomplete project: {project_name} ({line}/{total_line} lines, {progress:.1f}%)" if has_incomplete else f"Project complete: {project_name}"
+            }
+
+        except (json.JSONDecodeError, OSError, IOError) as e:
+            return {
+                "can_resume": False,
+                "has_incomplete": False,
+                "message": f"Failed to read project statistics: {str(e)}"
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # --- File Management Endpoints ---
 
 @app.post("/api/files/upload")
@@ -1998,7 +2692,7 @@ async def load_cache(request: CacheLoadRequest):
         raise HTTPException(status_code=500, detail=f"Failed to load cache: {e}")
 
 @app.get("/api/cache/items")
-async def get_cache_items(page: int = 1, page_size: Optional[int] = None, search: str = None):
+async def get_cache_items(page: int = 1, page_size: Optional[int] = None, search: str = None, file_path: str = None):
     """Get paginated cache items"""
     try:
         cache_manager = get_cache_manager()
@@ -2017,7 +2711,11 @@ async def get_cache_items(page: int = 1, page_size: Optional[int] = None, search
         # Extract items (similar to TUI's _extract_cache_items)
         items = []
         with cache_manager.file_lock:
-            for file_path, cache_file in cache_manager.project.files.items():
+            for f_path, cache_file in cache_manager.project.files.items():
+                # Filter by file_path if provided
+                if file_path and f_path != file_path:
+                    continue
+                    
                 for idx, item in enumerate(cache_file.items):
                     if item.source_text and item.source_text.strip():
                         translation = ""
@@ -2029,7 +2727,7 @@ async def get_cache_items(page: int = 1, page_size: Optional[int] = None, search
                         # Include all items with source text (translated or not)
                         items.append({
                             'id': len(items),
-                            'file_path': file_path,
+                            'file_path': f_path,
                             'text_index': item.text_index,
                             'source': item.source_text,
                             'translation': translation,
@@ -2918,6 +3616,2297 @@ async def reorder_queue(request: QueueReorderRequest):
             return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Scheduler API Endpoints ---
+
+# Global scheduler manager instance
+_scheduler_manager = None
+
+def get_scheduler_manager():
+    """Get or create the scheduler manager instance."""
+    global _scheduler_manager
+    if _scheduler_manager is None:
+        from ModuleFolders.Infrastructure.Automation.SchedulerManager import SchedulerManager
+        _scheduler_manager = SchedulerManager()
+        # Load from config
+        _scheduler_manager.load_from_config(load_config_sync())
+    return _scheduler_manager
+
+
+class ScheduledTaskItem(BaseModel):
+    task_id: str
+    name: str
+    schedule: str
+    input_path: str
+    profile: str
+    task_type: str
+    enabled: bool = True
+
+
+@app.get("/api/scheduler/status", response_model=dict)
+async def get_scheduler_status():
+    """Get scheduler status."""
+    try:
+        sm = get_scheduler_manager()
+        return sm.get_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/scheduler/tasks", response_model=List[dict])
+async def get_scheduler_tasks():
+    """Get all scheduled tasks."""
+    try:
+        sm = get_scheduler_manager()
+        tasks = sm.get_all_tasks()
+        return [task.to_dict() for task in tasks]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/scheduler/tasks")
+async def add_scheduler_task(task: ScheduledTaskItem):
+    """Add a new scheduled task."""
+    try:
+        sm = get_scheduler_manager()
+        from ModuleFolders.Infrastructure.Automation.SchedulerManager import ScheduledTask
+
+        new_task = ScheduledTask(
+            task_id=task.task_id,
+            name=task.name,
+            schedule=task.schedule,
+            input_path=task.input_path,
+            profile=task.profile,
+            task_type=task.task_type,
+            enabled=task.enabled
+        )
+
+        if sm.add_task(new_task):
+            temp_config = {}
+            sm.save_to_config(temp_config)
+            save_config_generic("scheduler", temp_config["scheduler"])
+            return {"success": True, "message": "Task added successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Task ID already exists")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/scheduler/tasks/{task_id}")
+async def update_scheduler_task(task_id: str, enabled: bool = None, schedule: str = None, input_path: str = None, profile: str = None):
+    """Update a scheduled task."""
+    try:
+        sm = get_scheduler_manager()
+        update_data = {}
+        if enabled is not None:
+            update_data["enabled"] = enabled
+        if schedule is not None:
+            update_data["schedule"] = schedule
+        if input_path is not None:
+            update_data["input_path"] = input_path
+        if profile is not None:
+            update_data["profile"] = profile
+
+        if sm.update_task(task_id, **update_data):
+            temp_config = {}
+            sm.save_to_config(temp_config)
+            save_config_generic("scheduler", temp_config["scheduler"])
+            return {"success": True, "message": "Task updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Task not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/scheduler/tasks/{task_id}")
+async def delete_scheduler_task(task_id: str):
+    """Delete a scheduled task."""
+    try:
+        sm = get_scheduler_manager()
+        if sm.remove_task(task_id):
+            temp_config = {}
+            sm.save_to_config(temp_config)
+            save_config_generic("scheduler", temp_config["scheduler"])
+            return {"success": True, "message": "Task deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Task not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/scheduler/start")
+async def start_scheduler():
+    """Start the scheduler."""
+    try:
+        sm = get_scheduler_manager()
+        sm.start()
+        temp_config = {}
+        sm.save_to_config(temp_config)
+        save_config_generic("scheduler", temp_config["scheduler"])
+        return {"success": True, "message": "Scheduler started"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/scheduler/stop")
+async def stop_scheduler():
+    """Stop the scheduler."""
+    try:
+        sm = get_scheduler_manager()
+        sm.stop()
+        temp_config = {}
+        sm.save_to_config(temp_config)
+        save_config_generic("scheduler", temp_config["scheduler"])
+        return {"success": True, "message": "Scheduler stopped"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/scheduler/logs", response_model=List[dict])
+async def get_scheduler_logs():
+    """Get scheduler execution logs."""
+    try:
+        sm = get_scheduler_manager()
+        return sm.get_logs()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- User Management API Routes ---
+
+@app.get("/api/v1/users/me", response_model=Dict[str, Any])
+async def get_my_profile(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户资料
+
+    返回完整的用户资料信息，包括：
+    - 基本信息（邮箱、用户名、角色、状态）
+    - 资料数据（全名、简介、头像）
+    - 账户状态（邮箱验证、最后登录时间）
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+        profile = user_manager.get_profile(str(user.id))
+
+        return profile
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/me", response_model=Dict[str, Any])
+async def update_my_profile(
+    request: UpdateProfileRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前用户资料
+
+    允许更新：
+    - username（必须唯一）
+    - full_name
+    - bio（最多500字符）
+    - avatar_url（必须是有效URL）
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        # Build update dict with only provided fields
+        update_data = {}
+        if request.username is not None:
+            update_data['username'] = request.username
+        if request.full_name is not None:
+            update_data['full_name'] = request.full_name
+        if request.bio is not None:
+            update_data['bio'] = request.bio
+        if request.avatar_url is not None:
+            update_data['avatar_url'] = request.avatar_url
+
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        profile = user_manager.update_profile(str(user.id), **update_data)
+
+        return profile
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/me/email", response_model=Dict[str, Any])
+async def update_my_email(
+    request: UpdateEmailRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前用户邮箱
+
+    需要密码验证以确保安全
+    新邮箱必须唯一且需要验证
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        profile = user_manager.update_email(
+            user_id=str(user.id),
+            new_email=request.new_email,
+            password=request.password,
+        )
+
+        return profile
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/me/password", response_model=Dict[str, Any])
+async def update_my_password(
+    request: UpdatePasswordRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前用户密码
+
+    需要当前密码验证
+    密码更改后将撤销所有刷新令牌
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.update_password(
+            user_id=str(user.id),
+            current_password=request.current_password,
+            new_password=request.new_password,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/users/me")
+async def delete_my_account(
+    request: DeleteAccountRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    删除当前用户账户
+
+    如果用户有密码，需要密码确认
+    此操作不可撤销
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.delete_account(
+            user_id=str(user.id),
+            password=request.password,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/users/me/login-history", response_model=LoginHistoryResponse)
+async def get_my_login_history(
+    page: int = 1,
+    per_page: int = 20,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户登录历史
+
+    返回登录尝试的分页列表，包括：
+    - IP地址
+    - User Agent
+    - 成功/失败状态
+    - 时间戳
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.get_login_history(
+            user_id=str(user.id),
+            page=page,
+            per_page=per_page,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/users/me/preferences", response_model=Dict[str, Any])
+async def get_my_preferences(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户偏好设置
+
+    返回用户的自定义偏好/设置
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        preferences = user_manager.get_preferences(str(user.id))
+
+        return preferences
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/me/preferences", response_model=Dict[str, Any])
+async def update_my_preferences(
+    preferences: Dict[str, Any] = Body(...),
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前用户偏好设置
+
+    允许存储自定义用户设置
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.update_preferences(
+            user_id=str(user.id),
+            preferences=preferences,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- 管理员用户管理路由 ---
+
+@app.get("/api/v1/users", response_model=UserListResponse)
+async def list_users(
+    page: int = 1,
+    per_page: int = 20,
+    search: Optional[str] = None,
+    role: Optional[str] = None,
+    status: Optional[str] = None,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    获取所有用户列表，支持过滤和分页（仅管理员）
+
+    支持过滤：
+    - search: 在用户名和邮箱中搜索
+    - role: 按用户角色过滤
+    - status: 按账户状态过滤
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.list_users(
+            page=page,
+            per_page=per_page,
+            search=search,
+            role=role,
+            status=status,
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/users/{user_id}", response_model=Dict[str, Any])
+async def get_user(
+    user_id: str,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    根据ID获取用户详情（仅管理员）
+
+    返回完整的用户资料信息
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+        profile = user_manager.get_profile(user_id)
+
+        return profile
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/{user_id}/role", response_model=Dict[str, Any])
+async def update_user_role(
+    user_id: str,
+    request: UpdateUserRoleRequest,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    更新用户角色（仅管理员）
+
+    可用角色：
+    - super_admin: 完整平台访问权限
+    - tenant_admin: 租户级管理
+    - team_admin: 团队管理
+    - translation_admin: 翻译任务管理
+    - developer: API访问
+    - user: 基础翻译功能
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.update_user_role(
+            admin_id=str(user.id),
+            user_id=user_id,
+            new_role=request.new_role,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/{user_id}/status", response_model=Dict[str, Any])
+async def update_user_status(
+    user_id: str,
+    request: UpdateUserStatusRequest,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    更新用户状态（仅管理员）
+
+    可用状态：
+    - active: 正常激活账户
+    - inactive: 暂时禁用
+    - suspended: 永久暂停
+
+    可选原因字段用于审计跟踪
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+
+        user_manager = get_user_manager()
+
+        result = user_manager.update_user_status(
+            admin_id=str(user.id),
+            user_id=user_id,
+            new_status=request.new_status,
+            reason=request.reason,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/users/{user_id}", response_model=Dict[str, Any])
+async def update_user(
+    user_id: str,
+    request: UpdateUserRequest,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    更新用户信息（仅管理员）
+
+    允许更新：
+    - username（必须唯一）
+    - email（必须唯一）
+    - full_name
+    - bio
+    - avatar_url
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+        from ModuleFolders.Service.Auth.models import User as AuthUser
+
+        user_manager = get_user_manager()
+
+        # Get the target user
+        target_user = AuthUser.get_by_id(user_id)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Build update dict with only provided fields
+        update_data = {}
+        if request.username is not None:
+            update_data['username'] = request.username
+        if request.email is not None:
+            update_data['email'] = request.email
+        if request.full_name is not None:
+            update_data['full_name'] = request.full_name
+        if request.bio is not None:
+            update_data['bio'] = request.bio
+        if request.avatar_url is not None:
+            update_data['avatar_url'] = request.avatar_url
+
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        # Update user fields directly
+        if 'username' in update_data:
+            # Check if username is already taken
+            existing = AuthUser.get_or_none(AuthUser.username == update_data['username'])
+            if existing and str(existing.id) != user_id:
+                raise HTTPException(status_code=400, detail="Username already taken")
+            target_user.username = update_data['username']
+
+        if 'email' in update_data:
+            # Check if email is already taken
+            existing = AuthUser.get_or_none(AuthUser.email == update_data['email'])
+            if existing and str(existing.id) != user_id:
+                raise HTTPException(status_code=400, detail="Email already taken")
+            target_user.email = update_data['email']
+
+        if 'full_name' in update_data:
+            target_user.full_name = update_data['full_name']
+
+        if 'bio' in update_data:
+            target_user.bio = update_data['bio']
+
+        if 'avatar_url' in update_data:
+            target_user.avatar_url = update_data['avatar_url']
+
+        target_user.save()
+
+        return {
+            "id": str(target_user.id),
+            "email": target_user.email,
+            "username": target_user.username,
+            "full_name": target_user.full_name,
+            "bio": target_user.bio,
+            "avatar_url": target_user.avatar_url,
+            "role": target_user.role,
+            "status": target_user.status,
+            "email_verified": target_user.email_verified,
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    user: User = Depends(jwt_middleware.require_admin())
+):
+    """
+    删除用户（仅管理员）
+
+    永久删除用户账户及其所有相关数据。
+    此操作不可撤销，请谨慎使用。
+    """
+    try:
+        from ModuleFolders.Service.User import get_user_manager
+        from ModuleFolders.Service.Auth.models import User as AuthUser
+        from peewee import IntegrityError
+
+        user_manager = get_user_manager()
+
+        # Get the target user
+        target_user = AuthUser.get_by_id(user_id)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Prevent self-deletion
+        if str(target_user.id) == str(user.id):
+            raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+        # Store user info for response
+        user_info = {
+            "id": str(target_user.id),
+            "email": target_user.email,
+            "username": target_user.username,
+        }
+
+        # Delete related data first (cascading)
+        # Delete login history
+        from ModuleFolders.Service.Auth.models import LoginHistory
+        LoginHistory.delete().where(LoginHistory.user == target_user).execute()
+
+        # Delete email verifications
+        from ModuleFolders.Service.Auth.models import EmailVerification
+        EmailVerification.delete().where(EmailVerification.user == target_user).execute()
+
+        # Delete password resets
+        from ModuleFolders.Service.Auth.models import PasswordReset
+        PasswordReset.delete().where(PasswordReset.user == target_user).execute()
+
+        # Delete the user
+        target_user.delete_instance()
+
+        return {
+            "message": "User deleted successfully",
+            "deleted_user": user_info,
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Subscription Management API Routes ---
+
+@app.get("/api/v1/subscriptions/plans", response_model=List[Dict[str, Any]])
+async def get_subscription_plans():
+    """
+    获取所有可用的订阅计划
+
+    返回所有订阅计划的详细信息，包括：
+    - plan: 计划名称
+    - daily_characters: 每日字符数限制
+    - monthly_price: 月费价格（CNY）
+    - features: 功能列表
+    """
+    try:
+        from ModuleFolders.Service.Billing import SubscriptionManager
+
+        manager = SubscriptionManager()
+        plans = manager.get_all_plans()
+
+        return plans
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/subscriptions", response_model=Dict[str, Any])
+async def create_subscription(
+    request: CreateSubscriptionRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    创建新的订阅
+
+    创建一个新的订阅，返回 Stripe Checkout Session URL。
+    用户需要访问返回的 URL 完成支付。
+
+    参数：
+    - plan: 订阅计划（starter, pro, enterprise）
+    - success_url: 支付成功后的跳转 URL
+    - cancel_url: 取消支付后的跳转 URL
+
+    返回：
+    - session_id: Stripe Checkout Session ID
+    - url: Stripe Checkout URL（用户访问此 URL 完成支付）
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import SubscriptionPlan
+
+        # 验证计划
+        try:
+            plan_enum = SubscriptionPlan(request.plan)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的订阅计划: {request.plan}。可选值: free, starter, pro, enterprise"
+            )
+
+        # Free 计划不需要 Stripe
+        if plan_enum == SubscriptionPlan.FREE:
+            return {
+                "message": "Free 计划无需订阅",
+                "plan": "free",
+                "url": None
+            }
+
+        processor = PaymentProcessor()
+
+        # 获取或创建 Stripe 客户 ID
+        from ModuleFolders.Service.Auth.models import Tenant
+        customer_id = None
+
+        if user.tenant_id:
+            try:
+                tenant = Tenant.get_by_id(user.tenant_id)
+                customer_id = tenant.stripe_customer_id
+            except Tenant.DoesNotExist:
+                pass
+
+        # 如果没有客户 ID，创建一个
+        if not customer_id:
+            customer_id = processor.create_customer(
+                user_id=str(user.id),
+                email=user.email
+            )
+
+        # 创建结账会话
+        result = processor.create_checkout_session(
+            user_id=str(user.id),
+            plan=plan_enum,
+            success_url=request.success_url,
+            cancel_url=request.cancel_url,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/subscriptions/current", response_model=Dict[str, Any])
+async def get_current_subscription(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户的订阅信息
+
+    返回当前用户的订阅详情，包括：
+    - plan: 当前计划
+    - status: 订阅状态
+    - expires_at: 过期时间
+    - stripe_subscription_id: Stripe 订阅 ID（如果有）
+    """
+    try:
+        from ModuleFolders.Service.Auth.models import Tenant, SubscriptionPlan
+
+        # 获取用户的租户信息
+        if not user.tenant_id:
+            return {
+                "plan": "free",
+                "status": "active",
+                "expires_at": None,
+                "stripe_subscription_id": None
+            }
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            return {
+                "plan": "free",
+                "status": "active",
+                "expires_at": None,
+                "stripe_subscription_id": None
+            }
+
+        result = {
+            "plan": tenant.plan,
+            "status": "active",
+            "expires_at": tenant.subscription_expires_at.isoformat() if tenant.subscription_expires_at else None,
+            "stripe_subscription_id": tenant.stripe_subscription_id,
+            "stripe_customer_id": tenant.stripe_customer_id,
+        }
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/subscriptions/current", response_model=Dict[str, Any])
+async def update_subscription(
+    request: UpdateSubscriptionRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新当前订阅（升降级）
+
+    更新用户的订阅计划，支持：
+    - 从 starter 升级到 pro
+    - 从 pro 降级到 starter
+    - 切换到 enterprise
+
+    参数：
+    - new_plan: 新的计划（starter, pro, enterprise）
+
+    返回：
+    - subscription_id: Stripe 订阅 ID
+    - status: 订阅状态
+    - current_period_start: 当前计费周期开始时间
+    - current_period_end: 当前计费周期结束时间
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import Tenant, SubscriptionPlan
+        import os
+
+        # 验证新计划
+        try:
+            new_plan = SubscriptionPlan(request.new_plan)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的订阅计划: {request.new_plan}。可选值: starter, pro, enterprise"
+            )
+
+        if new_plan == SubscriptionPlan.FREE:
+            raise HTTPException(
+                status_code=400,
+                detail="无法降级到 Free 计划，请使用取消订阅功能"
+            )
+
+        # 获取用户的租户和订阅信息
+        if not user.tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有租户信息，无法更新订阅"
+            )
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            raise HTTPException(
+                status_code=404,
+                detail="租户不存在"
+            )
+
+        if not tenant.stripe_subscription_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有活跃的订阅，请先创建订阅"
+            )
+
+        # 获取新计划的 Price ID
+        price_ids = {
+            SubscriptionPlan.STARTER: os.getenv("STRIPE_PRICE_STARTER"),
+            SubscriptionPlan.PRO: os.getenv("STRIPE_PRICE_PRO"),
+            SubscriptionPlan.ENTERPRISE: os.getenv("STRIPE_PRICE_ENTERPRISE"),
+        }
+
+        new_price_id = price_ids.get(new_plan)
+        if not new_price_id:
+            raise HTTPException(
+                status_code=500,
+                detail=f"未配置 {new_plan.value} 计划的 Price ID"
+            )
+
+        # 更新订阅
+        processor = PaymentProcessor()
+        result = processor.update_subscription(
+            subscription_id=tenant.stripe_subscription_id,
+            new_price_id=new_price_id,
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/subscriptions/current", response_model=Dict[str, Any])
+async def cancel_subscription(
+    request: CancelSubscriptionRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    取消当前订阅
+
+    取消用户的订阅，可以选择：
+    - at_period_end=true: 在当前计费周期结束时取消（默认）
+    - at_period_end=false: 立即取消
+
+    取消后，订阅将降级到 Free 计划。
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import Tenant
+
+        # 获取用户的租户和订阅信息
+        if not user.tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有租户信息，无法取消订阅"
+            )
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            raise HTTPException(
+                status_code=404,
+                detail="租户不存在"
+            )
+
+        if not tenant.stripe_subscription_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有活跃的订阅"
+            )
+
+        # 取消订阅
+        processor = PaymentProcessor()
+        result = processor.cancel_subscription(
+            subscription_id=tenant.stripe_subscription_id,
+            at_period_end=request.at_period_end,
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/subscriptions/invoices", response_model=List[Dict[str, Any]])
+async def get_subscription_invoices(
+    limit: int = 12,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取订阅发票列表
+
+    返回当前用户的发票列表，包括：
+    - id: 发票 ID
+    - number: 发票编号
+    - status: 发票状态（paid, open, void, uncollectible）
+    - amount_due: 应付金额
+    - currency: 货币
+    - created: 创建时间
+    - due_date: 到期日期
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import Tenant
+
+        # 获取用户的 Stripe 客户 ID
+        if not user.tenant_id:
+            return []
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            return []
+
+        if not tenant.stripe_customer_id:
+            return []
+
+        # 获取发票列表
+        processor = PaymentProcessor()
+        invoices = processor.list_invoices(
+            customer_id=tenant.stripe_customer_id,
+            limit=limit,
+        )
+
+        return invoices
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/subscriptions/invoices/{invoice_id}")
+async def get_invoice_pdf(
+    invoice_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取发票 PDF 下载链接
+
+    返回指定发票的详细信息，包括 PDF 下载链接。
+
+    参数：
+    - invoice_id: Stripe 发票 ID（通常以 in_ 开头）
+
+    返回：
+    - id: 发票 ID
+    - number: 发票编号
+    - status: 发票状态
+    - amount_due: 应付金额
+    - amount_paid: 已付金额
+    - currency: 货币
+    - invoice_pdf: PDF 下载链接
+    - hosted_invoice_url: 发票托管页面 URL
+    - created: 创建时间
+    """
+    try:
+        from ModuleFolders.Service.Billing import PaymentProcessor
+        from ModuleFolders.Service.Auth.models import Tenant
+
+        # 获取用户的 Stripe 客户 ID
+        if not user.tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail="用户没有租户信息"
+            )
+
+        try:
+            tenant = Tenant.get_by_id(user.tenant_id)
+        except Tenant.DoesNotExist:
+            raise HTTPException(
+                status_code=404,
+                detail="租户不存在"
+            )
+
+        # 获取发票详情
+        processor = PaymentProcessor()
+        invoice = processor.get_invoice(invoice_id)
+
+        # 验证发票是否属于该用户
+        if not invoice.get("hosted_invoice_url"):
+            raise HTTPException(
+                status_code=404,
+                detail="发票不存在或无法访问"
+            )
+
+        return invoice
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/subscriptions/invoices/{invoice_id}/pdf")
+async def download_invoice_pdf(
+    invoice_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    下载发票 PDF 文件
+
+    生成并下载指定发票的自定义 PDF 文件。
+
+    参数：
+    - invoice_id: 发票 ID（本地数据库 ID 或 Stripe 发票 ID）
+
+    返回：
+    - PDF 文件流（Content-Type: application/pdf）
+    """
+    try:
+        from ModuleFolders.Service.Billing import InvoiceGenerator
+        from fastapi.responses import Response
+
+        # 生成 PDF
+        invoice_generator = InvoiceGenerator()
+
+        # 尝试生成为字节数据
+        try:
+            pdf_data = invoice_generator.generate_pdf_bytes(invoice_id)
+        except ValueError:
+            # 如果本地数据库没有此发票，尝试通过 Stripe 发票 ID 查找
+            # 这里可以添加逻辑从 Stripe 获取发票信息并生成本地发票
+            raise HTTPException(
+                status_code=404,
+                detail="发票不存在"
+            )
+
+        # 返回 PDF 文件
+        return Response(
+            content=pdf_data,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="invoice_{invoice_id}.pdf"'
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF 生成失败: {str(e)}")
+
+
+# --- Usage Management API Routes ---
+
+@app.get("/api/v1/usage/current", response_model=Dict[str, Any])
+async def get_current_usage(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取当前用户的用量汇总
+
+    返回用户今日、本月和总计的使用量，包括：
+    - characters: 翻译字符数
+    - api_calls: API调用次数
+    - storage_mb: 存储使用(MB)
+    - concurrent_tasks: 并发任务数
+    - team_members: 团队成员数
+    """
+    try:
+        from ModuleFolders.Service.Billing.UsageTracker import UsageTracker
+
+        tracker = UsageTracker()
+        summary = tracker.get_usage_summary(user.id)
+
+        return {
+            "user_id": user.id,
+            "today": summary["today"],
+            "month": summary["month"],
+            "total": summary["total"],
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/usage/history", response_model=Dict[str, Any])
+async def get_usage_history(
+    metric_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 50,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取用户使用历史记录（分页）
+
+    参数：
+    - metric_type: 指标类型过滤（可选: characters, api_calls, storage_mb, concurrent_tasks, team_members）
+    - start_date: 开始日期 (YYYY-MM-DD)
+    - end_date: 结束日期 (YYYY-MM-DD)
+    - page: 页码（从1开始，默认1）
+    - per_page: 每页记录数（默认50，最大100）
+
+    返回：
+    - records: 使用记录列表
+    - pagination: 分页信息
+    """
+    try:
+        from ModuleFolders.Service.Billing.UsageTracker import UsageTracker
+
+        # 验证指标类型
+        if metric_type and metric_type not in UsageTracker.METRIC_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的指标类型: {metric_type}. 支持的类型: {list(UsageTracker.METRIC_TYPES.keys())}"
+            )
+
+        # 限制每页数量
+        per_page = min(per_page, 100)
+
+        tracker = UsageTracker()
+        history = tracker.get_usage_history(
+            user_id=user.id,
+            metric_type=metric_type,
+            start_date=start_date,
+            end_date=end_date,
+            page=page,
+            per_page=per_page,
+        )
+
+        return history
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/usage/daily", response_model=List[Dict[str, Any]])
+async def get_daily_usage(
+    metric_type: str = "characters",
+    days: int = 30,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取每日使用量统计（用于趋势图）
+
+    参数：
+    - metric_type: 指标类型（默认: characters）
+      可选: characters, api_calls, storage_mb, concurrent_tasks, team_members
+    - days: 统计天数（默认30天，最大90天）
+
+    返回：
+    每日使用量列表，包含：
+    - date: 日期 (YYYY-MM-DD)
+    - quantity: 使用量
+    """
+    try:
+        from ModuleFolders.Service.Billing.UsageTracker import UsageTracker
+
+        # 验证指标类型
+        if metric_type not in UsageTracker.METRIC_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的指标类型: {metric_type}. 支持的类型: {list(UsageTracker.METRIC_TYPES.keys())}"
+            )
+
+        # 限制天数
+        days = min(days, 90)
+
+        tracker = UsageTracker()
+        stats = tracker.get_daily_usage_stats(
+            user_id=user.id,
+            metric_type=metric_type,
+            days=days,
+        )
+
+        return stats
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- OAuth API Routes ---
+
+
+class OAuthUrlResponse(BaseModel):
+    """OAuth 授权 URL 响应"""
+    authorization_url: str
+    state: str
+
+
+class OAuthCallbackRequest(BaseModel):
+    """OAuth 回调请求"""
+    code: str
+    state: str
+
+
+class OAuthLinkAccountRequest(BaseModel):
+    """OAuth 关联账户请求"""
+    provider: str
+    oauth_id: str
+    access_token: str
+    account_email: Optional[str] = None
+    account_username: Optional[str] = None
+    account_data: Optional[Dict[str, Any]] = None
+
+
+@app.get("/api/v1/auth/oauth/{provider}/authorize", response_model=OAuthUrlResponse)
+async def get_oauth_authorization_url(provider: str):
+    """
+    获取 OAuth 授权 URL
+
+    参数：
+    - provider: OAuth 提供商（github, google）
+
+    返回：
+    - authorization_url: OAuth 授权 URL（用户访问此 URL 进行授权）
+    - state: CSRF 防护状态码（需在回调时验证）
+
+    说明：
+    1. 前端使用返回的 authorization_url 重定向用户到 OAuth 提供商
+    2. 用户授权后，OAuth 提供商会重定向回回调 URL 并带上 code 和 state
+    3. 将 code 和 state 传递给 /api/v1/auth/oauth/callback 完成登录
+    """
+    try:
+        from ModuleFolders.Service.Auth import get_oauth_manager
+
+        # 验证提供商
+        if provider not in ["github", "google"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的 OAuth 提供商: {provider}。可选值: github, google"
+            )
+
+        oauth_manager = get_oauth_manager()
+
+        # 生成授权 URL
+        auth_url, state = oauth_manager.get_authorization_url(provider)
+
+        return {
+            "authorization_url": auth_url,
+            "state": state
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/auth/oauth/callback")
+async def oauth_callback(
+    provider: str,
+    code: str,
+    state: str,
+    request: Request
+):
+    """
+    OAuth 回调处理
+
+    参数：
+    - provider: OAuth 提供商（github, google）
+    - code: OAuth 授权码
+    - state: CSRF 防护状态码
+
+    返回：
+    - user: 用户信息
+    - access_token: JWT 访问令牌
+    - refresh_token: JWT 刷新令牌
+    - provider: OAuth 提供商
+
+    说明：
+    1. 验证 state 参数（前端应在 session 中存储 state 并验证）
+    2. 使用 code 交换 OAuth 访问令牌
+    3. 获取用户信息并创建或登录账户
+    4. 返回 JWT 令牌
+
+    注意：
+    - state 参数验证应由前端实现（建议在 session 中存储并验证）
+    - 新用户的邮箱自动标记为已验证
+    - OAuth 用户可以设置密码以支持密码登录
+    """
+    try:
+        from ModuleFolders.Service.Auth import get_oauth_manager
+
+        # 验证提供商
+        if provider not in ["github", "google"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的 OAuth 提供商: {provider}"
+            )
+
+        oauth_manager = get_oauth_manager()
+
+        # 获取客户端信息
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+
+        # 完成 OAuth 登录流程
+        result = await oauth_manager.oauth_login(
+            provider=provider,
+            code=code,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/auth/oauth/accounts", response_model=List[Dict[str, Any]])
+async def get_linked_oauth_accounts(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取已关联的 OAuth 账户列表
+
+    返回：
+    已关联的 OAuth 账户列表，每个账户包含：
+    - provider: OAuth 提供商（github, google）
+    - account_email: OAuth 账户邮箱
+    - account_username: OAuth 账户用户名
+    - linked_at: 关联时间
+    - last_login_at: 最后登录时间
+
+    说明：
+    - 用户可以关联多个 OAuth 提供商（如 GitHub 和 Google）
+    - 每个提供商只能关联一个账户
+    """
+    try:
+        from ModuleFolders.Service.Auth import get_oauth_manager
+
+        oauth_manager = get_oauth_manager()
+
+        accounts = oauth_manager.get_linked_accounts(user_id=str(user.id))
+
+        return accounts
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/auth/oauth/accounts/{provider}")
+async def unlink_oauth_account(
+    provider: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    解除 OAuth 账户关联
+
+    参数：
+    - provider: OAuth 提供商（github, google）
+
+    返回：
+    - message: 成功消息
+
+    说明：
+    - 解除关联后，用户将无法使用该 OAuth 提供商登录
+    - 如果这是最后一个 OAuth 账户且用户未设置密码，需要先设置密码
+    - 解除关联不会删除用户账户
+
+    错误：
+    - 400: 尝试解除最后一个 OAuth 账户（未设置密码）
+    - 404: 未找到关联的 OAuth 账户
+    """
+    try:
+        from ModuleFolders.Service.Auth import get_oauth_manager
+
+        # 验证提供商
+        if provider not in ["github", "google"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的 OAuth 提供商: {provider}"
+            )
+
+        oauth_manager = get_oauth_manager()
+
+        result = oauth_manager.unlink_oauth_account(
+            user_id=str(user.id),
+            provider=provider,
+        )
+
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- 团队管理 API ---
+
+# 请求/响应模型
+class CreateTeamRequest(BaseModel):
+    """创建团队请求"""
+    name: str
+    slug: str
+    description: Optional[str] = None
+
+class UpdateTeamRequest(BaseModel):
+    """更新团队请求"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    settings: Optional[Dict[str, Any]] = None
+
+class InviteMemberRequest(BaseModel):
+    """邀请成员请求"""
+    email: str
+    role: str = "member"  # owner, admin, member
+
+class UpdateMemberRoleRequest(BaseModel):
+    """更新成员角色请求"""
+    new_role: str  # owner, admin, member
+
+class AcceptInvitationRequest(BaseModel):
+    """接受邀请请求"""
+    token: str
+
+class DeclineInvitationRequest(BaseModel):
+    """拒绝邀请请求"""
+    token: str
+
+
+@app.post("/api/v1/teams", response_model=Dict[str, Any])
+async def create_team(
+    request: CreateTeamRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    创建团队
+
+    请求体：
+    - name: 团队名称（必填）
+    - slug: 团队URL标识（必填，3-50字符，小写字母数字连字符）
+    - description: 团队描述（可选）
+
+    返回：
+    创建的团队信息，包含：
+    - id: 团队ID
+    - name: 团队名称
+    - slug: 团队URL标识
+    - description: 团队描述
+    - owner_id: 所有者ID
+    - max_members: 最大成员数
+    - created_at: 创建时间
+
+    说明：
+    - 创建者自动成为团队所有者（Owner）
+    - 最大成员数根据订阅计划自动设置
+    - Free: 5人, Starter: 10人, Pro: 50人, Enterprise: 无限制
+
+    错误：
+    - 400: slug格式无效或已被使用
+    - 404: 用户不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+        from ModuleFolders.Service.Auth.models import Tenant
+
+        # 获取用户的租户ID（如果有）
+        tenant_id = None
+        try:
+            tenant = Tenant.get(Tenant.owner == user.id)
+            tenant_id = str(tenant.id)
+        except:
+            pass
+
+        team_manager = TeamManager()
+
+        # 创建团队
+        team = team_manager.create_team(
+            owner_id=str(user.id),
+            name=request.name,
+            slug=request.slug,
+            tenant_id=tenant_id,
+            description=request.description,
+        )
+
+        return {
+            "id": str(team.id),
+            "name": team.name,
+            "slug": team.slug,
+            "description": team.description,
+            "owner_id": str(team.owner.id),
+            "max_members": team.max_members,
+            "is_active": team.is_active,
+            "created_at": team.created_at.isoformat() if team.created_at else None,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/teams", response_model=List[Dict[str, Any]])
+async def list_teams(
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取我的团队列表
+
+    返回：
+    用户参与的所有团队，每个团队包含：
+    - id: 团队ID
+    - name: 团队名称
+    - slug: 团队URL标识
+    - description: 团队描述
+    - owner_id: 所有者ID
+    - is_active: 是否激活
+    - member_count: 成员数量
+    - my_role: 用户在团队中的角色
+
+    说明：
+    - 包括用户拥有的团队（Owner）
+    - 包括用户参与的团队（Admin/Member）
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager, TeamRepository
+
+        team_manager = TeamManager()
+        team_repository = TeamRepository()
+
+        # 获取用户所有团队
+        teams = team_manager.list_user_teams(user_id=str(user.id))
+
+        result = []
+        for team in teams:
+            # 获取成员数量
+            member_count = team_repository.count_members(team.id, include_pending=False)
+
+            # 获取用户在团队中的角色
+            member = team_repository.find_member(team.id, str(user.id))
+            my_role = member.role if member else None
+
+            result.append({
+                "id": str(team.id),
+                "name": team.name,
+                "slug": team.slug,
+                "description": team.description,
+                "owner_id": str(team.owner.id),
+                "is_active": team.is_active,
+                "max_members": team.max_members,
+                "member_count": member_count,
+                "my_role": my_role,
+                "created_at": team.created_at.isoformat() if team.created_at else None,
+            })
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/teams/{team_id}", response_model=Dict[str, Any])
+async def get_team(
+    team_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取团队详情
+
+    路径参数：
+    - team_id: 团队ID
+
+    返回：
+    团队的完整信息，包含：
+    - id: 团队ID
+    - name: 团队名称
+    - slug: 团队URL标识
+    - description: 团队描述
+    - owner_id: 所有者ID
+    - max_members: 最大成员数
+    - is_active: 是否激活
+    - member_count: 当前成员数
+    - my_role: 当前用户在团队中的角色
+    - created_at: 创建时间
+
+    错误：
+    - 403: 无权限访问该团队
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager, TeamRepository
+
+        team_manager = TeamManager()
+        team_repository = TeamRepository()
+
+        # 获取团队（包含权限验证）
+        team = team_manager.get_team(team_id=team_id, user_id=str(user.id))
+
+        # 获取成员数量
+        member_count = team_repository.count_members(team.id, include_pending=False)
+
+        # 获取用户在团队中的角色
+        member = team_repository.find_member(team.id, str(user.id))
+        my_role = member.role if member else None
+
+        return {
+            "id": str(team.id),
+            "name": team.name,
+            "slug": team.slug,
+            "description": team.description,
+            "owner_id": str(team.owner.id),
+            "max_members": team.max_members,
+            "is_active": team.is_active,
+            "member_count": member_count,
+            "my_role": my_role,
+            "settings": team.settings,
+            "created_at": team.created_at.isoformat() if team.created_at else None,
+            "updated_at": team.updated_at.isoformat() if team.updated_at else None,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/teams/{team_id}", response_model=Dict[str, Any])
+async def update_team(
+    team_id: str,
+    request: UpdateTeamRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新团队信息
+
+    路径参数：
+    - team_id: 团队ID
+
+    请求体：
+    - name: 团队名称（可选）
+    - description: 团队描述（可选）
+    - settings: 团队设置（可选，JSON对象）
+
+    返回：
+    更新后的团队信息
+
+    说明：
+    - 只有团队所有者（Owner）可以更新团队信息
+    - 支持部分字段更新
+
+    错误：
+    - 403: 无权限（非Owner）
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 构建更新参数（只包含提供的字段）
+        update_data = {}
+        if request.name is not None:
+            update_data["name"] = request.name
+        if request.description is not None:
+            update_data["description"] = request.description
+        if request.settings is not None:
+            update_data["settings"] = request.settings
+
+        # 更新团队
+        team = team_manager.update_team(
+            team_id=team_id,
+            user_id=str(user.id),
+            **update_data
+        )
+
+        return {
+            "id": str(team.id),
+            "name": team.name,
+            "slug": team.slug,
+            "description": team.description,
+            "owner_id": str(team.owner.id),
+            "max_members": team.max_members,
+            "is_active": team.is_active,
+            "settings": team.settings,
+            "updated_at": team.updated_at.isoformat() if team.updated_at else None,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/teams/{team_id}")
+async def delete_team(
+    team_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    删除团队
+
+    路径参数：
+    - team_id: 团队ID
+
+    返回：
+    - message: 成功消息
+
+    说明：
+    - 只有团队所有者（Owner）可以删除团队
+    - 删除团队将级联删除所有成员记录
+    - 此操作不可撤销
+
+    错误：
+    - 403: 无权限（非Owner）
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 删除团队
+        team_manager.delete_team(team_id=team_id, user_id=str(user.id))
+
+        return {"message": "团队删除成功"}
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/teams/{team_id}/members", response_model=Dict[str, Any])
+async def invite_team_member(
+    team_id: str,
+    request: InviteMemberRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    邀请成员加入团队
+
+    路径参数：
+    - team_id: 团队ID
+
+    请求体：
+    - email: 被邀请用户邮箱
+    - role: 成员角色（member/admin，默认member）
+
+    返回：
+    邀请信息，包含：
+    - invitation_id: 邀请ID
+    - invitation_token: 邀请令牌（用于接受邀请）
+    - email: 被邀请邮箱
+    - role: 分配的角色
+    - team_id: 团队ID
+    - team_name: 团队名称
+
+    说明：
+    - 只有Owner和Admin可以邀请成员
+    - 被邀请用户必须已存在
+    - 邀请令牌有效期为7天
+    - 需要使用邀请令牌调用接受邀请API
+
+    错误：
+    - 400: 角色无效、团队成员已满、用户已在团队中
+    - 403: 无权限
+    - 404: 团队或用户不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+        from ModuleFolders.Service.Auth.models import User
+
+        team_manager = TeamManager()
+
+        # 根据邮箱查找被邀请用户
+        try:
+            invited_user = User.get(User.email == request.email)
+        except:
+            raise HTTPException(
+                status_code=404,
+                detail=f"用户不存在: {request.email}"
+            )
+
+        # 验证角色
+        if request.role not in ["admin", "member"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的角色: {request.role}，应为 admin 或 member"
+            )
+
+        # 发送邀请
+        member = team_manager.invite_member(
+            team_id=team_id,
+            inviter_id=str(user.id),
+            user_id=str(invited_user.id),
+            role=request.role,
+        )
+
+        return {
+            "invitation_id": str(member.id),
+            "invitation_token": member.invitation_token,
+            "email": request.email,
+            "role": member.role,
+            "team_id": team_id,
+            "team_name": member.team.name,
+            "invited_at": member.invited_at.isoformat() if member.invited_at else None,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            if e.code in ["team_full", "already_member"]:
+                raise HTTPException(status_code=400, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/teams/{team_id}/members", response_model=List[Dict[str, Any]])
+async def list_team_members(
+    team_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取团队成员列表
+
+    路径参数：
+    - team_id: 团队ID
+
+    返回：
+    团队成员列表，每个成员包含：
+    - id: 成员记录ID
+    - user_id: 用户ID
+    - username: 用户名
+    - email: 用户邮箱
+    - full_name: 用户全名
+    - avatar_url: 用户头像
+    - role: 成员角色（owner/admin/member）
+    - invitation_status: 邀请状态（pending/accepted/declined）
+    - invited_at: 邀请时间
+    - joined_at: 加入时间
+
+    说明：
+    - 只有团队成员可以查看成员列表
+    - 包含待接受邀请的成员
+
+    错误：
+    - 403: 无权限访问
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 获取成员列表（包含权限验证）
+        members = team_manager.list_members(team_id=team_id, user_id=str(user.id))
+
+        result = []
+        for member in members:
+            user_data = member.user
+            result.append({
+                "id": str(member.id),
+                "user_id": str(user_data.id),
+                "username": user_data.username,
+                "email": user_data.email,
+                "full_name": user_data.full_name,
+                "avatar_url": user_data.avatar_url,
+                "role": member.role,
+                "invitation_status": member.invitation_status,
+                "invited_at": member.invited_at.isoformat() if member.invited_at else None,
+                "joined_at": member.joined_at.isoformat() if member.joined_at else None,
+            })
+
+        return result
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/v1/teams/{team_id}/members/{member_user_id}", response_model=Dict[str, Any])
+async def update_team_member_role(
+    team_id: str,
+    member_user_id: str,
+    request: UpdateMemberRoleRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    更新团队成员角色
+
+    路径参数：
+    - team_id: 团队ID
+    - member_user_id: 成员用户ID
+
+    请求体：
+    - new_role: 新角色（owner/admin/member）
+
+    返回：
+    更新后的成员信息，包含：
+    - id: 成员记录ID
+    - user_id: 用户ID
+    - username: 用户名
+    - email: 用户邮箱
+    - role: 新角色
+    - updated_at: 更新时间
+
+    说明：
+    - 只有Owner可以更新成员角色
+    - 不能修改Owner的角色
+    - 可以将Admin降级为Member
+    - 可以将Member升级为Admin
+
+    错误：
+    - 400: 角色无效、不能修改Owner角色
+    - 403: 无权限
+    - 404: 团队或成员不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 验证角色
+        if request.new_role not in ["owner", "admin", "member"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的角色: {request.new_role}"
+            )
+
+        # 更新成员角色
+        member = team_manager.update_member_role(
+            team_id=team_id,
+            operator_id=str(user.id),
+            member_user_id=member_user_id,
+            new_role=request.new_role,
+        )
+
+        user_data = member.user
+        return {
+            "id": str(member.id),
+            "user_id": str(user_data.id),
+            "username": user_data.username,
+            "email": user_data.email,
+            "role": member.role,
+            "invitation_status": member.invitation_status,
+            "updated_at": member.team.updated_at.isoformat() if member.team.updated_at else None,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code in ["team_not_found", "member_not_found"]:
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code in ["permission_denied", "cannot_change_owner"]:
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/teams/{team_id}/members/{member_user_id}")
+async def remove_team_member(
+    team_id: str,
+    member_user_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    移除团队成员
+
+    路径参数：
+    - team_id: 团队ID
+    - member_user_id: 成员用户ID
+
+    返回：
+    - message: 成功消息
+
+    说明：
+    - Owner可以移除任何人
+    - Admin可以移除Member，但不能移除Owner和其他Admin
+    - 不能移除团队所有者
+    - 移除后用户将无法访问团队资源
+
+    错误：
+    - 403: 无权限或不能移除Owner
+    - 404: 团队或成员不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 移除成员
+        team_manager.remove_member(
+            team_id=team_id,
+            operator_id=str(user.id),
+            member_user_id=member_user_id,
+        )
+
+        return {"message": "成员移除成功"}
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code in ["team_not_found", "member_not_found"]:
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code in ["permission_denied", "cannot_remove_owner"]:
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/teams/accept", response_model=Dict[str, Any])
+async def accept_team_invitation(
+    request: AcceptInvitationRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    接受团队邀请
+
+    请求体：
+    - token: 邀请令牌
+
+    返回：
+    团队信息，包含：
+    - id: 团队ID
+    - name: 团队名称
+    - slug: 团队URL标识
+    - role: 用户在团队中的角色
+    - joined_at: 加入时间
+
+    说明：
+    - 用户必须已登录
+    - 邀请令牌有效期为7天
+    - 接受后用户成为团队成员
+    - 邀请令牌只能使用一次
+
+    错误：
+    - 400: 邀请已被接受或拒绝
+    - 404: 邀请不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 接受邀请
+        member = team_manager.accept_invitation(
+            token=request.token,
+            user_id=str(user.id),
+        )
+
+        team = member.team
+        return {
+            "id": str(team.id),
+            "name": team.name,
+            "slug": team.slug,
+            "description": team.description,
+            "role": member.role,
+            "joined_at": member.joined_at.isoformat() if member.joined_at else None,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code in ["invitation_not_found", "already_accepted", "already_declined"]:
+                raise HTTPException(status_code=400, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/teams/decline")
+async def decline_team_invitation(
+    request: DeclineInvitationRequest,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    拒绝团队邀请
+
+    请求体：
+    - token: 邀请令牌
+
+    返回：
+    - message: 成功消息
+    - team_name: 团队名称
+
+    说明：
+    - 用户必须已登录
+    - 拒绝后邀请令牌失效
+    - 无法重新使用同一令牌接受邀请
+
+    错误：
+    - 400: 邀请已被接受或拒绝
+    - 404: 邀请不存在
+    """
+    try:
+        from ModuleFolders.Service.Team import TeamManager
+
+        team_manager = TeamManager()
+
+        # 拒绝邀请
+        member = team_manager.decline_invitation(
+            token=request.token,
+            user_id=str(user.id),
+        )
+
+        return {
+            "message": "邀请已拒绝",
+            "team_name": member.team.name,
+        }
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code in ["invitation_not_found", "already_accepted", "already_declined"]:
+                raise HTTPException(status_code=400, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/teams/{team_id}/quota", response_model=Dict[str, Any])
+async def get_team_quota_status(
+    team_id: str,
+    user: User = Depends(jwt_middleware.get_current_user)
+):
+    """
+    获取团队配额状态
+
+    路径参数：
+    - team_id: 团队ID
+
+    返回：
+    团队配额信息，包含：
+    - current_members: 当前成员数（已加入）
+    - pending_invites: 待接受邀请数
+    - total_reserved: 总占用名额（已加入 + 待接受）
+    - max_members: 最大成员数（基于订阅计划）
+    - remaining_slots: 剩余可用名额
+    - usage_percentage: 使用百分比
+    - plan: 订阅计划名称
+    - is_unlimited: 是否无限制
+
+    说明：
+    - 配额基于团队所有者的订阅计划
+    - Free: 5人, Starter: 10人, Pro: 50人, Enterprise: 无限制
+    - 待接受的邀请也计入配额
+
+    错误：
+    - 403: 无权限访问团队
+    - 404: 团队不存在
+    """
+    try:
+        from ModuleFolders.Service.Team.team_quota_middleware import TeamQuotaMiddleware
+        from ModuleFolders.Service.Team.team_manager import TeamManager, TeamError
+
+        # 验证访问权限
+        team_manager = TeamManager()
+        team = team_manager.get_team(team_id, str(user.id))
+
+        # 获取配额状态
+        quota_middleware = TeamQuotaMiddleware()
+        quota_status = quota_middleware.get_quota_status(team_id, str(user.id))
+
+        return quota_status
+
+    except Exception as e:
+        from ModuleFolders.Service.Team.team_manager import TeamError
+        if isinstance(e, TeamError):
+            if e.code == "team_not_found":
+                raise HTTPException(status_code=404, detail=e.message)
+            if e.code == "permission_denied":
+                raise HTTPException(status_code=403, detail=e.message)
+            raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # --- Static File Serving for the React Frontend ---
 

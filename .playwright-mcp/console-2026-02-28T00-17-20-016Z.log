@@ -1,0 +1,1 @@
+[   31964ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:4200/api/v1/auth/register:0

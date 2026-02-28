@@ -29,3 +29,44 @@ yarn-error.log*
 .idea
 *.swp
 *.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Ralph orchestration system
+.ralph
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.hypothesis
+test-results
+
+# Temporary files
+*.tmp
+*.bak
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Playwright
+.playwright-mcp
+
+# Deployment (not needed in container)
+docker-compose*.yml
+Dockerfile.development
+.vercel
+
+# Documentation (exclude most but keep required files)
+CHANGELOG*
+# Keep LICENSE and README.md as they're needed by Dockerfile
+
+# Build artifacts
+dist/
+build/
+*.egg
+*.egg-info
+

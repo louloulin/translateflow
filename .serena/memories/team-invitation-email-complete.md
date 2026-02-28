@@ -1,0 +1,1 @@
+团队邀请邮件功能已完成实现。在EmailService中新增send_team_invitation方法，在templates.py中新增get_team_invitation_template函数。TeamManager的invite_member方法已集成自动邮件发送功能。邮件包含邀请人、团队、角色信息和接受邀请链接。32位随机邀请令牌，7天有效期。优雅降级：邮件发送失败不影响邀请创建。进度从92%提升到93%。

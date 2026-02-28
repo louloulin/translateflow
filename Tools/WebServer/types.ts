@@ -7,6 +7,24 @@ export interface LogEntry {
   type: 'error' | 'warning' | 'success' | 'system' | 'info';
 }
 
+export type ContentWidthMode = 'fluid' | 'contained';
+
+export type UiDensityMode = 'comfortable' | 'compact';
+
+export type UiThemeMode = 'light' | 'dark' | 'system';
+
+export interface UiPreferences {
+  contentWidthMode: ContentWidthMode;
+  density: UiDensityMode;
+  themeMode: UiThemeMode;
+  sidebarCollapsed: boolean;
+  taskConsole: {
+    splitRatio: number;
+    minTerminalPx: number;
+  };
+  updatedAt: number;
+}
+
 export interface TaskStats {
   rpm: number;
   tpm: number;
@@ -24,6 +42,16 @@ export interface ChartDataPoint {
   time: string;
   rpm: number;
   tpm: number;
+}
+
+export interface TaskStatusResponse {
+  stats: TaskStats;
+  logs: LogEntry[];
+  chart_data: ChartDataPoint[];
+  comparison?: {
+    source: string;
+    translation: string;
+  };
 }
 
 export enum TaskType {
@@ -211,6 +239,53 @@ export interface TaskRunnerState {
   };
 }
 
+export interface ProjectFile {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  sourceLang: string;
+  targetLang: string;
+  progress: number;
+  status: 'pending' | 'translating' | 'completed' | 'error';
+  lastModified: number;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  rootPath: string;
+  description?: string;
+  sourceLang: string;
+  targetLang: string;
+  createdAt: number;
+  updatedAt: number;
+  files: ProjectFile[];
+  status: 'active' | 'completed' | 'archived';
+  progress: number;
+  profile?: string;
+  rulesProfile?: string;
+}
+
+export interface Segment {
+  id: string;
+  index: number;
+  source: string;
+  target: string;
+  status: 'draft' | 'translated' | 'approved' | 'locked';
+  locked?: boolean;
+  comments?: string[];
+}
+
+export interface EditorState {
+  projectId: string;
+  fileId: string;
+  segments: Segment[];
+  activeSegmentId: string | null;
+  filter: 'all' | 'untranslated' | 'draft' | 'approved';
+  searchQuery: string;
+}
+
 export interface AppConfig {
   // --- Root / Meta ---
   version?: string; // Injected from version.json
@@ -298,6 +373,8 @@ export interface AppConfig {
   enable_xlsx_conversion: boolean;
   enable_dry_run: boolean;
   unlocked_themes?: string[]; // Persist unlocked themes
+  temp_file_limit?: number;
+  cache_editor_page_size?: number;
   response_check_switch: {
     newline_character_count_check: boolean;
     return_to_original_text_check: boolean;

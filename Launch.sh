@@ -1,5 +1,10 @@
 #!/bin/bash
 
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 if ! command -v uv &> /dev/null; then
     # Try to source cargo env in case it was just installed
     if [ -f "$HOME/.cargo/env" ]; then
@@ -14,4 +19,4 @@ if ! command -v uv &> /dev/null; then
 fi
 
 echo "Starting AiNiee CLI..."
-uv run ainiee_cli.py
+exec uv run "$SCRIPT_DIR/ainiee_cli.py" "$@"
