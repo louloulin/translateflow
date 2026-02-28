@@ -6,9 +6,16 @@ import { ElysiaGuide } from '@/components/ElysiaGuide';
 import { AppSidebar } from './AppSidebar';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Sparkles, LayoutDashboard } from "lucide-react";
+import { Menu, Sparkles, LayoutDashboard, CircleUser, LogOut, Settings, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/toaster";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Pages
 import { Dashboard } from '@/pages/Dashboard';
@@ -51,6 +58,7 @@ export const MainLayout: React.FC = () => {
   const { pathname } = useLocation();
   const { t, language, setLanguage, availableLanguages } = useI18n();
   const { config, activeTheme, rippleData, triggerRipple, uiPrefs, setUiPrefs } = useGlobal();
+  const { user, isAuthenticated, logout } = useAuth();
   const [systemMode, setSystemMode] = useState<'full' | 'monitor' | 'loading'>('loading');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const elysiaActive = activeTheme === 'elysia';
@@ -230,6 +238,62 @@ export const MainLayout: React.FC = () => {
                 <Menu className="h-5 w-5" />
             </Button>
             <span className="font-semibold text-foreground">TranslateFlow</span>
+         </header>
+         )}
+
+         {/* Desktop Header - User Info in Top Right */}
+         {!isAuthPage && (
+         <header className="hidden md:flex items-center justify-end h-14 px-4 border-b bg-card border-border">
+            {isAuthenticated && user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2 px-2 h-auto py-1.5 hover:bg-accent">
+                    {user.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt={user.username}
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <CircleUser className="h-4 w-4 text-primary" />
+                      </div>
+                    )}
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-medium">{user.username}</span>
+                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => handleNavigate('/profile')}>
+                    <User className="h-4 w-4 mr-2" />
+                    {t('profile') || '个人资料'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNavigate('/settings')}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    {t('settings') || '设置'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {t('logout') || '退出登录'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => handleNavigate('/login')}>
+                  {t('login') || '登录'}
+                </Button>
+                <Button onClick={() => handleNavigate('/register')}>
+                  {t('register') || '注册'}
+                </Button>
+              </div>
+            )}
          </header>
          )}
 
