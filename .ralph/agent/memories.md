@@ -1,6 +1,22 @@
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md
 ## Patterns
 
+### mem-1772254677-11be
+> Dokploy deployment configuration created for TranslateFlow: docker-compose.dokploy.yml (172 lines) with PaaS-optimized settings (resource limits: 2CPU/2GB, health checks on /api/system/status), optional managed PostgreSQL support, production logging. .env.dokploy.example (127 lines) with comprehensive environment template, security checklist, and production best practices. DEPLOYMENT_DOKPLOY.md (550 lines) covers quick start, database setup, SSL/HTTPS with Let's Encrypt, monitoring, troubleshooting, and advanced configuration. scripts/deploy-dokploy.sh (303 lines) provides validation, secret generation, build, export, and pre-flight checklist. All files validated successfully with docker-compose config. Committed as b22eba4e.
+<!-- tags: dokploy, paas, deployment, docker-compose | created: 2026-02-28 -->
+
+### mem-1772254448-0d48
+> Production Dockerfile created for TranslateFlow: Dockerfile.production with security (non-root user translateflow:1000), health checks (/api/system/status, 30s interval, 40s grace period), OCI labels (BUILD_DATE, VCS_REF, VERSION). Multi-stage build (Node 20-alpine → Python 3.12-slim), Alpine-based for minimal size. Layer optimization (cleanup in same layer), UV package manager with --frozen --no-dev. .dockerignore excludes .ralph, test files, docs. Multi-platform build script (scripts/build-docker-multiplatform.sh) supports AMD64/ARM64 via Docker Buildx. Dockerfile.development preserved for compatibility. Documented in DEPLOYMENT_DOCKER.md (108 lines added). Committed as d77b28f7.
+<!-- tags: docker, production, optimization, multi-platform | created: 2026-02-28 -->
+
+### mem-1772253862-5316
+> Docker Compose configuration created for TranslateFlow: App service (uses existing Dockerfile) + PostgreSQL 15-alpine database. Health checks: app uses /api/health, postgres uses pg_isready. Environment variables defined in .env.example with defaults (DB_USER=translateflow, DB_PASSWORD=changeme, SECRET_KEY=changeme-in-production). Volumes: postgres-data (named), output/ and updatetemp/ (bind mounts). Networks: isolated translateflow-network. docker-compose.override.yml provides development overrides (exposes PostgreSQL port 5432, adds DEBUG flag). Deployment documented in DEPLOYMENT_DOCKER.md (314 lines) with quick start, management commands, troubleshooting, production setup, security checklist, and scaling options. Docker Compose syntax validated successfully.
+<!-- tags: docker, deployment, compose, postgresql | created: 2026-02-28 -->
+
+### mem-1772253496-f16e
+> TranslateFlow deployment architecture: FastAPI backend (Python 3.12, uvicorn, port 8000) + React frontend (Vite 6.2.0, built to dist/). Database: PostgreSQL (preferred) with Peewee ORM + connection pooling (max 10 connections), SQLite fallback. Services: Auth (JWT + OAuth), Billing (Stripe), Email (Resend/SendGrid/SMTP), Teams. Existing Dockerfile: multi-stage (Node 20 build → Python 3.12-slim runtime), uses uv package manager. Missing: docker-compose.yml, .env.example, health checks. Deployment targets: Docker Compose (recommended), Dokploy, Vercel (frontend only), container platforms. ~25 environment variables required for full configuration.
+<!-- tags: deployment, architecture, docker, configuration | created: 2026-02-28 -->
+
 ### mem-1772240281-68e8
 > Default admin user created on server startup: username=admin, password=admin, role=super_admin. Created in web_server.py startup event using User.create() with PasswordManager hash.
 <!-- tags: auth, admin, startup | created: 2026-02-28 -->
@@ -57,6 +73,14 @@
 > pyproject.toml updated: package=translateflow-cli, cmd=translateflow, description includes 'formerly AiNiee-Next' for discoverability
 <!-- tags: branding, config | created: 2026-02-27 -->
 ## Fixes
+
+### mem-1772252903-3f11
+> Frontend-backend language code mismatch fixed: Created language_mapper.py to convert display names (e.g., 'Chinese (Simplified)') to backend codes (e.g., 'chinese_simplified'). Integrated in web_server.py TaskManager.start_task() with debug logging. Supports 40+ languages with bidirectional mapping and validation.
+<!-- tags: bilingual, i18n, language-mapper | created: 2026-02-28 -->
+
+### mem-1772252767-f583
+> Bilingual output disabled by default: Fixed enable_bilingual_output in default_config.py from False to True. This controls whether FileOutputer generates both _translated.txt and _bilingual.txt files. Configuration flow: TaskConfig → TaskExecutor.output_config → FileOutputer.build_output_config() → BaseWriter.can_write(BILINGUAL) → DirectoryWriter.write()
+<!-- tags: bilingual, output, config | created: 2026-02-28 -->
 
 ### mem-1772206170-88fd
 > UI功能验证完成：使用Playwright MCP成功验证TranslateFlow前端UI。主仪表盘/团队管理/设置页面均正常渲染。前后端集成正常，API通信无问题。技术栈：Vite+React19.2.3+Radix UI+Tailwind CSS。运行在4200端口，后端API在8000端口。部分i18n key未翻译但不影响功能使用。
