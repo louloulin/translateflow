@@ -11,6 +11,13 @@ on:
   # 【新增】当发布 Release 时触发，确保文件能挂载到 Release 页面
   release:
     types: [published]
+  # 【新增】手动触发工作流
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag (e.g., v2.4.5B or latest)'
+        required: false
+        default: 'latest'
 
 env:
   REGISTRY: ghcr.io
@@ -57,9 +64,15 @@ jobs:
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09
         with:
           context: .
+          file: ./Dockerfile.production
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ github.ref_name || 'latest' }}
+            BUILD_DATE=${{ github.run_id }}
+            VCS_REF=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -77,12 +90,12 @@ jobs:
         if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
         run: |
           mkdir -p deploy_package
-          
-          cp Dockerfile pyproject.toml README.md deploy_package/
-          
+
+          cp Dockerfile.production pyproject.toml README.md deploy_package/
+
           # 如果有 docker-compose.yml 也拷进去
           [ -f docker-compose.yml ] && cp docker-compose.yml deploy_package/
-          
+
           # 压缩
           zip -r docker-deploy.zip deploy_package/
 
