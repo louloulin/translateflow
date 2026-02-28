@@ -50,13 +50,18 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install system dependencies and cleanup in a single layer
+# Minimal dependencies for headless server (no X11/display needed)
+# - libgomp1: OpenMP support (for NumPy, pandas)
+# - libjpeg8, zlib1g, libfreetype6, liblcms2-2, libwebp7, libtiff5: Image codecs for Pillow
+# - curl, ca-certificates: For HTTP requests and SSL
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
     libgomp1 \
+    libjpeg62-turbo \
+    zlib1g \
+    libfreetype6 \
+    liblcms2-2 \
+    libwebp8 \
+    libtiff6 \
     curl \
     ca-certificates \
     && apt-get clean \
