@@ -86,6 +86,7 @@ RUN uv sync --frozen --no-install-project --no-dev && \
 
 # Copy application source code with proper ownership
 COPY --chown=translateflow:translateflow ainiee_cli.py ./
+COPY --chown=translateflow:translateflow 批量电子书整合.py ./
 COPY --chown=translateflow:translateflow ModuleFolders/ ./ModuleFolders/
 COPY --chown=translateflow:translateflow Resource/ ./Resource/
 COPY --chown=translateflow:translateflow PluginScripts/ ./PluginScripts/
