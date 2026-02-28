@@ -1,6 +1,19 @@
 # TranslateFlow Docker Deployment Guide
 
-This guide explains how to deploy TranslateFlow using Docker Compose.
+This guide explains how to deploy TranslateFlow using Docker and Docker Compose.
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Production Dockerfile](#production-dockerfile)
+- [Docker Compose Deployment](#docker-compose-deployment)
+- [Multi-Platform Builds](#multi-platform-builds)
+- [Production Setup](#production-setup)
+- [Security Checklist](#security-checklist)
+- [Scaling](#scaling)
+- [Troubleshooting](#troubleshooting)
+- [Support](#support)
 
 ## Prerequisites
 
@@ -49,7 +62,98 @@ Default admin credentials:
 - Username: `admin`
 - Password: `admin` ⚠️ **Change this immediately after first login!**
 
-## Management Commands
+## Production Dockerfile
+
+TranslateFlow includes an optimized production Dockerfile (`Dockerfile.production`) with the following enhancements:
+
+### Optimizations
+
+1. **Security**
+   - ✅ Non-root user execution (runs as `translateflow` user, UID 1000)
+   - ✅ Minimal attack surface (Alpine-based images)
+   - ✅ No unnecessary system packages
+
+2. **Image Size Reduction**
+   - ✅ Multi-stage build (separate build and runtime stages)
+   - ✅ Cleanup in same layer (apt cache, build artifacts)
+   - ✅ Optimized layer caching
+
+3. **Health Monitoring**
+   - ✅ Built-in health check (`/api/system/status` endpoint)
+   - ✅ 30s check interval with 10s timeout
+   - ✅ 40s startup grace period
+   - ✅ 3 retries before marking unhealthy
+
+4. **Build Metadata**
+   - ✅ OCI-compliant labels (version, build date, git ref)
+   - ✅ Reproducible builds
+
+5. **Performance**
+   - ✅ Python memory allocator optimization
+   - ✅ UV package manager for fast dependency installation
+   - ✅ Optimized environment variables
+
+### Dockerfile Variants
+
+| File | Use Case |
+|------|----------|
+| `Dockerfile` | Production (symlink to `Dockerfile.production`) |
+| `Dockerfile.production` | Optimized for production deployment |
+| `Dockerfile.development` | Original Dockerfile for development |
+
+### Building the Production Image
+
+```bash
+# Standard build (AMD64 only)
+docker build -f Dockerfile.production -t translateflow:latest .
+
+# Build with build arguments
+docker build \
+  -f Dockerfile.production \
+  --build-arg VERSION=1.0.0 \
+  --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+  --build-arg VCS_REF=$(git rev-parse --short HEAD) \
+  -t translateflow:latest .
+
+# Build for specific platform
+docker buildx build \
+  --platform linux/amd64 \
+  -f Dockerfile.production \
+  -t translateflow:latest \
+  --load \
+  .
+```
+
+## Multi-Platform Builds
+
+TranslateFlow supports multi-platform builds for AMD64 and ARM64 architectures using the provided build script:
+
+```bash
+# Build for multiple platforms and push to registry
+./scripts/build-docker-multiplatform.sh
+
+# With custom configuration
+IMAGE_NAME=my-translateflow \
+IMAGE_TAG=v1.0.0 \
+REGISTRY=ghcr.io/myorg/ \
+VERSION=1.0.0 \
+./scripts/build-docker-multiplatform.sh
+```
+
+**Requirements:**
+- Docker Buildx (Docker 19.03+)
+- QEMU emulator for cross-platform builds: `docker run --privileged --rm tonistiigi/binfmt --install all`
+
+**Supported Platforms:**
+- `linux/amd64` - Standard x86_64 servers
+- `linux/arm64` - ARM64 servers (Apple Silicon, AWS Graviton, etc.)
+
+## Docker Compose Deployment
+
+The `docker-compose.yml` file orchestrates the following services:
+
+- **app** - TranslateFlow application (FastAPI + React)
+- **postgres** - PostgreSQL database
 
 ### Starting and Stopping
 
