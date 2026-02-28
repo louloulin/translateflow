@@ -1,17 +1,10 @@
 name: Docker
 
 on:
-  schedule:
-    - cron: '43 0 * * *'
+  # 仅通过 tag 触发 (如 v1.0.0)
   push:
-    branches: [ "main" ]
     tags: [ 'v*.*.*' ]
-  pull_request:
-    branches: [ "main" ]
-  # 【新增】当发布 Release 时触发，确保文件能挂载到 Release 页面
-  release:
-    types: [published]
-  # 【新增】手动触发工作流
+  # 手动触发工作流
   workflow_dispatch:
     inputs:
       tag:
