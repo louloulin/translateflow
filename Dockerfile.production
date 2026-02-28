@@ -76,7 +76,7 @@ RUN groupadd -r translateflow && \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy project definition files
-COPY --chown=translateflow:translateflow pyproject.toml README.md LICENSE ./
+COPY --chown=translateflow:translateflow pyproject.toml uv.lock README.md LICENSE ./
 
 # Install Python dependencies
 RUN uv sync --frozen --no-install-project --no-dev && \
