@@ -1,8 +1,8 @@
 # Loop Summary
 
 **Status:** Completed successfully
-**Iterations:** 2
-**Duration:** 4m 6s
+**Iterations:** 1
+**Duration:** 2m 30s
 
 ## Tasks
 
@@ -14,4 +14,4 @@ _No events recorded._
 
 ## Final Commit
 
-ea062309: chore: auto-commit before merge (loop primary)
+249f0cc0: fix: correct target_language from display name to language code
