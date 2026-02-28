@@ -52,16 +52,16 @@ WORKDIR /app
 # Install system dependencies and cleanup in a single layer
 # Minimal dependencies for headless server (no X11/display needed)
 # - libgomp1: OpenMP support (for NumPy, pandas)
-# - libjpeg8, zlib1g, libfreetype6, liblcms2-2, libwebp7, libtiff5: Image codecs for Pillow
+# - libjpeg8, zlib1g, libfreetype6, liblcms2-2, libwebp, libtiff: Image codecs for Pillow
 # - curl, ca-certificates: For HTTP requests and SSL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
-    libjpeg62-turbo \
+    libjpeg8 \
     zlib1g \
     libfreetype6 \
     liblcms2-2 \
-    libwebp8 \
-    libtiff6 \
+    libwebp7 \
+    libtiff5 \
     curl \
     ca-certificates \
     && apt-get clean \
