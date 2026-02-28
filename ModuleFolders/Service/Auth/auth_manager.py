@@ -171,8 +171,8 @@ class AuthManager:
         Authenticate a user.
         Returns user data and tokens.
         """
-        # Find user by email
-        user = User.get_or_none(User.email == email)
+        # Find user by email or username (support both)
+        user = User.get_or_none((User.email == email) | (User.username == email))
 
         if not user:
             raise AuthError("Invalid email or password")

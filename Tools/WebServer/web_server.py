@@ -495,6 +495,13 @@ def create_default_admin():
         from uuid import uuid4
         from ModuleFolders.Service.Auth.models import UserRole, UserStatus
         from ModuleFolders.Service.Auth.password_manager import PasswordManager
+        from ModuleFolders.Service.Auth import init_database
+
+        # Initialize database tables first
+        try:
+            init_database()
+        except Exception as e:
+            print(f"Database init in startup: {e}")
 
         # Check if admin already exists
         admin_user = User.get_or_none(User.username == "admin")
