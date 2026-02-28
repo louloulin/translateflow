@@ -1,8 +1,8 @@
 # Loop Summary
 
 **Status:** Completed successfully
-**Iterations:** 2
-**Duration:** 10m 1s
+**Iterations:** 1
+**Duration:** 8m 28s
 
 ## Tasks
 
@@ -14,4 +14,4 @@ _No events recorded._
 
 ## Final Commit
 
-c27d4cea: chore: auto-commit before merge (loop primary)
+96d65f01: fix: add missing enable_bilingual_output to export config
