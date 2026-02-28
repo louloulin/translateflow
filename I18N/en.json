@@ -857,9 +857,7 @@
         "prompt_task_id_new": "Task ID (alphanumeric)",
         "msg_id_exists": "ID already exists, please use another",
         "msg_path_not_exist": "Path does not exist",
-        "msg_invalid_cron": "Invalid Cron expression"
-    }
-    ,
+        "msg_invalid_cron": "Invalid Cron expression",
     "menu_group_collaboration": "Collaboration",
     "menu_teams": "Teams",
 

@@ -879,10 +879,7 @@
         "prompt_task_id_new": "任务ID (英文/数字)",
         "msg_id_exists": "ID 已存在，请使用其他ID",
         "msg_path_not_exist": "路径不存在",
-        "msg_invalid_cron": "无效的 Cron 表达式"
-    }
-    ,
-    "menu_group_collaboration": "协作",
+        "msg_invalid_cron": "无效的 Cron 表达式",
     "menu_teams": "团队管理",
 
     "teams_title": "团队管理",
