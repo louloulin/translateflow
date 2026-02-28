@@ -1,6 +1,10 @@
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md
 ## Patterns
 
+### mem-1772240281-68e8
+> Default admin user created on server startup: username=admin, password=admin, role=super_admin. Created in web_server.py startup event using User.create() with PasswordManager hash.
+<!-- tags: auth, admin, startup | created: 2026-02-28 -->
+
 ### mem-1772203379-f227
 > 团队成员配额检查中间件实现: 在ModuleFolders/Service/Team/team_quota_middleware.py实现配额中间件。TeamQuotaMiddleware类提供get_max_members/check_team_quota/get_quota_status方法。根据订阅计划自动限制团队成员数(Free:5/Starter:10/Pro:50/Enterprise:无限制)。TeamQuotaError异常包含升级引导。集成到TeamManager.invite_member()。新增API: GET /api/v1/teams/{team_id}/quota。依赖TeamManager/TeamRepository/SubscriptionManager。FastAPI依赖函数和装饰器支持。
 <!-- tags: team, quota, middleware, fastapi | created: 2026-02-27 -->
