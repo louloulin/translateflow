@@ -1,6 +1,14 @@
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md
 ## Patterns
 
+### mem-1772287133-9de3
+> Python+Web桌面应用方案已完成分析并写入app.md。推荐Tauri+Python方案：体积最小(4-12MB vs Electron 100-300MB)，性能最佳，安全性最高。方案保留现有React前端和Python FastAPI后端，通过Tauri Rust主进程管理窗口和系统集成，Python作为子进程运行，通过HTTP与前端通信。分析了4种方案：Tauri+Python(推荐)、Electron+Python、PyWebView、Flet。
+<!-- tags: desktop-app, tauri, python | created: 2026-02-28 -->
+
+### mem-1772286826-dc79
+> Python+Web桌面应用构建方案已完成分析，写入app.md。推荐Tauri+Python方案：体积最小(5MB vs Electron 85MB)，性能最佳，安全性高。方案保留了现有Next.js前端和Python后端，通过Tauri WebView渲染前端，Rust主进程管理Python子进程通信。备选方案包括Electron+Python、PyWebView、Flet。
+<!-- tags: desktop-app, tauri, python, electron | created: 2026-02-28 -->
+
 ### mem-1772265173-8407
 > GitHub Actions Docker build triggered: Created louloulin/translateflow repo, added github remote, pushed main branch (db92a8ad), manually triggered Docker workflow (run_id: 22516588730). Building multi-platform images (linux/amd64,linux/arm64) for GHCR. Monitor with: gh run watch --repo louloulin/translateflow. After build, use docker-compose.production.yml to pull from ghcr.io/louloulin/translateflow.
 <!-- tags: docker, github-actions, cicd, multi-platform | created: 2026-02-28 -->
@@ -109,6 +117,10 @@
 > pyproject.toml updated: package=translateflow-cli, cmd=translateflow, description includes 'formerly AiNiee-Next' for discoverability
 <!-- tags: branding, config | created: 2026-02-27 -->
 ## Fixes
+
+### mem-1772275176-45ae
+> Docker build fix: mediapipe platform-specific dependency. pyproject.toml now uses 'mediapipe; sys_platform == "linux" and platform_machine == "x86_64"' to avoid ARM64 build failures. ReaderUtil.py updated with graceful fallback. Dockerfile.production updated with build-essential, cmake, rustc, cargo for ARM64 compilation support. uv.lock regenerated.
+<!-- tags: docker, mediapipe, arm64 | created: 2026-02-28 -->
 
 ### mem-1772269441-e578
 > Docker build blocked by network timeouts and mediapipe ARM64 incompatibility. mediapipe 0.10.31 only supports x86_64 Linux not ARM64. Solutions: build on x86_64 or make mediapipe optional
