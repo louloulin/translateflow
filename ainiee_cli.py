@@ -3382,7 +3382,8 @@ class CLIMenu:
                 output_config = {
                     "translated_suffix": cfg.output_filename_suffix,
                     "bilingual_suffix": "_bilingual",
-                    "bilingual_order": cfg.bilingual_text_order 
+                    "bilingual_order": cfg.bilingual_text_order,
+                    "enable_bilingual_output": cfg.enable_bilingual_output
                 }
                 
                 self.file_outputer.output_translated_content(
