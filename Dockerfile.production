@@ -74,11 +74,13 @@ RUN groupadd -r translateflow && \
 # Install uv package manager
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Copy project definition files
-COPY --chown=translateflow:translateflow pyproject.toml uv.lock README.md LICENSE ./
+# Copy project definition files (no ownership change, root will install)
+COPY pyproject.toml uv.lock README.md LICENSE ./
 
-# Install Python dependencies
+# Install Python dependencies as root
 RUN uv sync --frozen --no-install-project --no-dev && \
+    # Change ownership to translateflow user
+    chown -R translateflow:translateflow /app && \
     # Clean up uv cache
     rm -rf /root/.cache/uv /tmp/*
 
