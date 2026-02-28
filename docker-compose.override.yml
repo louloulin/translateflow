@@ -1,0 +1,27 @@
+# Docker Compose Override for Development
+# This file is automatically loaded by docker-compose and overrides settings in docker-compose.yml
+# Use this for local development customizations
+
+version: '3.8'
+
+services:
+  app:
+    # Enable hot-reloading by mounting source code
+    # Uncomment the volumes below for development with live reload
+    # volumes:
+    #   - ./ModuleFolders:/app/ModuleFolders:ro
+    #   - ./Resource:/app/Resource:ro
+    #   - ./Tools:/app/Tools:ro
+    #   - ./I18N:/app/I18N:ro
+
+    # Override environment for development
+    environment:
+      - DEBUG=true
+
+    # Enable verbose logging
+    command: ["uv", "run", "ainiee_cli.py", "--verbose"]
+
+  postgres:
+    # Expose PostgreSQL port for local development tools
+    ports:
+      - "5432:5432"

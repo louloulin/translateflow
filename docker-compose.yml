@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # TranslateFlow Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: translateflow-app
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Database Configuration
+      - DATABASE_URL=postgresql://${DB_USER:-translateflow}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-translateflow}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-translateflow}
+      - DB_USER=${DB_USER:-translateflow}
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - USE_SQLITE=false
+
+      # Application Configuration
+      - SECRET_KEY=${SECRET_KEY:-changeme-in-production-please-generate-a-secure-key}
+      - PYTHONUNBUFFERED=1
+      - RUNNING_IN_DOCKER=true
+      - HOST=0.0.0.0
+      - PORT=${PORT:-8000}
+
+      # Email Configuration (Optional - choose one provider)
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@translateflow.local}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-TranslateFlow}
+      - EMAIL_REPLY_TO=${EMAIL_REPLY_TO:-}
+
+      # Stripe Payment Configuration (Optional)
+      - STRIPE_API_KEY=${STRIPE_API_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_PRICE_FREE=${STRIPE_PRICE_FREE:-}
+      - STRIPE_PRICE_STARTER=${STRIPE_PRICE_STARTER:-}
+      - STRIPE_PRICE_PRO=${STRIPE_PRICE_PRO:-}
+      - STRIPE_PRICE_ENTERPRISE=${STRIPE_PRICE_ENTERPRISE:-}
+
+      # OAuth Providers (Optional)
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI:-http://localhost:8000/auth/callback}
+
+    volumes:
+      # Mount output directories for persistence
+      - ./output:/app/output
+      - ./updatetemp:/app/updatetemp
+      # Optional: Mount SQLite database if not using PostgreSQL
+      # - ./ainiee.db:/app/ainiee.db
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - translateflow-network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: translateflow-postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME:-translateflow}
+      - POSTGRES_USER=${DB_USER:-translateflow}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - translateflow-network
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-translateflow} -d ${DB_NAME:-translateflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# Named Volumes
+volumes:
+  postgres-data:
+    driver: local
+
+# Networks
+networks:
+  translateflow-network:
+    driver: bridge
