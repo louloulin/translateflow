@@ -3,7 +3,7 @@ import {
   LayoutDashboard, PlayCircle, Settings, Archive, Terminal,
   BookOpen, Puzzle, ListPlus, Database, Clock, Sparkles,
   Menu, X, Paintbrush, Wand2, FileText, Server, ChevronLeft, ChevronRight,
-  Users, LogIn, LogOut, CreditCard
+  Users, LogIn, LogOut, CreditCard, User, CircleUser
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -149,6 +149,37 @@ export function AppSidebar({ className, activePath, activeTheme, onNavigate, onT
           </ScrollArea>
         </div>
       </div>
+
+      {/* User Info Section - Show when authenticated */}
+      {isAuthenticated && user && (
+        <div className="border-t border-border px-3 py-2">
+          <div
+            className={cn(
+              "flex items-center gap-2 p-2 rounded-lg bg-accent/50 cursor-pointer hover:bg-accent transition-colors",
+              isCollapsed && "justify-center"
+            )}
+            onClick={() => onNavigate('/profile')}
+          >
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.username}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <CircleUser className="h-4 w-4 text-primary" />
+              </div>
+            )}
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user.username}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Footer Section */}
       <div className={cn(
