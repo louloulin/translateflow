@@ -126,12 +126,81 @@ class TaskManager:
                             self.logs.append({"timestamp": time.time(), "message": line})
 
 
+
+    def validate_payload(self, payload: Dict[str, Any]) -> tuple:
+        """
+        Validate task payload before starting.
+
+        Returns:
+            Tuple of (is_valid, warnings, corrections)
+        """
+        warnings = []
+        corrections = {}
+
+        # Validate languages
+        source_lang = payload.get("source_lang")
+        target_lang = payload.get("target_lang")
+
+        if source_lang:
+            normalized_source = normalize_language_input(source_lang)
+            if normalized_source != source_lang:
+                corrections["source_lang"] = {
+                    "old": source_lang,
+                    "new": normalized_source
+                }
+                warnings.append(f"Source language normalized: '{source_lang}' → '{normalized_source}'")
+                payload["source_lang"] = normalized_source
+
+            if not validate_language_code(normalized_source):
+                warnings.append(f"Invalid source language: '{source_lang}'")
+
+        if target_lang:
+            normalized_target = normalize_language_input(target_lang)
+            if normalized_target != target_lang:
+                corrections["target_lang"] = {
+                    "old": target_lang,
+                    "new": normalized_target
+                }
+                warnings.append(f"Target language normalized: '{target_lang}' → '{normalized_target}'")
+                payload["target_lang"] = normalized_target
+
+            if normalized_target == "auto":
+                return False, ["Target language cannot be 'auto'"], corrections
+
+            if not validate_language_code(normalized_target):
+                return False, [f"Invalid target language: '{target_lang}'"], corrections
+
+        # Validate required fields
+        if not payload.get("input_path"):
+            return False, ["Input path is required"], corrections
+
+        if not payload.get("task"):
+            return False, ["Task type is required"], corrections
+
+        return True, warnings, corrections
+
     def start_task(self, payload: Dict[str, Any]) -> bool:
         """Starts the ainiee_cli.py script as a subprocess with config overrides."""
         with self._lock:
             if self.status == "running":
                 return False
-            
+
+            # Validate payload before starting
+            is_valid, warnings, corrections = self.validate_payload(payload)
+
+            # Log validation results
+            if warnings:
+                for warning in warnings:
+                    self.logs.append({"timestamp": time.time(), "message": f"[VALIDATION] {warning}", "type": "warning"})
+
+            if corrections:
+                for key, change in corrections.items():
+                    self.logs.append({"timestamp": time.time(), "message": f"[CORRECTION] {key}: '{change['old']}' → '{change['new']}'", "type": "info"})
+
+            if not is_valid:
+                self.logs.append({"timestamp": time.time(), "message": "[VALIDATION] Failed - cannot start task", "type": "error"})
+                return False
+
             self.status = "running"
             self.logs.clear()
             self.chart_data.clear()
@@ -162,19 +231,12 @@ class TaskManager:
             if payload.get("output_path"):
                 cli_args.extend(["--output", payload["output_path"]])
 
-            # Normalize language codes from frontend display names to backend codes
-            source_lang = payload.get("source_lang")
-            target_lang = payload.get("target_lang")
+            # Use normalized languages (already corrected in validate_payload)
+            if payload.get("source_lang"):
+                cli_args.extend(["--source", payload["source_lang"]])
 
-            if source_lang:
-                normalized_source = normalize_language_input(source_lang)
-                cli_args.extend(["--source", normalized_source])
-                self.logs.append({"timestamp": time.time(), "message": f"[DEBUG] Source language normalized: {source_lang} -> {normalized_source}"})
-
-            if target_lang:
-                normalized_target = normalize_language_input(target_lang)
-                cli_args.extend(["--target", normalized_target])
-                self.logs.append({"timestamp": time.time(), "message": f"[DEBUG] Target language normalized: {target_lang} -> {normalized_target}"})
+            if payload.get("target_lang"):
+                cli_args.extend(["--target", payload["target_lang"]])
             if payload.get("resume"):
                 cli_args.append("--resume")
             

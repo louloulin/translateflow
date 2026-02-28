@@ -104,7 +104,7 @@ class TaskConfig(Base):
         self.pre_line_counts = 3 # NEW: 每次翻译获取上文的行数
         self.actual_thread_counts = 3 # NEW: 实际线程数
         self.output_filename_suffix = "" # NEW: 输出文件名后缀
-        self.enable_bilingual_output = False # NEW: 是否启用双语输出
+        self.enable_bilingual_output = True # NEW: 是否启用双语输出 (default True)
         self.bilingual_text_order = "translation_first" # NEW: 双语文本顺序
         self.polishing_mode_selection = "translated_text_polish" # NEW: 润色模式选择
         self.polishing_pre_line_counts = 2 # NEW: 润色时获取上文的行数
@@ -202,6 +202,7 @@ class TaskConfig(Base):
             return key
 
     # 读取配置文件
+    # 读取配置文件
     def initialize(self, config_dict: dict = None) -> None:
         # 如果传入了 config_dict，则直接使用
         if config_dict is not None:
@@ -210,13 +211,60 @@ class TaskConfig(Base):
             # 否则从配置文件加载（保持向后兼容性）
             config = self.load_config()
             self.load_config_from_dict(config)
-        
+
         # 确保关键配置有合理的默认值，防止因配置文件缺失导致逻辑错误
         if not hasattr(self, 'request_timeout') or self.request_timeout <= 0:
             self.request_timeout = 60
-            
+
         if not hasattr(self, 'actual_thread_counts') or self.actual_thread_counts <= 0:
             self.actual_thread_counts = 3
+
+        # 验证配置并自动修正问题
+        self.validate_config()
+
+
+    # 验证配置
+    def validate_config(self) -> tuple:
+        """
+        Validate configuration and auto-correct issues.
+
+        Returns:
+            Tuple of (is_valid, warnings, corrections)
+            - is_valid: bool, True if no critical errors
+            - warnings: list of warning messages
+            - corrections: dict of corrections made
+        """
+        try:
+            from .config_validator import validate_and_correct_config
+            result = validate_and_correct_config(self, self)
+
+            # Log validation summary
+            if result.warnings or result.corrections:
+                summary_parts = []
+                if result.warnings:
+                    summary_parts.append(f"{len(result.warnings)} warnings")
+                if result.corrections:
+                    summary_parts.append(f"{len(result.corrections)} corrections")
+
+                self.info(f"Configuration validation: {', '.join(summary_parts)}")
+
+                # Log individual warnings
+                for warning in result.warnings:
+                    self.warning(warning)
+
+                # Log corrections
+                for key, change in result.corrections.items():
+                    self.info(f"Auto-corrected {key}: '{change['old']}' → '{change['new']}'")
+
+            if not result.is_valid:
+                for error in result.errors:
+                    self.error(f"Configuration error: {error}")
+
+            return result.is_valid, result.warnings, result.corrections
+
+        except Exception as e:
+            self.warning(f"Configuration validation failed: {e}")
+            return True, [], {}  # Assume valid if validator fails
 
     # API_URL 自动处理方法
     def process_api_url(self, raw_url: str, target_platform: str, auto_complete: bool) -> str:
