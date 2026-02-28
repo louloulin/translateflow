@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # TranslateFlow Application
   app:
-    image: translateflow:syntax-check
+    image: translateflow:v2.4.5B
     container_name: translateflow-app
     ports:
       - "8000:8000"
@@ -19,6 +19,7 @@ services:
     volumes:
       - ./output:/app/output
       - ./updatetemp:/app/updatetemp
+      - ./data:/app/data
 
     restart: unless-stopped
 

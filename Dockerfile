@@ -100,9 +100,12 @@ COPY --chown=translateflow:translateflow Tools/ ./Tools/
 # Copy the built frontend assets from the builder stage
 COPY --from=builder --chown=translateflow:translateflow /web/dist ./Tools/WebServer/dist
 
+# Copy docker entrypoint script
+COPY --chown=translateflow:translateflow docker-entrypoint.sh ./
+
 # Create necessary directories for data and set permissions
-RUN mkdir -p /app/output /app/updatetemp && \
-    chown -R translateflow:translateflow /app/output /app/updatetemp
+RUN mkdir -p /app/output /app/updatetemp /app/data && \
+    chown -R translateflow:translateflow /app/output /app/updatetemp /app/data
 
 # Switch to non-root user
 USER translateflow
@@ -114,5 +117,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/api/system/status || exit 1
 
-# Set entrypoint - run FastAPI web server directly (not interactive CLI)
-ENTRYPOINT ["uv", "run", "python", "-m", "uvicorn", "Tools.WebServer.web_server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Set entrypoint to init script
+ENTRYPOINT ["./docker-entrypoint.sh"]
