@@ -8,3 +8,9 @@
 2026-03-01T03:09:40.838688Z  INFO ralph_core::event_loop: Successfully loaded 46 memories from store
 2026-03-01T03:09:40.838716Z  INFO ralph_core::event_loop: Injecting 46 memories (22908 chars) into prompt
 2026-03-01T03:09:40.838874Z  INFO ralph_core::event_loop: Injecting ready tasks (3 ready, 6 open, 93 closed) into prompt
+2026-03-01T03:17:18.549794Z  INFO ralph_core::event_loop: Memory injection check: enabled=true, inject=Auto, workspace_root="/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/swift-peacock"
+2026-03-01T03:17:18.550006Z  INFO ralph_core::event_loop: Looking for memories at: "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/swift-peacock/.ralph/agent/memories.md" (exists: true)
+2026-03-01T03:17:18.550386Z  INFO ralph_core::event_loop: Successfully loaded 46 memories from store
+2026-03-01T03:17:18.550441Z  INFO ralph_core::event_loop: Injecting 46 memories (22908 chars) into prompt
+2026-03-01T03:17:18.550635Z  INFO ralph_core::event_loop: Injecting scratchpad (1775 chars) into prompt
+2026-03-01T03:17:18.550901Z  INFO ralph_core::event_loop: Injecting ready tasks (3 ready, 6 open, 93 closed) into prompt

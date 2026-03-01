@@ -186,3 +186,8 @@
 ### mem-1772264078-74cc
 > Docker build network constraints: Even with pre-pulled base images, apt-get downloads from Debian mirrors are slow (69.5 kB/s). Building TranslateFlow with all dependencies (73 packages, 51.4 MB) takes 6-8 hours on slow network. Solution: 1) Use CI/CD with better network, 2) Reduce dependencies in Dockerfile (remove graphics libraries if not needed), 3) Build during off-peak hours, 4) Use local package cache.
 <!-- tags: docker, performance, network | created: 2026-02-28 -->
+## Context
+
+### mem-1772335012-e2bc
+> Re-translation support implemented: Added --force/-f CLI option to allow re-translating already translated content. When enabled, all items are included and their translation status is reset to UNTRANSLATED. Files modified: CacheManager.py (generate_item_chunks with force_retranslate param), TaskConfig.py (force_retranslate config), TaskExecutor.py (pass parameter), web_server.py (API support), ainiee_cli.py (CLI argument).
+<!-- tags: translation, retranslation, cli, config | created: 2026-03-01 -->
