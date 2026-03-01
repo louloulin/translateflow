@@ -875,7 +875,33 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "back": "返回",
     "back_to_project": "返回项目",
     "error_loading": "加载错误",
-    "loading_bilingual": "加载双语文件中..."
+    "loading_bilingual": "加载双语文件中...",
+    
+    // File Comparison Dashboard
+    "file_comparison_title": "文件对比仪表盘",
+    "file_comparison_description": "并排对比原始、翻译和双语文件",
+    "total_files": "总文件数",
+    "completed_files": "已完成",
+    "in_progress_files": "进行中",
+    "average_progress": "平均进度",
+    "total_diffs": "差异总数",
+    "all_files": "所有文件",
+    "grid_view": "网格视图",
+    "list_view": "列表视图",
+    "compare_view": "对比视图",
+    "original": "原始文件",
+    "translated": "翻译文件",
+    "bilingual": "双语文件",
+    "exists": "存在",
+    "missing": "缺失",
+    "diffs": "差异",
+    "export_report": "导出报告",
+    "file_comparison_stats": "文件对比统计",
+    "view_file": "查看文件",
+    "back_to_grid": "返回网格",
+    "download_original": "下载原始文件",
+    "download_translated": "下载翻译文件",
+    "download_bilingual": "下载双语文件"
 };
 
 // Approximated English Locale for demonstration
@@ -1524,7 +1550,33 @@ export const EN_LOCALE: Record<string, string> = {
     "back": "Back",
     "back_to_project": "Back to Project",
     "error_loading": "Error Loading",
-    "loading_bilingual": "Loading bilingual file..."
+    "loading_bilingual": "Loading bilingual file...",
+    
+    // File Comparison Dashboard
+    "file_comparison_title": "File Comparison Dashboard",
+    "file_comparison_description": "Compare original, translated, and bilingual files side-by-side",
+    "total_files": "Total Files",
+    "completed_files": "Completed",
+    "in_progress_files": "In Progress",
+    "average_progress": "Average Progress",
+    "total_diffs": "Total Diffs",
+    "all_files": "All Files",
+    "grid_view": "Grid",
+    "list_view": "List",
+    "compare_view": "Compare",
+    "original": "Original",
+    "translated": "Translated",
+    "bilingual": "Bilingual",
+    "exists": "Exists",
+    "missing": "Missing",
+    "diffs": "Diffs",
+    "export_report": "Export Report",
+    "file_comparison_stats": "File Comparison Statistics",
+    "view_file": "View File",
+    "back_to_grid": "Back to Grid",
+    "download_original": "Download Original",
+    "download_translated": "Download Translated",
+    "download_bilingual": "Download Bilingual"
 };
 
 export const DEFAULT_CONFIG: AppConfig = {

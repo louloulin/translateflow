@@ -38,6 +38,7 @@ import { Login } from '@/pages/Login';
 import { Profile } from '@/pages/Profile';
 import { Subscription } from '@/pages/Subscription';
 import { BilingualView } from '@/pages/BilingualView';
+import { FileComparisonView } from '@/pages/FileComparisonView';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Custom hook to track hash based location for navigation
@@ -191,6 +192,10 @@ export const MainLayout: React.FC = () => {
               const projectId = parts[2];
               const fileId = parts[3];
               content = <BilingualView projectId={projectId} fileId={fileId} />;
+            } else if (pathname.startsWith('/comparison/')) {
+              const parts = pathname.split('/');
+              const projectId = parts[2];
+              content = <FileComparisonView projectId={projectId} />;
             } else if (pathname.startsWith('/projects/')) {
               const projectId = pathname.split('/projects/')[1];
               content = <ProjectDetails projectId={projectId} />;
