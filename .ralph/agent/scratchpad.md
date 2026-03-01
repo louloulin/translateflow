@@ -83,7 +83,28 @@ Based on the plan, I need to create tasks for:
 
 **Conclusion**: The bilingual output default has been successfully changed from False to True across all relevant files. Memory mem-1772334212-3559 is accurate.
 
+## Task 2: Verify language_mapper.py Implementation ✅ COMPLETED
+
+**Status**: Language mapper fully implemented and integrated
+
+**Verification Results**:
+1. ✅ `Tools/WebServer/language_mapper.py` exists (8155 bytes)
+2. ✅ Supports 40+ language mappings (display name ↔ backend code)
+3. ✅ Integrated in `web_server.py:37-41` with imports
+4. ✅ Used in `web_server.py:146, 159` for language normalization
+5. ✅ Provides 3 functions: `normalize_language_input`, `map_display_name_to_code`, `validate_language_code`
+
+**Key Features**:
+- Handles Chinese variants: Simplified (chinese_simplified), Traditional (chinese_traditional)
+- Supports English variants: US, UK
+- Maps display names like "Chinese (Simplified)" → "chinese_simplified"
+- Validates language codes to ensure only valid codes are used
+- Auto-normalizes user input in API payloads
+
+**Conclusion**: Language mapper is fully functional and integrated into the web server. Memory mem-1772252903-3f11 is accurate.
+
 ## Next Steps
 
 1. ✅ Complete - Bilingual defaults verified
-2. → Next task: Verify language_mapper.py implementation
+2. ✅ Complete - Language mapper verified
+3. → Next task: Verify Web UI bilingual toggle exists
