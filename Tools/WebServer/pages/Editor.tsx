@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, Search, Sparkles, Check, Lock, RotateCcw, Copy, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ArrowLeft, Save, Search, Sparkles, Check, Lock, RotateCcw, Copy, ChevronLeft, ChevronRight, Loader2, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,6 +33,10 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Context Panel
+  const [showContextPanel, setShowContextPanel] = useState(true);
+  const [contextSegments, setContextSegments] = useState<{ prev: Segment | null; next: Segment | null }>({ prev: null, next: null });
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -83,6 +88,41 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeSegmentId, segments]);
+
+  // Load context when active segment changes
+  useEffect(() => {
+    const loadContext = async () => {
+      if (!activeSegmentId || !project?.rootPath || !currentFile?.path) {
+        setContextSegments({ prev: null, next: null });
+        return;
+      }
+
+      const activeIndex = segments.findIndex(s => s.id === activeSegmentId);
+      if (activeIndex === -1) return;
+
+      try {
+        // Fetch previous segment (index - 1)
+        const prevIndex = activeIndex > 0 ? segments[activeIndex - 1].index - 1 : null;
+        // Fetch next segment (index + 1)
+        const nextIndex = activeIndex < segments.length - 1 ? segments[activeIndex + 1].index + 1 : null;
+
+        const contextPromises: Promise<{ index: number; source: string; target: string } | null>[] = [];
+
+        // We'll load context from the current page data - for now use segments
+        const prevSeg = activeIndex > 0 ? segments[activeIndex - 1] : null;
+        const nextSeg = activeIndex < segments.length - 1 ? segments[activeIndex + 1] : null;
+
+        setContextSegments({
+          prev: prevSeg,
+          next: nextSeg
+        });
+      } catch (error) {
+        console.error("Failed to load context", error);
+      }
+    };
+
+    loadContext();
+  }, [activeSegmentId, segments, project?.rootPath, currentFile?.path]);
 
   const loadProjectAndCache = async () => {
     setLoading(true);
@@ -302,9 +342,17 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button 
-              size="sm" 
-              variant="secondary" 
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowContextPanel(!showContextPanel)}
+              title={showContextPanel ? "Hide Context Panel" : "Show Context Panel"}
+            >
+              {showContextPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={handleTranslateAll}
               disabled={isTranslating}
             >
@@ -321,8 +369,11 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
       </header>
 
       {/* Editor Grid */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="min-w-full divide-y divide-border pb-20">
+      <div className="flex-1 overflow-hidden">
+        <div className="flex h-full">
+          {/* Main Editor Area */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="min-w-full divide-y divide-border pb-20">
           {filteredSegments.map((segment) => (
             <div 
               key={segment.id}
@@ -435,6 +486,94 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
             <div className="flex flex-col items-center justify-center p-12 text-muted-foreground gap-2">
               <Search className="h-8 w-8 opacity-20" />
               <p>No segments found.</p>
+            </div>
+          )}
+        </div>
+          </div>
+
+          {/* Context Panel */}
+          {showContextPanel && (
+            <div className="w-72 border-l bg-card shrink-0 flex flex-col">
+              <div className="p-3 border-b bg-muted/30">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-pink-500" />
+                  {t('editor_context_panel', 'Context Preview')}
+                </h3>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-3 space-y-4">
+                  {/* Previous Segment */}
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <ChevronLeft className="h-3 w-3" />
+                      {t('editor_context_previous', 'Previous')}
+                    </div>
+                    {contextSegments.prev ? (
+                      <div
+                        className="p-3 rounded-lg bg-muted/50 border text-sm cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => setActiveSegmentId(contextSegments.prev!.id)}
+                      >
+                        <div className="text-xs text-muted-foreground mb-1">
+                          #{contextSegments.prev.index}
+                        </div>
+                        <div className="text-muted-foreground line-clamp-3">
+                          {contextSegments.prev.source}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-lg border border-dashed text-sm text-muted-foreground text-center">
+                        {t('editor_context_no_previous', 'No previous segment')}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current Segment Info */}
+                  {activeSegmentId && (
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        {t('editor_context_current', 'Current Selection')}
+                      </div>
+                      <div className="p-3 rounded-lg bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800">
+                        {segments.find(s => s.id === activeSegmentId) && (
+                          <>
+                            <div className="text-xs text-pink-600 dark:text-pink-400 mb-1">
+                              #{segments.find(s => s.id === activeSegmentId)?.index}
+                            </div>
+                            <div className="text-sm line-clamp-4">
+                              {segments.find(s => s.id === activeSegmentId)?.source}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Next Segment */}
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      {t('editor_context_next', 'Next')}
+                      <ChevronRight className="h-3 w-3" />
+                    </div>
+                    {contextSegments.next ? (
+                      <div
+                        className="p-3 rounded-lg bg-muted/50 border text-sm cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => setActiveSegmentId(contextSegments.next!.id)}
+                      >
+                        <div className="text-xs text-muted-foreground mb-1">
+                          #{contextSegments.next.index}
+                        </div>
+                        <div className="text-muted-foreground line-clamp-3">
+                          {contextSegments.next.source}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-lg border border-dashed text-sm text-muted-foreground text-center">
+                        {t('editor_context_no_next', 'No next segment')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
             </div>
           )}
         </div>
