@@ -1,6 +1,18 @@
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md
 ## Patterns
 
+### mem-1772333640-f6d4
+> Enhanced progress dashboard implemented with charts, word counts, quality metrics, and exportable reports. Added: bar chart for project progress, pie charts for file status and quality distribution, word count tracking, quality score with breakdown, JSON/CSV export buttons. Reference: Transifex reporting patterns. Files: Tools/WebServer/components/ProgressDashboard.tsx (+382 lines), constants.ts (+30 i18n keys). Committed: a436aadf.
+<!-- tags: ui, dashboard, charts, translation | created: 2026-03-01 -->
+
+### mem-1772333011-d190
+> Context preview panel implemented in Editor: Shows previous/current/next segment context, toggleable panel in toolbar, i18n support (Chinese/English). Files: Tools/WebServer/pages/Editor.tsx (+157 lines), constants.ts (+16 i18n keys).
+<!-- tags: editor, ui, context-preview | created: 2026-03-01 -->
+
+### mem-1772331458-7339
+> Bilingual file viewer implemented: Created BilingualViewer component with 4 view modes (side-by-side, top-bottom, source-only, translation-only), synchronized scrolling, search highlighting, text controls (font size 12-20px, alignment), pagination, export (TXT/JSON), fullscreen mode. Route: /bilingual/:projectId/:fileId. Research-based design from DeepL/Microsoft Translator/Crowdin patterns. Files: Tools/WebServer/components/BilingualViewer.tsx (422 lines), pages/BilingualView.tsx (151 lines).
+<!-- tags: bilingual, viewer, ui, file-management, translation | created: 2026-03-01 -->
+
 ### mem-1772287133-9de3
 > Python+Web桌面应用方案已完成分析并写入app.md。推荐Tauri+Python方案：体积最小(4-12MB vs Electron 100-300MB)，性能最佳，安全性最高。方案保留现有React前端和Python FastAPI后端，通过Tauri Rust主进程管理窗口和系统集成，Python作为子进程运行，通过HTTP与前端通信。分析了4种方案：Tauri+Python(推荐)、Electron+Python、PyWebView、Flet。
 <!-- tags: desktop-app, tauri, python | created: 2026-02-28 -->
