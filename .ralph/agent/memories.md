@@ -134,6 +134,10 @@
 <!-- tags: branding, config | created: 2026-02-27 -->
 ## Fixes
 
+### mem-1772345759-2aba
+> Bilingual output feature fully verified with Playwright MCP. All components working: UI toggle exists (Settings > Features), API config returns enable_bilingual_output: true, default_config.py has True value, language mapper supports 40+ languages. End-to-end data flow verified from UI to output generation.
+<!-- tags: bilingual, verification, playwright, ui, api | created: 2026-03-01 -->
+
 ### mem-1772335545-f053
 > Fixed bilingual output setting not exposed in UI: Added enable_bilingual_output field to AppConfig type, added i18n keys (feature_enable_bilingual_output), and added toggle to SettingsFeatures component. Verified with Playwright MCP.
 <!-- tags: ui, settings, bilingual, translation | created: 2026-03-01 -->
