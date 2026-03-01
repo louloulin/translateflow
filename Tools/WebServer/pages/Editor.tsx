@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import { DataService } from '@/services/DataService';
 import { ProjectService } from '@/services/ProjectService';
@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Save, Search, Sparkles, Check, Lock, RotateCcw, Copy, ChevronLeft, ChevronRight, Loader2, PanelRightClose, PanelRightOpen, BookOpen, Plus, Trash2, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, Save, Search, Sparkles, Check, Lock, RotateCcw, Copy, ChevronLeft, ChevronRight, Loader2, PanelRightClose, PanelRightOpen, BookOpen, Plus, Trash2, X, Download, Wand2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,6 +34,10 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Batch Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchTranslating, setIsBatchTranslating] = useState(false);
 
   // Context Panel
   const [showContextPanel, setShowContextPanel] = useState(true);
@@ -85,6 +90,7 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + Enter: Approve current segment
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         if (activeSegmentId) {
@@ -96,11 +102,25 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
           }
         }
       }
+      // Ctrl/Cmd + A: Select all (when not in input)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        e.preventDefault();
+        handleSelectAll();
+      }
+      // Escape: Clear selection
+      if (e.key === 'Escape') {
+        handleClearSelection();
+      }
+      // Ctrl/Cmd + Shift + A: Deselect all
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        setSelectedIds(new Set());
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSegmentId, segments]);
+  }, [activeSegmentId, segments, selectedIds]);
 
   // Load context when active segment changes
   useEffect(() => {
@@ -292,6 +312,141 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
     handleSegmentUpdate(id, source);
   };
 
+  // Batch Selection Handlers
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === segments.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(segments.map(s => s.id)));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  // Batch Actions
+  const handleBatchTranslate = async () => {
+    if (selectedIds.size === 0) {
+      toast({ title: "Info", description: "No segments selected" });
+      return;
+    }
+
+    if (!project?.rootPath || !currentFile) {
+      toast({ title: "Error", description: "Project path missing", variant: "destructive" });
+      return;
+    }
+
+    setIsBatchTranslating(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      for (const id of selectedIds) {
+        const segment = segments.find(s => s.id === id);
+        if (!segment || segment.locked) continue;
+
+        try {
+          const result = await DataService.checkSingleLine(
+            project.rootPath,
+            currentFile.path,
+            segment.index,
+            segment.target
+          );
+
+          if (result.corrected_translation) {
+            await handleSegmentUpdate(id, result.corrected_translation);
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          failCount++;
+          console.error(`Failed to translate segment ${id}:`, error);
+        }
+      }
+
+      toast({
+        title: "Batch Translate Complete",
+        description: `Translated: ${successCount}, Failed: ${failCount}`,
+        variant: failCount > 0 ? "default" : "default",
+      });
+    } catch (error) {
+      console.error("Batch translate error:", error);
+      toast({
+        title: "Error",
+        description: "Batch translation failed",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBatchTranslating(false);
+    }
+  };
+
+  const handleBatchApprove = () => {
+    if (selectedIds.size === 0) {
+      toast({ title: "Info", description: "No segments selected" });
+      return;
+    }
+
+    setSegments(prev => prev.map(s => {
+      if (selectedIds.has(s.id)) {
+        return { ...s, status: 'approved' as const };
+      }
+      return s;
+    }));
+
+    toast({
+      title: "Approved",
+      description: `${selectedIds.size} segments marked as approved`,
+    });
+
+    handleClearSelection();
+  };
+
+  const handleBatchExport = () => {
+    if (selectedIds.size === 0) {
+      toast({ title: "Info", description: "No segments selected" });
+      return;
+    }
+
+    const selectedSegments = segments.filter(s => selectedIds.has(s.id));
+    const exportData = selectedSegments.map(s => ({
+      index: s.index,
+      source: s.source,
+      target: s.target,
+      status: s.status,
+    }));
+
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `translation-export-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exported",
+      description: `${selectedSegments.length} segments exported`,
+    });
+
+    handleClearSelection();
+  };
+
   // Glossary handlers
   const handleAddGlossaryEntry = () => {
     if (!newGlossarySource.trim() || !newGlossaryTarget.trim()) return;
@@ -419,6 +574,59 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
           </div>
         </div>
         <Progress value={progress} className="h-1 w-full rounded-none" />
+        {/* Batch Action Toolbar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center justify-between px-4 py-2 bg-pink-50 dark:bg-pink-900/20 border-b border-pink-200 dark:border-pink-800">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSelection}
+                className="h-8 text-pink-700 dark:text-pink-300"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear Selection ({selectedIds.size})
+              </Button>
+              <span className="text-xs text-pink-600 dark:text-pink-400">
+                Press Esc to clear • Ctrl+A to select all
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleBatchTranslate}
+                disabled={isBatchTranslating}
+                className="h-8"
+              >
+                {isBatchTranslating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4 mr-2 text-pink-500" />
+                )}
+                Translate
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleBatchApprove}
+                className="h-8"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-500" />
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleBatchExport}
+                className="h-8"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Editor Grid */}
@@ -427,16 +635,47 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
           {/* Main Editor Area */}
           <div className="flex-1 overflow-y-auto">
             <div className="min-w-full divide-y divide-border pb-20">
+              {/* Header Row with Select All */}
+              <div className="grid grid-cols-[40px_50px_1fr_1fr_50px] bg-muted/50 sticky top-0 z-10 border-b">
+                <div className="p-2 flex items-center justify-center">
+                  <Checkbox
+                    checked={selectedIds.size === segments.length && segments.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                  />
+                </div>
+                <div className="p-3 text-xs font-medium text-muted-foreground border-r flex items-center justify-center">
+                  #
+                </div>
+                <div className="p-3 text-xs font-medium text-muted-foreground border-r">
+                  Source
+                </div>
+                <div className="p-3 text-xs font-medium text-muted-foreground border-r">
+                  Target
+                </div>
+                <div className="p-3"></div>
+              </div>
           {filteredSegments.map((segment) => (
-            <div 
+            <div
               key={segment.id}
               ref={activeSegmentId === segment.id ? activeRowRef : null}
               className={cn(
-                "grid grid-cols-[50px_1fr_1fr_50px] group transition-colors",
-                activeSegmentId === segment.id ? "bg-accent/50" : "hover:bg-accent/20"
+                "grid grid-cols-[40px_50px_1fr_1fr_50px] group transition-colors",
+                activeSegmentId === segment.id ? "bg-accent/50" : "hover:bg-accent/20",
+                selectedIds.has(segment.id) && "bg-pink-50 dark:bg-pink-900/10"
               )}
               onClick={() => setActiveSegmentId(segment.id)}
             >
+              {/* Checkbox Column */}
+              <div className="p-2 flex items-center justify-center border-r bg-muted/5">
+                <Checkbox
+                  checked={selectedIds.has(segment.id)}
+                  onCheckedChange={() => handleToggleSelect(segment.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`Select segment ${segment.index}`}
+                />
+              </div>
+
               {/* Index Column */}
               <div className="p-3 text-xs text-muted-foreground border-r flex flex-col items-center justify-center select-none bg-muted/10 gap-1">
                 <span>{segment.index}</span>
