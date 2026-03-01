@@ -1,59 +1,43 @@
-# Scratchpad - Comprehensive Code Analysis & MCP UI Implementation
+# Scratchpad - UI Components Review
 
-## Objective Analysis
-The objective is to:
-1. Perform comprehensive code analysis
-2. Real execution (not just planning)
-3. Implement and launch MCP UI
+## Task: Review UI components and pages
 
-## Current State
-- Project: TranslateFlow (formerly AiNiee-Next)
-- Translation application with React frontend + Python FastAPI backend
-- Existing tasks focus on Docker deployment and bilingual output testing
-- Need to understand what "MCP UI implementation" means in this context
+### Component Categories
+1. **Layout Components** (Tools/WebServer/components/Layout/)
+   - MainLayout: Main application shell
+   - Navigation components
 
-## Plan
-1. First, analyze the codebase structure comprehensively
-2. Understand what UI components exist and what needs implementation
-3. Actually execute and test the MCP UI (Playwright MCP is available)
-4. Verify end-to-end functionality
+2. **UI Components** (Tools/WebServer/components/ui/)
+   - Radix UI primitives (buttons, dialogs, etc.)
 
-## Investigation Needed
-- What is the current UI state?
-- What MCP servers are configured and relevant?
-- What specific UI features need testing/implementation?
+3. **Feature Components** (Tools/WebServer/components/)
+   - BilingualViewer.tsx: Bilingual translation viewer (422 lines)
+   - ProgressDashboard.tsx: Progress tracking with charts
+   - FileComparisonDashboard.tsx: Side-by-side comparison
+   - TermSelector.tsx: Term selection interface
+   - MonacoEditor.tsx: Code editor integration
+   - Terminal.tsx: Terminal output viewer
+   - VersionHistoryViewer.tsx: Version control interface
 
-## Next Steps
-1. Get project overview
-2. Analyze UI components
-3. Test with Playwright MCP
-4. Document findings
+4. **Settings Components** (Tools/WebServer/components/Settings/)
+   - Feature toggles and configuration
 
-## Codebase Analysis Complete
+5. **Pages** (Tools/WebServer/pages/)
+   - Dashboard.tsx: Main dashboard
+   - Editor.tsx: Translation editor with context preview
+   - Settings.tsx: Application settings
+   - Teams.tsx: Team management
+   - Subscription.tsx: Billing and plans
+   - Monitor.tsx: Task monitoring
+   - BilingualView.tsx: Bilingual file viewer
+   - And 12+ more pages
 
-### Architecture Overview
-TranslateFlow is a translation platform with:
-- **Frontend**: React 19.2.3 + Vite 6.2.0 + Radix UI + Tailwind CSS
-- **Backend**: Python 3.14 + FastAPI + uvicorn (currently running on port 8002)
-- **Database**: SQLite (ainiee.db) with PostgreSQL support
-- **UI Components**: 20+ components including BilingualViewer, ProgressDashboard, TermSelector
-- **Pages**: 20+ pages including Dashboard, Editor, Settings, Teams, Subscription
+### Key Features to Test with Playwright
+1. Dashboard main view and navigation
+2. Editor with context preview
+3. Bilingual viewer functionality
+4. Settings and feature toggles
+5. Team management interface
+6. Login/authentication flow
 
-### Key Features
-1. Bilingual output with context preview
-2. Multi-format translation (epub, docx, txt, srt, etc.)
-3. Team management with RBAC
-4. Subscription/billing with Stripe
-5. OAuth integration
-6. Plugin system
-7. Task queue with scheduler
-8. Version history
-9. Cache editor
-10. Glossary management
-
-### Current State
-- Backend server running on port 8002 (uvicorn)
-- Need to start frontend and test UI with Playwright
-- MCP UI testing available via Playwright MCP
-
-## Next: Start frontend and test with Playwright
+### Next: Launch frontend and test with Playwright
