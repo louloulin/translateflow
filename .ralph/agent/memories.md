@@ -130,6 +130,10 @@
 <!-- tags: branding, config | created: 2026-02-27 -->
 ## Fixes
 
+### mem-1772335545-f053
+> Fixed bilingual output setting not exposed in UI: Added enable_bilingual_output field to AppConfig type, added i18n keys (feature_enable_bilingual_output), and added toggle to SettingsFeatures component. Verified with Playwright MCP.
+<!-- tags: ui, settings, bilingual, translation | created: 2026-03-01 -->
+
 ### mem-1772334212-3559
 > Fixed bilingual output default value: Changed enable_bilingual_output default from False to True in TaskExecutor.py (manual_export function) and FileOutputer.py (_get_writer_default_config). This aligns with default_config.py which already has enable_bilingual_output: True. Previously bilingual output would be disabled even when config explicitly enabled it because these locations used False as fallback.
 <!-- tags: bilingual, config, translation | created: 2026-03-01 -->
