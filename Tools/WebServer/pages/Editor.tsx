@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Save, Search, Sparkles, Check, Lock, RotateCcw, Copy, ChevronLeft, ChevronRight, Loader2, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { ArrowLeft, Save, Search, Sparkles, Check, Lock, RotateCcw, Copy, ChevronLeft, ChevronRight, Loader2, PanelRightClose, PanelRightOpen, BookOpen, Plus, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -37,6 +37,19 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
   // Context Panel
   const [showContextPanel, setShowContextPanel] = useState(true);
   const [contextSegments, setContextSegments] = useState<{ prev: Segment | null; next: Segment | null }>({ prev: null, next: null });
+
+  // Glossary Panel
+  const [showGlossaryPanel, setShowGlossaryPanel] = useState(false);
+  const [glossaryEntries, setGlossaryEntries] = useState<{ id: string; source: string; target: string }[]>([
+    { id: '1', source: 'Hello', target: '你好' },
+    { id: '2', source: 'World', target: '世界' },
+    { id: '3', source: 'Settings', target: '设置' },
+    { id: '4', source: 'Language', target: '语言' },
+    { id: '5', source: 'Translation', target: '翻译' },
+  ]);
+  const [newGlossarySource, setNewGlossarySource] = useState('');
+  const [newGlossaryTarget, setNewGlossaryTarget] = useState('');
+  const [glossarySearch, setGlossarySearch] = useState('');
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -279,6 +292,37 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
     handleSegmentUpdate(id, source);
   };
 
+  // Glossary handlers
+  const handleAddGlossaryEntry = () => {
+    if (!newGlossarySource.trim() || !newGlossaryTarget.trim()) return;
+    const newEntry = {
+      id: Date.now().toString(),
+      source: newGlossarySource.trim(),
+      target: newGlossaryTarget.trim()
+    };
+    setGlossaryEntries([...glossaryEntries, newEntry]);
+    setNewGlossarySource('');
+    setNewGlossaryTarget('');
+  };
+
+  const handleDeleteGlossaryEntry = (id: string) => {
+    setGlossaryEntries(glossaryEntries.filter(e => e.id !== id));
+  };
+
+  const handleApplyGlossary = (target: string) => {
+    if (!activeSegmentId) {
+      toast({ title: "Info", description: "Select a segment first" });
+      return;
+    }
+    handleSegmentUpdate(activeSegmentId, target);
+    toast({ title: "Applied", description: "Glossary term applied to segment" });
+  };
+
+  const filteredGlossaryEntries = glossaryEntries.filter(e =>
+    e.source.toLowerCase().includes(glossarySearch.toLowerCase()) ||
+    e.target.toLowerCase().includes(glossarySearch.toLowerCase())
+  );
+
   // Filter is done client side for current page, 
   // ideally backend should support status filter.
   const filteredSegments = segments.filter(s => {
@@ -349,6 +393,15 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
               title={showContextPanel ? "Hide Context Panel" : "Show Context Panel"}
             >
               {showContextPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowGlossaryPanel(!showGlossaryPanel)}
+              title={showGlossaryPanel ? "Hide Glossary Panel" : "Show Glossary Panel"}
+              className={showGlossaryPanel ? "bg-accent" : ""}
+            >
+              <BookOpen className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
@@ -572,6 +625,107 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
                       </div>
                     )}
                   </div>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {/* Glossary Panel */}
+          {showGlossaryPanel && (
+            <div className="w-80 border-l bg-card shrink-0 flex flex-col">
+              <div className="p-3 border-b bg-muted/30">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-blue-500" />
+                  {t('editor_glossary_panel', 'Glossary')}
+                </h3>
+              </div>
+
+              {/* Add new entry */}
+              <div className="p-3 border-b space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">
+                  {t('editor_glossary_add', 'Add New Term')}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t('editor_glossary_source', 'Source')}
+                    value={newGlossarySource}
+                    onChange={(e) => setNewGlossarySource(e.target.value)}
+                    className="h-8 text-xs"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddGlossaryEntry()}
+                  />
+                  <Input
+                    placeholder={t('editor_glossary_target', 'Target')}
+                    value={newGlossaryTarget}
+                    onChange={(e) => setNewGlossaryTarget(e.target.value)}
+                    className="h-8 text-xs"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddGlossaryEntry()}
+                  />
+                  <Button
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleAddGlossaryEntry}
+                    disabled={!newGlossarySource.trim() || !newGlossaryTarget.trim()}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="p-3 border-b">
+                <Input
+                  placeholder={t('editor_glossary_search', 'Search glossary...')}
+                  value={glossarySearch}
+                  onChange={(e) => setGlossarySearch(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="p-3 space-y-2">
+                  {filteredGlossaryEntries.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      {t('editor_glossary_empty', 'No glossary entries')}
+                    </div>
+                  ) : (
+                    filteredGlossaryEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {entry.source}
+                            </div>
+                            <div className="text-sm font-medium line-clamp-2">
+                              {entry.target}
+                            </div>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              title="Apply to segment"
+                              onClick={() => handleApplyGlossary(entry.target)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 text-destructive"
+                              title="Delete"
+                              onClick={() => handleDeleteGlossaryEntry(entry.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </ScrollArea>
             </div>
