@@ -277,6 +277,35 @@ export interface Segment {
   comments?: string[];
 }
 
+export interface FileVersion {
+  id: string;
+  fileId: string;
+  projectId: string;
+  version: number;
+  timestamp: number;
+  size: number;
+  segmentCount: number;
+  status: 'draft' | 'translated' | 'completed';
+  description?: string;
+}
+
+export interface VersionDiff {
+  oldVersion: FileVersion;
+  newVersion: FileVersion;
+  addedLines: number;
+  removedLines: number;
+  modifiedLines: number;
+  diff: DiffLine[];
+}
+
+export interface DiffLine {
+  type: 'added' | 'removed' | 'unchanged';
+  lineNumber: number;
+  oldLineNumber?: number;
+  newLineNumber?: number;
+  content: string;
+}
+
 export interface EditorState {
   projectId: string;
   fileId: string;

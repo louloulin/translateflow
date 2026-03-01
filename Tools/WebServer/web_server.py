@@ -28,6 +28,7 @@ except ImportError:
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 UPDATETEMP_PATH = os.path.join(PROJECT_ROOT, "updatetemp") # Define upload directory
 TEMP_EDIT_PATH = os.path.join(PROJECT_ROOT, "output", "temp_edit") # Define draft directory
+VERSION_PATH = os.path.join(PROJECT_ROOT, "output", "versions") # Version history storage
 
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
@@ -2499,6 +2500,128 @@ async def delete_temp_files(request: DeleteFileRequest):
             failed.append({"file": filename, "error": "File not found"})
             
     return {"deleted": deleted, "failed": failed}
+
+# --- Version History Endpoints ---
+
+def get_version_file_path(file_id: str) -> str:
+    """Get the directory path for file versions."""
+    version_dir = os.path.join(VERSION_PATH, file_id)
+    os.makedirs(version_dir, exist_ok=True)
+    return version_dir
+
+def get_version_index(file_id: str) -> list:
+    """Get version index for a file."""
+    index_file = os.path.join(get_version_file_path(file_id), "index.json")
+    if os.path.exists(index_file):
+        with open(index_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def save_version_index(file_id: str, versions: list):
+    """Save version index for a file."""
+    index_file = os.path.join(get_version_file_path(file_id), "index.json")
+    with open(index_file, 'w', encoding='utf-8') as f:
+        json.dump(versions, f, indent=2, ensure_ascii=False)
+
+@app.get("/api/v1/files/{file_id}/versions")
+async def list_file_versions(file_id: str):
+    """
+    List all versions for a specific file.
+    """
+    try:
+        versions = get_version_index(file_id)
+        return {"versions": versions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list versions: {e}")
+
+@app.post("/api/v1/files/{file_id}/versions")
+async def create_file_version(file_id: str, request: Request):
+    """
+    Create a new version snapshot for a file.
+    """
+    try:
+        body = await request.json()
+        content = body.get("content", "")
+        description = body.get("description", "")
+
+        version_dir = get_version_file_path(file_id)
+        versions = get_version_index(file_id)
+
+        # Create new version
+        version_num = len(versions) + 1
+        version_id = f"v{version_num}_{int(time.time())}"
+        version_file = os.path.join(version_dir, f"{version_id}.txt")
+
+        with open(version_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        version_data = {
+            "id": version_id,
+            "fileId": file_id,
+            "version": version_num,
+            "timestamp": int(time.time() * 1000),
+            "size": len(content),
+            "segmentCount": len(content.split('\n')),
+            "status": "completed",
+            "description": description
+        }
+
+        versions.append(version_data)
+        save_version_index(file_id, versions)
+
+        return {"version": version_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create version: {e}")
+
+@app.get("/api/v1/files/{file_id}/versions/{version_id}/content")
+async def get_version_content(file_id: str, version_id: str):
+    """
+    Get the content of a specific version.
+    """
+    try:
+        version_dir = get_version_file_path(file_id)
+        version_file = os.path.join(version_dir, f"{version_id}.txt")
+
+        if not os.path.exists(version_file):
+            raise HTTPException(status_code=404, detail="Version not found")
+
+        with open(version_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        return {"content": content}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get version content: {e}")
+
+@app.delete("/api/v1/files/{file_id}/versions/{version_id}")
+async def delete_file_version(file_id: str, version_id: str):
+    """
+    Delete a specific version.
+    """
+    try:
+        version_dir = get_version_file_path(file_id)
+        versions = get_version_index(file_id)
+
+        # Find and remove version
+        version_data = next((v for v in versions if v["id"] == version_id), None)
+        if not version_data:
+            raise HTTPException(status_code=404, detail="Version not found")
+
+        # Delete version file
+        version_file = os.path.join(version_dir, f"{version_id}.txt")
+        if os.path.exists(version_file):
+            os.remove(version_file)
+
+        # Update index
+        versions = [v for v in versions if v["id"] != version_id]
+        save_version_index(file_id, versions)
+
+        return {"message": "Version deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete version: {e}")
 
 # --- Draft Management Endpoints ---
 

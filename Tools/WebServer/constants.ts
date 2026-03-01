@@ -782,7 +782,6 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "editor_upload_error": "文件上传失败",
     "editor_upload_processing": "正在处理上传的文件...",
     "editor_unsupported_format": "不支持的文件格式",
-    "loading": "加载中",
     "retry": "重试",
     "ui_ai_glossary": "AI术语分析",
     "ai_glossary_warning": "⚠ 当前暂不建议使用本地LLM进行分析，可能存在质量问题。尽可能使用在线API进行分析，但可能会产生相关API费用。\n注意：分析结果的准确程度取决于您使用的API模型能力，此功能仅提供初步分析结果，建议人工审核后再使用。",
@@ -901,7 +900,27 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "back_to_grid": "返回网格",
     "download_original": "下载原始文件",
     "download_translated": "下载翻译文件",
-    "download_bilingual": "下载双语文件"
+    "download_bilingual": "下载双语文件",
+    // Version History
+    "versionHistory": "版本历史",
+    "version": "版本",
+    "versionList": "版本列表",
+    "noVersions": "暂无版本记录",
+    "saveSnapshot": "保存快照",
+    "createFirstVersion": "创建第一个版本",
+    "selectVersion": "选择版本...",
+    "oldVersion": "旧版本",
+    "newVersion": "新版本",
+    "compare": "对比",
+    "added": "新增",
+    "removed": "删除",
+    "unchanged": "未更改",
+    "unified": "统一视图",
+    "split": "分栏视图",
+    "selectVersionsToCompare": "选择两个版本进行对比",
+    "latest": "最新",
+    "segments": "段落",
+    "refresh": "刷新"
 };
 
 // Approximated English Locale for demonstration
@@ -1457,7 +1476,6 @@ export const EN_LOCALE: Record<string, string> = {
     "editor_upload_error": "File upload failed",
     "editor_upload_processing": "Processing uploaded file...",
     "editor_unsupported_format": "Unsupported file format",
-    "loading": "Loading",
     "retry": "Retry",
     "ui_ai_glossary": "AI Glossary Analysis",
     "ai_glossary_warning": "⚠ Local LLMs are not recommended for analysis due to potential quality issues. Use online APIs for better results, but this may incur API costs.\nNote: Analysis accuracy depends on your API model. This is preliminary analysis - manual review recommended.",
@@ -1576,7 +1594,27 @@ export const EN_LOCALE: Record<string, string> = {
     "back_to_grid": "Back to Grid",
     "download_original": "Download Original",
     "download_translated": "Download Translated",
-    "download_bilingual": "Download Bilingual"
+    "download_bilingual": "Download Bilingual",
+    // Version History
+    "versionHistory": "Version History",
+    "version": "Version",
+    "versionList": "Version List",
+    "noVersions": "No versions saved yet",
+    "saveSnapshot": "Save Snapshot",
+    "createFirstVersion": "Create First Version",
+    "selectVersion": "Select version...",
+    "oldVersion": "Old Version",
+    "newVersion": "New Version",
+    "compare": "Compare",
+    "added": "added",
+    "removed": "removed",
+    "unchanged": "unchanged",
+    "unified": "Unified",
+    "split": "Split",
+    "selectVersionsToCompare": "Select two versions to compare",
+    "latest": "Latest",
+    "segments": "segments",
+    "refresh": "Refresh"
 };
 
 export const DEFAULT_CONFIG: AppConfig = {
