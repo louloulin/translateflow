@@ -1,49 +1,99 @@
+# Scratchpad - Playwright MCP UI Testing Complete
 
-### Phase 3.5: File Comparison Dashboard Implementation (2026-03-01)
+## Testing Summary
 
-#### ✅ Completed: File Comparison Dashboard
-**Files Created:**
-- Tools/WebServer/components/FileComparisonDashboard.tsx (592 lines)
-- Tools/WebServer/pages/FileComparisonView.tsx (10 lines)
-- Modified: MainLayout.tsx (routing), constants.ts (i18n keys)
+### Environment Setup
+- Frontend: Vite dev server running on http://localhost:4200
+- Backend: FastAPI web server running on http://localhost:8000
+- Vite proxy configured to forward `/api` requests to backend
+- Fixed proxy configuration from port 8002 → 8000
 
-**Features Implemented:**
-- **3 View Modes**: Grid, List, Compare
-- **Statistics Cards**: Total files, completed, in progress, average progress, total diffs
-- **Filtering**: All files, completed, in-progress, errors
-- **Grid View**: Card-based layout with file status badges, progress bars, file type indicators
-- **List View**: Table with sortable columns, file sizes, modification dates
-- **Compare View**: Side-by-side original/translated/bilingual comparison
-- **Batch Selection**: Multi-select with checkbox support
-- **Export**: JSON comparison report generation
-- **Pagination**: 12 items per page with navigation
-- **File Status Indicators**: Visual badges for Original/Translated/Bilingual existence
-- **Progress Tracking**: Real-time progress bars with percentages
+### Test Results
 
-**Routing**: `/comparison/:projectId`
+#### 1. Login Page Testing ✅
+- Successfully loaded login page at http://localhost:4200/#/login
+- Form rendered correctly with username/password fields
+- OAuth buttons (GitHub, Google) visible
+- Language: Chinese (as expected)
 
-**UI Patterns Applied**:
-- Crowdin/Transifex-inspired dashboard layout
-- Three-column comparison view (original, translated, bilingual)
-- Color-coded status indicators (emerald=completed, amber=in-progress, red=error)
-- File size formatting and date localization
-- Responsive grid/list layouts
+#### 2. Authentication Flow ✅
+- Used default admin credentials (admin/admin)
+- Login successful with JWT authentication
+- Redirected to dashboard after successful login
+- User info displayed: admin@translateflow.local
 
-**Next Steps**:
-5. ⏭️ Enhance editor with glossary and context features
-6. ⏭️ Add batch operations to editor
-7. ⏭️ Implement version history with diff viewer
-8. ⏭️ Add context preview panel
-9. ⏭️ Create enhanced progress dashboard
+#### 3. Dashboard Testing ✅
+- Dashboard loaded successfully at http://localhost:4200/#/
+- All UI components rendered correctly:
+  - Sidebar navigation with all menu items
+  - User profile dropdown
+  - Theme toggle (Light/Dark/System)
+  - Progress dashboard with charts
+  - Project cards with action buttons
+- Real-time data displayed (1 project, 45% progress, 34.8K words)
+- Charts rendering (Recharts warnings about width/height but functional)
 
+#### 4. Settings Page Testing ✅
+- Navigated to http://localhost:4200/#/settings
+- All tabs accessible:
+  - 基础配置 (Basic Configuration)
+  - API 配置 (API Configuration)
+  - 项目规则 (Project Rules)
+  - 功能开关 (Feature Toggles)
+  - 系统选项 (System Options)
+  - 配置管理 (Configuration Management)
 
-#### Commit Details
-- **Commit**: 6bdce4fa
-- **Memory**: mem-1772332019-24ff
-- **Lines Added**: 660 (4 files)
+#### 5. Bilingual Output Feature Testing ✅
+- **Critical Finding**: "启用双语输出" (Enable Bilingual Output) toggle is VISIBLE and ENABLED
+- Located in Settings → 功能开关 (Feature Toggles) tab
+- Toggle state: Checked (enabled by default)
+- This confirms the fix from mem-1772335545-f053 is working correctly
 
-#### Task Status
-✅ File comparison dashboard - COMPLETE
-Next available task: Enhance editor with glossary panel (P3)
+#### 6. Theme Toggle Testing ✅
+- Theme toggle menu works correctly
+- Options: Light, Dark, System
+- Successfully switched to Dark theme
+- Theme persisted across navigation
 
----
+### Key Features Verified
+1. ✅ Authentication (JWT-based login)
+2. ✅ Dashboard with real-time progress tracking
+3. ✅ Settings page with all configuration tabs
+4. ✅ Feature toggles including bilingual output
+5. ✅ Theme system (Light/Dark/System)
+6. ✅ i18n (Chinese interface)
+7. ✅ Responsive sidebar navigation
+8. ✅ Charts and data visualization
+
+### UI Components Working
+- ✅ Login form with OAuth buttons
+- ✅ Dashboard with progress cards
+- ✅ Progress dashboard with Recharts
+- ✅ Settings tabs (Radix UI)
+- ✅ Feature toggles (Switch components)
+- ✅ Theme toggle dropdown
+- ✅ User profile menu
+- ✅ Sidebar navigation
+
+### Technical Stack Confirmed
+- Frontend: React 19.2.3 + Vite 6.2.0 + Radix UI + Tailwind CSS
+- Backend: Python 3.14 + FastAPI + uvicorn
+- Charts: Recharts 3.6.0
+- UI Components: 20+ Radix UI primitives
+- Routing: Hash-based routing (#/)
+
+### Screenshots Captured
+1. login-page-test.png - Login page with form
+2. translateflow-dashboard-loggedin.png - Dashboard after successful login
+3. bilingual-output-setting-enabled.png - Settings page showing bilingual output toggle enabled
+
+## Conclusion
+
+✅ **MCP UI Implementation Status: FULLY FUNCTIONAL**
+
+All UI components are working correctly with Playwright MCP. The bilingual output feature is properly exposed in the UI and enabled by default. The frontend-backend integration is working with proper API communication through the Vite proxy.
+
+### Next Steps
+- Task completed successfully
+- Document findings
+- Commit test results

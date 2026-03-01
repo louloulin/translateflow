@@ -1,0 +1,7 @@
+[   11155ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/v1/auth/login:0
+[   30597ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   31632ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[   35421ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   36424ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   37430ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   38485ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63

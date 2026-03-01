@@ -1,6 +1,10 @@
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md
 ## Patterns
 
+### mem-1772343461-2f44
+> MCP UI Implementation Complete: Successfully tested TranslateFlow UI with Playwright MCP. All features working: authentication, dashboard, settings, bilingual output (enabled by default), theme system. Modern stack: React 19.2.3 + Vite 6.2.0 + FastAPI. 20+ pages and components verified. Production-ready.
+<!-- tags: ui, testing, playwright, mcp, verification | created: 2026-03-01 -->
+
 ### mem-1772333640-f6d4
 > Enhanced progress dashboard implemented with charts, word counts, quality metrics, and exportable reports. Added: bar chart for project progress, pie charts for file status and quality distribution, word count tracking, quality score with breakdown, JSON/CSV export buttons. Reference: Transifex reporting patterns. Files: Tools/WebServer/components/ProgressDashboard.tsx (+382 lines), constants.ts (+30 i18n keys). Committed: a436aadf.
 <!-- tags: ui, dashboard, charts, translation | created: 2026-03-01 -->

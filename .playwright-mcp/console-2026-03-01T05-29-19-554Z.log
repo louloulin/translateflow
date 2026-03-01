@@ -1,0 +1,75 @@
+[     107ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[     301ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/system/mode:0
+[     301ms] [ERROR] API Error: getSystemMode Error: Failed to fetch system mode
+    at Object.getSystemMode (http://localhost:4200/services/DataService.ts:17:26) @ http://localhost:4200/services/DataService.ts:19
+[     301ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/version:0
+[     301ms] [ERROR] API Error: getVersion Error: Failed to fetch version
+    at Object.getVersion (http://localhost:4200/services/DataService.ts:7:26) @ http://localhost:4200/services/DataService.ts:9
+[     302ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/config:0
+[     302ms] [ERROR] API Error: getConfig Error: Failed to fetch config
+    at Object.getConfig (http://localhost:4200/services/DataService.ts:27:26)
+    at async refreshConfig (http://localhost:4200/contexts/GlobalContext.tsx:132:20) @ http://localhost:4200/services/DataService.ts:29
+[     302ms] [ERROR] Global Context: Failed to load config Error: Failed to fetch config
+    at Object.getConfig (http://localhost:4200/services/DataService.ts:27:26)
+    at async refreshConfig (http://localhost:4200/contexts/GlobalContext.tsx:132:20) @ http://localhost:4200/contexts/GlobalContext.tsx:144
+[     302ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/v1/auth/me:0
+[     310ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/favicon.ico:0
+[     310ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/system/mode:0
+[     310ms] [ERROR] API Error: getSystemMode Error: Failed to fetch system mode
+    at Object.getSystemMode (http://localhost:4200/services/DataService.ts:17:26) @ http://localhost:4200/services/DataService.ts:19
+[     310ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/version:0
+[     310ms] [ERROR] API Error: getVersion Error: Failed to fetch version
+    at Object.getVersion (http://localhost:4200/services/DataService.ts:7:26) @ http://localhost:4200/services/DataService.ts:9
+[     310ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/config:0
+[     310ms] [ERROR] API Error: getConfig Error: Failed to fetch config
+    at Object.getConfig (http://localhost:4200/services/DataService.ts:27:26)
+    at async refreshConfig (http://localhost:4200/contexts/GlobalContext.tsx:132:20) @ http://localhost:4200/services/DataService.ts:29
+[     310ms] [ERROR] Global Context: Failed to load config Error: Failed to fetch config
+    at Object.getConfig (http://localhost:4200/services/DataService.ts:27:26)
+    at async refreshConfig (http://localhost:4200/contexts/GlobalContext.tsx:132:20) @ http://localhost:4200/contexts/GlobalContext.tsx:144
+[     311ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/v1/auth/me:0
+[     338ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/favicon.ico:0
+[   10349ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/v1/auth/login:0
+[   23556ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   24559ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   25559ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   26562ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   27567ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   28569ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   29571ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   30573ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   31578ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   32584ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   33592ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   34599ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   35608ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   36615ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   37634ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   38645ms] [ERROR] WebSocket connection to 'ws://localhost:4200/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:4200/@vite/client:1034
+[   39726ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[   40262ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/version:0
+[   40262ms] [ERROR] API Error: getVersion Error: Failed to fetch version
+    at Object.getVersion (http://localhost:4200/services/DataService.ts:7:26) @ http://localhost:4200/services/DataService.ts:9
+[   40262ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/system/mode:0
+[   40262ms] [ERROR] API Error: getSystemMode Error: Failed to fetch system mode
+    at Object.getSystemMode (http://localhost:4200/services/DataService.ts:17:26) @ http://localhost:4200/services/DataService.ts:19
+[   40263ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/config:0
+[   40263ms] [ERROR] API Error: getConfig Error: Failed to fetch config
+    at Object.getConfig (http://localhost:4200/services/DataService.ts:27:26)
+    at async refreshConfig (http://localhost:4200/contexts/GlobalContext.tsx:132:20) @ http://localhost:4200/services/DataService.ts:29
+[   40263ms] [ERROR] Global Context: Failed to load config Error: Failed to fetch config
+    at Object.getConfig (http://localhost:4200/services/DataService.ts:27:26)
+    at async refreshConfig (http://localhost:4200/contexts/GlobalContext.tsx:132:20) @ http://localhost:4200/contexts/GlobalContext.tsx:144
+[   40268ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/version:0
+[   40268ms] [ERROR] API Error: getVersion Error: Failed to fetch version
+    at Object.getVersion (http://localhost:4200/services/DataService.ts:7:26) @ http://localhost:4200/services/DataService.ts:9
+[   40268ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/config:0
+[   40268ms] [ERROR] API Error: getConfig Error: Failed to fetch config
+    at Object.getConfig (http://localhost:4200/services/DataService.ts:27:26)
+    at async refreshConfig (http://localhost:4200/contexts/GlobalContext.tsx:132:20) @ http://localhost:4200/services/DataService.ts:29
+[   40268ms] [ERROR] Global Context: Failed to load config Error: Failed to fetch config
+    at Object.getConfig (http://localhost:4200/services/DataService.ts:27:26)
+    at async refreshConfig (http://localhost:4200/contexts/GlobalContext.tsx:132:20) @ http://localhost:4200/contexts/GlobalContext.tsx:144
+[   40268ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/system/mode:0
+[   40268ms] [ERROR] API Error: getSystemMode Error: Failed to fetch system mode
+    at Object.getSystemMode (http://localhost:4200/services/DataService.ts:17:26) @ http://localhost:4200/services/DataService.ts:19
