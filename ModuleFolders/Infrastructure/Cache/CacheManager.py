@@ -358,14 +358,21 @@ class CacheManager(Base):
 
     # 生成待翻译片段
     def generate_item_chunks(self, limit_type: str, limit_count: int, previous_line_count: int, task_mode,
-                              enable_context_enhancement: bool = False, context_line_count: int = 5) -> \
+                              enable_context_enhancement: bool = False, context_line_count: int = 5,
+                              force_retranslate: bool = False) -> \
             Tuple[List[List[CacheItem]], List[List[CacheItem]], List[str], List[List[CacheItem]]]:
         chunks, previous_chunks, file_paths, source_context_chunks = [], [], [], []
 
         for file in self.project.files.values():
             # 1. 筛选出当前任务需要的条目
             if task_mode == TaskType.TRANSLATION:
-                items = [item for item in file.items if item.translation_status == TranslationStatus.UNTRANSLATED]
+                if force_retranslate:
+                    # Force re-translation: include all items and reset status to UNTRANSLATED
+                    items = list(file.items)
+                    for item in items:
+                        item.translation_status = TranslationStatus.UNTRANSLATED
+                else:
+                    items = [item for item in file.items if item.translation_status == TranslationStatus.UNTRANSLATED]
             elif task_mode == TaskType.POLISH:
                 items = [item for item in file.items if item.translation_status == TranslationStatus.TRANSLATED]
             else:

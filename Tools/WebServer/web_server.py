@@ -240,6 +240,8 @@ class TaskManager:
                 cli_args.extend(["--target", payload["target_lang"]])
             if payload.get("resume"):
                 cli_args.append("--resume")
+            if payload.get("force_retranslate"):
+                cli_args.append("--force")
             
             # Additional Overrides from Payload
             if payload.get("threads") is not None:

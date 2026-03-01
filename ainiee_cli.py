@@ -1130,7 +1130,7 @@ class CLIMenu:
                 # 在非交互模式下，如果传入了 input_path，则使用它
                 if args.input_path:
                     # 使用 run_task 组合逻辑，因为 run_all_in_one 内部带 path 选择
-                    self.run_task(TaskType.TRANSLATION, target_path=args.input_path, continue_status=args.resume, non_interactive=True, web_mode=args.web_mode, from_queue=True)
+                    self.run_task(TaskType.TRANSLATION, target_path=args.input_path, continue_status=args.resume, non_interactive=True, web_mode=args.web_mode, from_queue=True, force_retranslate=getattr(args, 'force_retranslate', False))
                     if Base.work_status != Base.STATUS.STOPING:
                         self.run_task(TaskType.POLISH, target_path=args.input_path, continue_status=True, non_interactive=True, web_mode=args.web_mode)
                 else:
@@ -1141,7 +1141,8 @@ class CLIMenu:
                     target_path=args.input_path,
                     continue_status=args.resume,
                     non_interactive=args.non_interactive,
-                    web_mode=args.web_mode
+                    web_mode=args.web_mode,
+                    force_retranslate=getattr(args, 'force_retranslate', False)
                 )
         elif args.task == 'export':
             self.run_export_only(
@@ -2545,7 +2546,7 @@ class CLIMenu:
             console.print(f"[green]Plugin '{name}' {'enabled' if not current_state else 'disabled'}.[/green]")
             time.sleep(0.5)
 
-    def run_task(self, task_mode, target_path=None, continue_status=False, non_interactive=False, web_mode=False, from_queue=False):
+    def run_task(self, task_mode, target_path=None, continue_status=False, non_interactive=False, web_mode=False, from_queue=False, force_retranslate=False):
         # 如果是非交互模式，直接跳过菜单
         if target_path is None:
             last_path = self.config.get("label_input_path")
@@ -2806,6 +2807,11 @@ class CLIMenu:
 
         # 确保 TaskExecutor 的配置与 CLIMenu 的配置同步
         self.task_executor.config.load_config_from_dict(self.config)
+
+        # Set force_retranslate if provided
+        if force_retranslate:
+            self.task_executor.config.force_retranslate = True
+
         
         if self.input_listener.disabled and not web_mode:
             self.ui.log("[bold yellow]Warning: Keyboard listener failed to initialize (no TTY found). Hotkeys will be disabled.[/bold yellow]")
@@ -4004,6 +4010,7 @@ def main():
     
     # 运行策略
     parser.add_argument('-r', '--resume', action='store_true', help=i18n.get('help_resume'))
+    parser.add_argument('-f', '--force', dest='force_retranslate', action='store_true', help="Force re-translation of all content, ignoring previous translations")
     parser.add_argument('-y', '--yes', action='store_true', dest='non_interactive', help=i18n.get('help_yes'))
     parser.add_argument('--threads', type=int, help="Concurrent thread counts (0 for auto)")
     parser.add_argument('--retry', type=int, help="Max retry counts for failed requests")
