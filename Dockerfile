@@ -97,6 +97,10 @@ COPY --chown=translateflow:translateflow StevExtraction/ ./StevExtraction/
 COPY --chown=translateflow:translateflow I18N/ ./I18N/
 COPY --chown=translateflow:translateflow Tools/ ./Tools/
 
+# Ensure Resource directory permissions are correct (create profiles at runtime)
+RUN chown -R translateflow:translateflow /app/Resource && \
+    chmod -R u+rw,g+r,o+r /app/Resource
+
 # Copy the built frontend assets from the builder stage
 COPY --from=builder --chown=translateflow:translateflow /web/dist ./Tools/WebServer/dist
 

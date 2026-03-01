@@ -14,6 +14,11 @@ init_config() {
         echo "[Init] Creating default profile from preset..."
         mkdir -p /app/Resource/profiles
         cp /app/Resource/platforms/preset.json /app/Resource/profiles/default.json
+        
+        # Ensure correct permissions for runtime-created files
+        chmod 644 /app/Resource/profiles/default.json
+        chmod 755 /app/Resource/profiles
+        
         echo "✓ Default profile created"
     else
         echo "✓ Default profile exists"
@@ -29,6 +34,10 @@ init_config() {
     "active_rules_profile": "default"
 }
 EOF
+        
+        # Ensure correct permissions for runtime-created files
+        chmod 644 /app/Resource/config.json
+        
         echo "✓ Main config.json created"
     else
         echo "✓ Main config.json exists"
