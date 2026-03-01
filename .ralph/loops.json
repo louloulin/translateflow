@@ -1,3 +1,12 @@
 {
-  "loops": []
+  "loops": [
+    {
+      "id": "swift-peacock",
+      "pid": 78610,
+      "started": "2026-03-01T03:09:40.724422Z",
+      "prompt": "分析为什么不能重复翻译，同时支持双语版本",
+      "worktree_path": "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/swift-peacock",
+      "workspace": "/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.worktrees/swift-peacock"
+    }
+  ]
 }

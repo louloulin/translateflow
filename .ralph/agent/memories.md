@@ -130,6 +130,10 @@
 <!-- tags: branding, config | created: 2026-02-27 -->
 ## Fixes
 
+### mem-1772334212-3559
+> Fixed bilingual output default value: Changed enable_bilingual_output default from False to True in TaskExecutor.py (manual_export function) and FileOutputer.py (_get_writer_default_config). This aligns with default_config.py which already has enable_bilingual_output: True. Previously bilingual output would be disabled even when config explicitly enabled it because these locations used False as fallback.
+<!-- tags: bilingual, config, translation | created: 2026-03-01 -->
+
 ### mem-1772275176-45ae
 > Docker build fix: mediapipe platform-specific dependency. pyproject.toml now uses 'mediapipe; sys_platform == "linux" and platform_machine == "x86_64"' to avoid ARM64 build failures. ReaderUtil.py updated with graceful fallback. Dockerfile.production updated with build-essential, cmake, rustc, cargo for ARM64 compilation support. uv.lock regenerated.
 <!-- tags: docker, mediapipe, arm64 | created: 2026-02-28 -->

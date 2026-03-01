@@ -1,179 +1,75 @@
-# Scratchpad - UI Optimization for Translation File Management
+# Scratchpad - Translation File Management & UI Optimization
 
 ## Objective
-实现翻译前后文件的管理优化整个ui，搜索相关的AI翻译软件参考实现
+实现翻译前后文件的管理优化整个ui，搜索相关的AI翻译软件参考实现,分析整个翻译功能存在很多问题，真实执行修复
 
 ## Current Understanding
+- TranslateFlow project (formerly AiNiee-Next)
+- React frontend + Python FastAPI backend
+- Multiple file format support (20+ formats)
+- Bilingual output capability exists
+- Task system for translation execution
 
-### Project Context
-- TranslateFlow (formerly AiNiee-Next) is an AI-powered translation tool
-- Frontend: React 19.2.3 + Vite + Radix UI + Tailwind CSS
-- Backend: FastAPI (Python 3.12)
-- Current UI verified working (mem-1772206170-88fd)
+## Identified Issues
 
-### Existing Features
-1. **Bilingual Output**: Fixed and enabled by default (mem-1772252767-f583)
-2. **Language Mapper**: Converts display names to backend codes (mem-1772252903-3f11)
-3. **File Management**: Projects, tasks, translation queue
-4. **Key Pages**:
-   - Dashboard
-   - ProjectDetails
-   - TaskQueue
-   - TaskRunner
-   - Editor
-   - CacheEditor
-   - Settings
-   - Teams
-   - Monitor
+### Issue 1: Bilingual output default in manual_export
+**Location**: TaskExecutor.py line 359
+**Problem**: `config.get('enable_bilingual_output', False)` defaults to False instead of using config value
+**Impact**: Manual export ignores the enable_bilingual_output setting from config
+**Fix**: Use `config.get('enable_bilingual_output', True)` to match default_config.py
 
-### Blocked Tasks
-All existing tasks are blocked, need to create new tasks for UI optimization.
+### Issue 2: Similar pattern in line 124
+**Location**: TaskExecutor.py line 124 (source/AiNiee)
+**Problem**: Same pattern - defaults to False
+**Impact**: Initial config also has wrong default
 
-## Research Plan
+### Reference from web search:
+- File management patterns: drag & drop, batch processing, version control
+- UI patterns: split view, progress indicators, collaborative features
+- Crowdin/DeepL patterns for translation workflow
 
-### Phase 1: Research AI Translation Software UIs
-- Study popular AI translation tools for UI patterns
-- Focus on file management workflows
-- Identify best practices for pre/post translation file handling
+## Planned Tasks
+1. [Task] Fix bilingual output config default in TaskExecutor.py manual_export
+2. [Task] Analyze other translation issues
+3. [Task] Implement UI improvements for file management
+4. [Task] Verify fixes work
 
-### Phase 2: Analyze Current UI
-- Review existing file management components
-- Identify pain points and improvement opportunities
-- Document current user flow
+## Notes
+- Starting fresh - no existing tasks match this objective directly
+- Need to create new tasks for this objective
 
-### Phase 3: Design Improvements
-- Create UI enhancement plan
-- Design new file management features
-- Plan bilingual output visualization
+## Completed
+1. Fixed bilingual output config default in TaskExecutor.py line 359 (manual_export)
+2. Fixed bilingual output config default in FileOutputer.py line 145 (_get_writer_default_config)
+3. Committed changes: d66b2d90
 
-### Phase 4: Implementation
-- Implement UI improvements
-- Add file comparison features
-- Enhance bilingual output display
+## Current Analysis - Editor Component
 
-## Research Findings (2026-03-01)
+### Editor.tsx (Tools/WebServer/pages/Editor.tsx)
 
-### AI Translation Software UI Patterns
+**Current State:**
+- Single-segment editing only (no multi-select)
+- Keyboard shortcut: Ctrl+Enter to approve single segment
+- "AI Translate Page" button shows "Coming Soon" - not implemented
+- No batch operations (translate, approve, export)
 
-#### Key Tools Researched:
-1. **DeepL**: Drag-and-drop file translation, format preservation, side-by-side comparison
-2. **Crowdin/Transifex/Phrase**: Translation memory, terminology management, context preview
-3. **BabelEdit**: Multi-file simultaneous editing, framework-aware
-4. **Microsoft Translator**: 4 bilingual view types (side-by-side, top/bottom, hover, combined)
+**Issues Found:**
+1. No checkbox selection UI for multi-select
+2. No batch translate action
+3. No batch approve action
+4. No batch export action
+5. Limited keyboard shortcuts
 
-#### Best Practices Identified:
-1. **Bilingual Display**:
-   - Side-by-side source/target layout
-   - Segment-by-segment alignment
-   - Synchronized scrolling and highlighting
-   - Hover translation option
+## Implementation Plan - Batch Operations
 
-2. **File Management**:
-   - Drag-and-drop upload
-   - Format preservation (PDF, Word, etc.)
-   - Version tracking and history
-   - Batch processing support
+1. Add checkbox column for multi-select
+2. Add "Select All" checkbox in header
+3. Add batch action toolbar (appears when items selected)
+4. Implement batch translate (AI translate selected)
+5. Implement batch approve (mark selected as approved)
+6. Implement batch export (export selected segments)
+7. Add keyboard shortcuts: Ctrl+A (select all), Ctrl+Shift+A (deselect all)
 
-3. **Editor Features**:
-   - Real-time collaborative editing
-   - Translation memory integration
-   - Terminology/glossary panel
-   - Quality assurance checks
-   - Progress tracking (word count, completion %)
-
-4. **Diff/Comparison**:
-   - Track translation key changes
-   - Visual diff for modifications
-   - Version comparison
-   - Change history with rollback
-
-### Current TranslateFlow UI Analysis
-
-#### Existing Strengths:
-- Segment-based editor with source/target display
-- Search and filter functionality
-- Pagination for large files
-- Keyboard shortcuts (Ctrl+Enter)
-- Status tracking (draft/translated/approved)
-- AI translation integration via checkSingleLine
-
-#### Improvement Opportunities:
-1. **Bilingual Output Visualization**: Need dedicated view for _bilingual.txt files
-2. **File Comparison**: Side-by-side original vs translated vs bilingual
-3. **Enhanced Progress Tracking**: Visual dashboard with completion metrics
-4. **Batch Operations**: Multi-select segments for batch actions
-5. **Context Preview**: Show surrounding context for each segment
-6. **Glossary Panel**: Terminology management sidebar
-7. **Version History**: Track changes with diff viewer
-8. **Export Options**: Multiple format export (original, translated, bilingual)
-
-## Next Steps
-1. ✅ Research AI translation software UIs (DeepL, Google Translate, ChatGPT, etc.)
-2. ✅ Create specific UI improvement tasks
-3. ✅ Implement bilingual file viewer component
-   - Created BilingualViewer component with 4 view modes
-   - Added side-by-side, top-bottom, source-only, translation-only views
-   - Implemented synchronized scrolling and search highlighting
-   - Added export functionality (TXT/JSON)
-   - Created BilingualView page with routing
-4. ⏭️ Add file comparison dashboard
-5. ⏭️ Enhance editor with glossary and context features
-
-### Implementation Details (2026-03-01)
-
-#### ✅ Completed: Bilingual File Viewer
-- **Files Created**:
-  - Tools/WebServer/components/BilingualViewer.tsx (422 lines)
-  - Tools/WebServer/pages/BilingualView.tsx (151 lines)
-  - Modified: MainLayout.tsx (routing), constants.ts (i18n)
-
-- **Features Implemented**:
-  - 4 View Modes: Side-by-side, Top/Bottom, Source Only, Translation Only
-  - Text Controls: Font size (12-20px), alignment (left/center/right)
-  - Search: Real-time search with match highlighting
-  - Pagination: 50 segments per page with navigation
-  - Export: TXT and JSON formats
-  - Fullscreen: Immersive viewing mode
-  - Synchronized Scrolling: For side-by-side view
-  - Status Badges: Visual indicators for segment status
-
-- **Routing**: `/bilingual/:projectId/:fileId`
-- **Committed**: e16f1fab
-- **Memory Saved**: mem-1772331458-7339
-
----
-*Last Updated: 2026-03-01*
-
-## Iteration 2026-03-01 - Context Preview Panel
-
-### Completed
-- **Context Preview Panel** (task-1772331239-af06)
-  - Added toggleable context panel on right side of editor
-  - Shows previous segment, current selection, and next segment
-  - Clickable segments to navigate
-  - Toggle button in toolbar (PanelRightClose/PanelRightOpen icons)
-  - i18n keys added: editor_context_panel, editor_context_previous, editor_context_next, editor_context_current, editor_context_no_previous, editor_context_no_next
-  - Committed: ff3c5429
-
-### Files Changed
-- Tools/WebServer/pages/Editor.tsx: +157 lines
-- Tools/WebServer/constants.ts: +16 lines (i18n)
-
-### Completed: Enhanced Progress Dashboard (2026-03-01)
-- **Task**: task-1772331242-c486
-- **Features Added**:
-  - Visual bar chart for project progress (recharts)
-  - Pie chart for file status distribution
-  - Quality distribution pie chart with score indicators
-  - Word count tracking (total/completed words)
-  - Quality score with excellent/good/needs review breakdown
-  - Export buttons for JSON and CSV reports
-  - New i18n keys for all new features (Chinese/English)
-- **Files Changed**:
-  - Tools/WebServer/components/ProgressDashboard.tsx: +382 lines
-  - Tools/WebServer/constants.ts: +30 lines (i18n keys)
-- **Committed**: a436aadf
-
-### Next Tasks (Ready)
-- task-1772331227-8643: Enhance editor with glossary panel
-- task-1772331230-5569: Add batch operations to editor
+## Status
+- COMPLETED: task-1772331230-5569 (Add batch operations to editor) - commit 2b340284
+- Remaining: More UI improvements for file management, analyze other translation issues
