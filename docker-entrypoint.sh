@@ -48,31 +48,51 @@ create_admin() {
     echo "[Init] Creating default admin user..."
 
     python << 'EOF'
+import traceback
 from uuid import uuid4
 from ModuleFolders.Service.Auth.models import User, UserRole, UserStatus
 from ModuleFolders.Service.Auth.password_manager import PasswordManager
 
 try:
     # Check if admin exists
+    print("[DB] Querying for existing admin user...")
     admin_user = User.get_or_none(User.username == "admin")
+    print(f"[DB] Query result: {admin_user}")
 
     if admin_user is None:
         # Create admin
+        print("[DB] Creating new admin user...")
         password_manager = PasswordManager()
+        print("[DB] Password manager initialized")
+
+        password_hash = password_manager.hash_password("admin")
+        print(f"[DB] Password hash generated: {password_hash[:20]}...")
+
         admin_user = User.create(
             id=str(uuid4()),
             email="admin@translateflow.local",
             username="admin",
-            password_hash=password_manager.hash_password("admin"),
+            password_hash=password_hash,
             role=UserRole.SUPER_ADMIN.value,
             status=UserStatus.ACTIVE.value,
             email_verified=True,
+            preferences={},  # Explicitly set all JSONField defaults
+            failed_login_attempts=0,
+            tenant_id=None,
+            full_name=None,
+            bio=None,
         )
+        print("[DB] User.create() called successfully")
+        print(f"[DB] Created user ID: {admin_user.id}")
         print("✓ Default admin user created (username: admin, password: admin)")
     else:
+        print(f"[DB] Admin user already exists: {admin_user.username}")
         print("✓ Admin user already exists")
 except Exception as e:
-    print(f"Warning: Could not create admin user: {e}")
+    print(f"[ERROR] Could not create admin user: {e}")
+    print(f"[ERROR] Exception type: {type(e).__name__}")
+    print(f"[ERROR] Traceback:")
+    traceback.print_exc()
 EOF
 }
 

@@ -10,6 +10,7 @@ services:
     environment:
       # Use SQLite for local testing (no PostgreSQL needed)
       - USE_SQLITE=true
+      - SQLITE_PATH=/app/data/translateflow.db
       - SECRET_KEY=local-dev-key-change-in-production
       - PYTHONUNBUFFERED=1
       - RUNNING_IN_DOCKER=true

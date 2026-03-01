@@ -28,6 +28,9 @@ class JSONField(TextField):
     def db_value(self, value):
         if value is None:
             return None
+        # Handle callable defaults (e.g., dict, list)
+        if callable(value):
+            value = value()
         return json.dumps(value)
 
     def python_value(self, value):
@@ -95,8 +98,13 @@ class BaseModel:
         return super().save(*args, **kwargs)
 
 
-class User(_db.Model, BaseModel):
+class User(_db.Model):
     """User model for authentication and profile management."""
+
+    # Primary key (explicitly defined to avoid multi-inheritance issues)
+    id = CharField(max_length=36, primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = DateTimeField(default=datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.utcnow)
 
     email = CharField(max_length=255, unique=True, index=True)
     username = CharField(max_length=100, unique=True, index=True)
@@ -140,6 +148,10 @@ class User(_db.Model, BaseModel):
 
     class Meta:
         table_name = "users"
+
+    def save(self, *args, **kwargs):
+        self.updated_at = datetime.utcnow()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"<User {self.username}>"
@@ -446,21 +458,38 @@ class OAuthAccount(_db.Model):
 
 # Database initialization function
 def init_database():
-    """Initialize database tables."""
+    """Initialize database tables.
+
+    Only creates tables if they don't exist (safe=True).
+    Checks if 'users' table exists to skip unnecessary migrations.
+    """
     if _db.is_closed():
         _db.connect()
-    _db.create_tables([
-        User,
-        Tenant,
-        Team,
-        TeamMember,
-        ApiKey,
-        LoginHistory,
-        PasswordReset,
-        EmailVerification,
-        RefreshToken,
-        OAuthAccount,
-    ], safe=True)
+
+    # Check if tables already exist to skip migration
+    cursor = _db.execute_sql(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+    )
+    tables_exist = cursor.fetchone() is not None
+
+    if tables_exist:
+        print("[DB] Tables already exist, skipping migration")
+    else:
+        print("[DB] Creating database tables...")
+        _db.create_tables([
+            User,
+            Tenant,
+            Team,
+            TeamMember,
+            ApiKey,
+            LoginHistory,
+            PasswordReset,
+            EmailVerification,
+            RefreshToken,
+            OAuthAccount,
+        ], safe=True)
+        print("[DB] Database tables created successfully")
+
     return _db
 
 

@@ -110,6 +110,7 @@ def create_sqlite_database(path: str) -> SqliteDatabase:
     Returns:
         SqliteDatabase instance.
     """
+    print(f"[DB] Creating SQLite database at: {path}")
     return SqliteDatabase(
         path,
         pragmas={
@@ -128,6 +129,7 @@ database: Optional[PostgresqlDatabase | SqliteDatabase] = None
 if should_use_sqlite():
     # Force SQLite usage
     sqlite_path = get_sqlite_path()
+    print(f"[DB] USE_SQLITE=true, using SQLite at: {sqlite_path}")
     database = create_sqlite_database(sqlite_path)
 else:
     # Try PostgreSQL
@@ -137,10 +139,11 @@ else:
         # Use DATABASE_URL if provided
         config = parse_database_url(db_url)
         try:
+            print(f"[DB] Connecting to PostgreSQL: {config['host']}:{config['port']}/{config['database']}")
             database = create_postgresql_database(config)
         except Exception as e:
-            print(f"Failed to connect to PostgreSQL: {e}")
-            print("Falling back to SQLite...")
+            print(f"[DB] Failed to connect to PostgreSQL: {e}")
+            print("[DB] Falling back to SQLite...")
             sqlite_path = get_sqlite_path()
             database = create_sqlite_database(sqlite_path)
     else:
@@ -148,15 +151,16 @@ else:
         config = get_database_config()
         if config["password"]:
             try:
+                print(f"[DB] Connecting to PostgreSQL: {config['host']}:{config['port']}/{config['database']}")
                 database = create_postgresql_database(config)
             except Exception as e:
-                print(f"Failed to connect to PostgreSQL: {e}")
-                print("Falling back to SQLite...")
+                print(f"[DB] Failed to connect to PostgreSQL: {e}")
+                print("[DB] Falling back to SQLite...")
                 sqlite_path = get_sqlite_path()
                 database = create_sqlite_database(sqlite_path)
         else:
             # No password provided, use SQLite
-            print("No database password provided, using SQLite...")
+            print("[DB] No database password provided, using SQLite...")
             sqlite_path = get_sqlite_path()
             database = create_sqlite_database(sqlite_path)
 
@@ -175,7 +179,9 @@ def init_database():
         raise RuntimeError("Database not configured")
 
     if database.is_closed():
+        print(f"[DB] Connecting to database...")
         database.connect()
+        print(f"[DB] Database connected successfully")
 
     return database
 
@@ -183,6 +189,7 @@ def init_database():
 def close_database():
     """Close database connection if open."""
     if database is not None and not database.is_closed():
+        print(f"[DB] Closing database connection...")
         database.close()
 
 

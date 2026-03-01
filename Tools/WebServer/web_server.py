@@ -570,37 +570,60 @@ app = FastAPI(title="AiNiee CLI Backend API")
 @app.on_event("startup")
 def create_default_admin():
     """Create default admin user on startup if not exists."""
+    import traceback
     try:
         from uuid import uuid4
         from ModuleFolders.Service.Auth.models import UserRole, UserStatus
         from ModuleFolders.Service.Auth.password_manager import PasswordManager
         from ModuleFolders.Service.Auth import init_database
 
+        print("[Startup] Initializing default admin user...")
+
         # Initialize database tables first
         try:
+            print("[Startup] Calling init_database()...")
             init_database()
+            print("[Startup] Database initialized successfully")
         except Exception as e:
-            print(f"Database init in startup: {e}")
+            print(f"[Startup] Database init warning: {e}")
 
         # Check if admin already exists
+        print("[Startup] Checking for existing admin user...")
         admin_user = User.get_or_none(User.username == "admin")
+        print(f"[Startup] Query result: {admin_user}")
+
         if admin_user is None:
             # Create default admin user
+            print("[Startup] Creating new admin user...")
             password_manager = PasswordManager()
+            print("[Startup] Password manager initialized")
+
+            password_hash = password_manager.hash_password("admin")
+            print(f"[Startup] Password hash generated: {password_hash[:20]}...")
+
             admin_user = User.create(
                 id=str(uuid4()),
                 email="admin@translateflow.local",
                 username="admin",
-                password_hash=password_manager.hash_password("admin"),
+                password_hash=password_hash,
                 role=UserRole.SUPER_ADMIN.value,
                 status=UserStatus.ACTIVE.value,
                 email_verified=True,  # Admin doesn't need email verification
+                preferences={},  # Explicitly set all JSONField defaults
+                failed_login_attempts=0,
+                tenant_id=None,
+                full_name=None,
+                bio=None,
             )
-            print(f"Default admin user created with username: admin")
+            print(f"[Startup] User.create() called successfully, ID: {admin_user.id}")
+            print(f"[Startup] Default admin user created with username: admin")
         else:
-            print(f"Admin user already exists")
+            print(f"[Startup] Admin user already exists: {admin_user.username}")
     except Exception as e:
-        print(f"Warning: Could not create default admin user: {e}")
+        print(f"[Startup] ERROR: Could not create default admin user: {e}")
+        print(f"[Startup] Exception type: {type(e).__name__}")
+        print(f"[Startup] Traceback:")
+        traceback.print_exc()
 
 # --- Paths to Resources ---
 RESOURCE_PATH = os.path.join(PROJECT_ROOT, "Resource")
