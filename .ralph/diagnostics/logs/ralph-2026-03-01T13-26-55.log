@@ -11,3 +11,11 @@
 2026-03-01T05:38:07.436423Z  INFO ralph_core::event_loop: Wrapping up: completed. 1 iterations in 11m 11s. reason=completed iterations=1 duration=11m 11s
 2026-03-01T05:38:07.450817Z  INFO ralph_core::landing: Beginning landing sequence loop_id=primary
 2026-03-01T05:38:07.450941Z  WARN ralph_core::landing: Landing with 5 open tasks loop_id=primary open_tasks=["task-1772252830-4f7e", "task-1772261168-47a8", "task-1772261168-b16d", "task-1772261169-ebcc", "task-1772264899-9ed4"]
+2026-03-01T05:38:07.598563Z  INFO ralph_core::landing: Auto-committed changes during landing loop_id=primary commit=Some("308aa204dd3e33e86472ed52924f5b959dbe217e") files=19
+2026-03-01T05:39:12.291073Z  WARN ralph_core::landing: Failed to prune remote refs loop_id=primary error=Git command failed: Failed to prune remote refs: error: RPC failed; curl 28 Failed to connect to github.com port 443 after 32056 ms: Couldn't connect to server
+fatal: expected flush after ref listing
+
+2026-03-01T05:39:12.331947Z  INFO ralph_core::landing: Generated handoff file loop_id=primary path=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md completed=106 open=5
+2026-03-01T05:39:12.364598Z  INFO ralph_core::loop_completion: Landing completed with auto-commit commit=Some("308aa204dd3e33e86472ed52924f5b959dbe217e") handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md
+2026-03-01T05:39:12.364616Z  INFO ralph::loop_runner: Primary loop landed successfully committed=true handoff=/Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/handoff.md open_tasks=5
+2026-03-01T05:41:26.374209Z  INFO ralph_tui::app: Ctrl+C detected, signaling main loop
