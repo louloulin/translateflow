@@ -356,7 +356,7 @@ class TaskExecutor(Base):
             "translated_suffix": config.get('output_filename_suffix', ''),
             "bilingual_suffix": "_bilingual",
             "bilingual_order": config.get('bilingual_text_order', 'translation_first'),
-            "enable_bilingual_output": config.get('enable_bilingual_output', False)
+            "enable_bilingual_output": config.get('enable_bilingual_output', True)
         }
 
         # 写入文件
