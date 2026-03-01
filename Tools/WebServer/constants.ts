@@ -863,7 +863,19 @@ export const ZH_CN_LOCALE: Record<string, string> = {
     "ui_layout_task_split_ratio": "任务页统计高度比例",
     "ui_layout_terminal_min_height": "控制台最小高度（px）",
     "ui_layout_reset": "恢复默认",
-    "ui_layout_reset_confirm": "确认恢复显示与布局默认设置？"
+    "ui_layout_reset_confirm": "确认恢复显示与布局默认设置？",
+    // Bilingual Viewer
+    "bilingual_output": "双语对照",
+    "source_text": "原文",
+    "translation_text": "译文",
+    "search_placeholder": "在原文或译文中搜索...",
+    "showing": "显示",
+    "of": "共",
+    "page": "第",
+    "back": "返回",
+    "back_to_project": "返回项目",
+    "error_loading": "加载错误",
+    "loading_bilingual": "加载双语文件中..."
 };
 
 // Approximated English Locale for demonstration
@@ -1500,7 +1512,19 @@ export const EN_LOCALE: Record<string, string> = {
     "ui_layout_task_split_ratio": "Task stats height ratio",
     "ui_layout_terminal_min_height": "Console min height (px)",
     "ui_layout_reset": "Reset",
-    "ui_layout_reset_confirm": "Reset display & layout settings to defaults?"
+    "ui_layout_reset_confirm": "Reset display & layout settings to defaults?",
+    // Bilingual Viewer
+    "bilingual_output": "Bilingual View",
+    "source_text": "Source",
+    "translation_text": "Translation",
+    "search_placeholder": "Search in source or translation...",
+    "showing": "Showing",
+    "of": "of",
+    "page": "Page",
+    "back": "Back",
+    "back_to_project": "Back to Project",
+    "error_loading": "Error Loading",
+    "loading_bilingual": "Loading bilingual file..."
 };
 
 export const DEFAULT_CONFIG: AppConfig = {
