@@ -18,11 +18,13 @@ try:
     MEDIAPIPE_AVAILABLE = True
 except ImportError:
     MEDIAPIPE_AVAILABLE = False
+    # Create a placeholder for type hints when mediapipe is not available
+    LanguageDetector = None
 
 from ModuleFolders.Infrastructure.Cache.CacheFile import CacheFile
 from ModuleFolders.Infrastructure.Cache.CacheItem import CacheItem
 
-_LANG_DETECTOR_INSTANCE: LanguageDetector | None = None
+_LANG_DETECTOR_INSTANCE = None
 """语言检测器单例实现"""
 
 VARIOUS_LETTERS_RANGE = r'a-zA-Z\uFF21-\uFF3A\uFF41-\uFF5A'

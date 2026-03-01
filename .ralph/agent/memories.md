@@ -1,6 +1,26 @@
 /Users/louloulin/Documents/linchong/ai/AiNiee-Next/.ralph/agent/memories.md
 ## Patterns
 
+### mem-1772333640-f6d4
+> Enhanced progress dashboard implemented with charts, word counts, quality metrics, and exportable reports. Added: bar chart for project progress, pie charts for file status and quality distribution, word count tracking, quality score with breakdown, JSON/CSV export buttons. Reference: Transifex reporting patterns. Files: Tools/WebServer/components/ProgressDashboard.tsx (+382 lines), constants.ts (+30 i18n keys). Committed: a436aadf.
+<!-- tags: ui, dashboard, charts, translation | created: 2026-03-01 -->
+
+### mem-1772333011-d190
+> Context preview panel implemented in Editor: Shows previous/current/next segment context, toggleable panel in toolbar, i18n support (Chinese/English). Files: Tools/WebServer/pages/Editor.tsx (+157 lines), constants.ts (+16 i18n keys).
+<!-- tags: editor, ui, context-preview | created: 2026-03-01 -->
+
+### mem-1772331458-7339
+> Bilingual file viewer implemented: Created BilingualViewer component with 4 view modes (side-by-side, top-bottom, source-only, translation-only), synchronized scrolling, search highlighting, text controls (font size 12-20px, alignment), pagination, export (TXT/JSON), fullscreen mode. Route: /bilingual/:projectId/:fileId. Research-based design from DeepL/Microsoft Translator/Crowdin patterns. Files: Tools/WebServer/components/BilingualViewer.tsx (422 lines), pages/BilingualView.tsx (151 lines).
+<!-- tags: bilingual, viewer, ui, file-management, translation | created: 2026-03-01 -->
+
+### mem-1772287133-9de3
+> Python+Web桌面应用方案已完成分析并写入app.md。推荐Tauri+Python方案：体积最小(4-12MB vs Electron 100-300MB)，性能最佳，安全性最高。方案保留现有React前端和Python FastAPI后端，通过Tauri Rust主进程管理窗口和系统集成，Python作为子进程运行，通过HTTP与前端通信。分析了4种方案：Tauri+Python(推荐)、Electron+Python、PyWebView、Flet。
+<!-- tags: desktop-app, tauri, python | created: 2026-02-28 -->
+
+### mem-1772286826-dc79
+> Python+Web桌面应用构建方案已完成分析，写入app.md。推荐Tauri+Python方案：体积最小(5MB vs Electron 85MB)，性能最佳，安全性高。方案保留了现有Next.js前端和Python后端，通过Tauri WebView渲染前端，Rust主进程管理Python子进程通信。备选方案包括Electron+Python、PyWebView、Flet。
+<!-- tags: desktop-app, tauri, python, electron | created: 2026-02-28 -->
+
 ### mem-1772265173-8407
 > GitHub Actions Docker build triggered: Created louloulin/translateflow repo, added github remote, pushed main branch (db92a8ad), manually triggered Docker workflow (run_id: 22516588730). Building multi-platform images (linux/amd64,linux/arm64) for GHCR. Monitor with: gh run watch --repo louloulin/translateflow. After build, use docker-compose.production.yml to pull from ghcr.io/louloulin/translateflow.
 <!-- tags: docker, github-actions, cicd, multi-platform | created: 2026-02-28 -->
@@ -110,6 +130,18 @@
 <!-- tags: branding, config | created: 2026-02-27 -->
 ## Fixes
 
+### mem-1772335545-f053
+> Fixed bilingual output setting not exposed in UI: Added enable_bilingual_output field to AppConfig type, added i18n keys (feature_enable_bilingual_output), and added toggle to SettingsFeatures component. Verified with Playwright MCP.
+<!-- tags: ui, settings, bilingual, translation | created: 2026-03-01 -->
+
+### mem-1772334212-3559
+> Fixed bilingual output default value: Changed enable_bilingual_output default from False to True in TaskExecutor.py (manual_export function) and FileOutputer.py (_get_writer_default_config). This aligns with default_config.py which already has enable_bilingual_output: True. Previously bilingual output would be disabled even when config explicitly enabled it because these locations used False as fallback.
+<!-- tags: bilingual, config, translation | created: 2026-03-01 -->
+
+### mem-1772275176-45ae
+> Docker build fix: mediapipe platform-specific dependency. pyproject.toml now uses 'mediapipe; sys_platform == "linux" and platform_machine == "x86_64"' to avoid ARM64 build failures. ReaderUtil.py updated with graceful fallback. Dockerfile.production updated with build-essential, cmake, rustc, cargo for ARM64 compilation support. uv.lock regenerated.
+<!-- tags: docker, mediapipe, arm64 | created: 2026-02-28 -->
+
 ### mem-1772269441-e578
 > Docker build blocked by network timeouts and mediapipe ARM64 incompatibility. mediapipe 0.10.31 only supports x86_64 Linux not ARM64. Solutions: build on x86_64 or make mediapipe optional
 <!-- tags: docker, arm64, mediapipe, network | created: 2026-02-28 -->
@@ -158,3 +190,8 @@
 ### mem-1772264078-74cc
 > Docker build network constraints: Even with pre-pulled base images, apt-get downloads from Debian mirrors are slow (69.5 kB/s). Building TranslateFlow with all dependencies (73 packages, 51.4 MB) takes 6-8 hours on slow network. Solution: 1) Use CI/CD with better network, 2) Reduce dependencies in Dockerfile (remove graphics libraries if not needed), 3) Build during off-peak hours, 4) Use local package cache.
 <!-- tags: docker, performance, network | created: 2026-02-28 -->
+## Context
+
+### mem-1772335012-e2bc
+> Re-translation support implemented: Added --force/-f CLI option to allow re-translating already translated content. When enabled, all items are included and their translation status is reset to UNTRANSLATED. Files modified: CacheManager.py (generate_item_chunks with force_retranslate param), TaskConfig.py (force_retranslate config), TaskExecutor.py (pass parameter), web_server.py (API support), ainiee_cli.py (CLI argument).
+<!-- tags: translation, retranslation, cli, config | created: 2026-03-01 -->

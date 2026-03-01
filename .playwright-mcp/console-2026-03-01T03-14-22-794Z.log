@@ -1,0 +1,50 @@
+[     869ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[    1040ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/favicon.ico:0
+[    1119ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:4200/api/v1/auth/me:0
+[    1119ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:4200/api/v1/auth/me:0
+[    1163ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[    1163ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[    1163ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[    1164ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[    9009ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[    9009ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[    9010ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[    9010ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:4200/node_modules/.vite/deps/recharts.js?v=47659610:9025
+[   38506ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/cache/load:0
+[   38507ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:4200/api/cache/load:0
+[   38507ms] [ERROR] API Error: loadCache Error: Cache directory not found: /Users/louloulin/Documents/linchong/ai/AiNiee-Next/output/demo_project/cache. Please check if the project path is correct.
+    at Object.loadCache (http://localhost:4200/services/DataService.ts:718:15)
+    at async loadProjectAndCache (http://localhost:4200/pages/Editor.tsx:127:9) @ http://localhost:4200/services/DataService.ts:721
+[   38507ms] [ERROR] Failed to load project Error: Cache directory not found: /Users/louloulin/Documents/linchong/ai/AiNiee-Next/output/demo_project/cache. Please check if the project path is correct.
+    at Object.loadCache (http://localhost:4200/services/DataService.ts:718:15)
+    at async loadProjectAndCache (http://localhost:4200/pages/Editor.tsx:127:9) @ http://localhost:4200/pages/Editor.tsx:130
+[   38507ms] [ERROR] API Error: loadCache Error: Cache directory not found: /Users/louloulin/Documents/linchong/ai/AiNiee-Next/output/demo_project/cache. Please check if the project path is correct.
+    at Object.loadCache (http://localhost:4200/services/DataService.ts:718:15)
+    at async loadProjectAndCache (http://localhost:4200/pages/Editor.tsx:127:9) @ http://localhost:4200/services/DataService.ts:721
+[   38507ms] [ERROR] Failed to load project Error: Cache directory not found: /Users/louloulin/Documents/linchong/ai/AiNiee-Next/output/demo_project/cache. Please check if the project path is correct.
+    at Object.loadCache (http://localhost:4200/services/DataService.ts:718:15)
+    at async loadProjectAndCache (http://localhost:4200/pages/Editor.tsx:127:9) @ http://localhost:4200/pages/Editor.tsx:130

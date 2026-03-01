@@ -79,3 +79,66 @@ lint:
 # Format code
 format:
     cd Tools/WebServer && npx prettier --write src/
+
+# =============================================================================
+# Docker Build Commands
+# =============================================================================
+
+# Build ARM64 image (current platform - macOS ARM64)
+docker-build-arm64:
+    docker build -f Dockerfile.production -t translateflow:arm64-latest .
+
+# Build AMD64 image (for x86_64 Linux servers)
+docker-build-amd64:
+    docker build -f Dockerfile.production --platform linux/amd64 -t translateflow:amd64-latest .
+
+# Build multi-platform images (ARM64 + AMD64) and push to registry
+docker-build-multi:
+    docker buildx build --platform linux/amd64,linux/arm64 \
+        -t translateflow:multi \
+        -f Dockerfile.production \
+        --push .
+
+# Build with custom tag
+docker-build TAG="latest":
+    docker build -f Dockerfile.production -t translateflow:{{TAG}} .
+
+# Build without cache
+docker-build-no-cache:
+    docker build --no-cache -f Dockerfile.production -t translateflow:arm64-latest .
+
+# Run container locally
+docker-run:
+    docker run -d --name translateflow-app \
+        -p 8000:8000 \
+        -e DB_HOST=host.docker.internal \
+        translateflow:arm64-latest
+
+# Stop and remove container
+docker-down:
+    docker rm -f translateflow-app || true
+
+# View container logs
+docker-logs:
+    docker logs -f translateflow-app
+
+# Show running containers
+docker-ps:
+    docker ps --filter "name=translateflow"
+
+# Cleanup unused images
+docker-clean:
+    docker image prune -f
+
+# Full rebuild
+docker-rebuild: docker-clean docker-build-arm64
+
+# Docker Compose commands
+compose-up:
+    docker-compose -f docker-compose.production.yml up -d
+
+compose-down:
+    docker-compose -f docker-compose.production.yml down
+
+compose-logs:
+    docker-compose -f docker-compose.production.yml logs -f

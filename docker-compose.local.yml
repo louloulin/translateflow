@@ -3,13 +3,19 @@ version: '3.8'
 services:
   # TranslateFlow Application
   app:
-    image: translateflow:syntax-check
+    image: translateflow:v2.4.6C
     container_name: translateflow-app
     ports:
       - "8000:8000"
+    
+    # Run as translateflow user (UID 1000, GID 1000)
+    # This ensures proper file permissions for mounted volumes
+    user: "1000:1000"
+    
     environment:
       # Use SQLite for local testing (no PostgreSQL needed)
       - USE_SQLITE=true
+      - SQLITE_PATH=/app/data/translateflow.db
       - SECRET_KEY=local-dev-key-change-in-production
       - PYTHONUNBUFFERED=1
       - RUNNING_IN_DOCKER=true
@@ -17,8 +23,12 @@ services:
       - PORT=8000
 
     volumes:
+      # Application data directories
       - ./output:/app/output
       - ./updatetemp:/app/updatetemp
+      - ./data:/app/data
+      # Resource directory for configuration persistence
+      - ./Resource:/app/Resource
 
     restart: unless-stopped
 

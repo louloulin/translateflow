@@ -28,6 +28,7 @@ except ImportError:
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 UPDATETEMP_PATH = os.path.join(PROJECT_ROOT, "updatetemp") # Define upload directory
 TEMP_EDIT_PATH = os.path.join(PROJECT_ROOT, "output", "temp_edit") # Define draft directory
+VERSION_PATH = os.path.join(PROJECT_ROOT, "output", "versions") # Version history storage
 
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
@@ -239,6 +240,8 @@ class TaskManager:
                 cli_args.extend(["--target", payload["target_lang"]])
             if payload.get("resume"):
                 cli_args.append("--resume")
+            if payload.get("force_retranslate"):
+                cli_args.append("--force")
             
             # Additional Overrides from Payload
             if payload.get("threads") is not None:
@@ -570,37 +573,60 @@ app = FastAPI(title="AiNiee CLI Backend API")
 @app.on_event("startup")
 def create_default_admin():
     """Create default admin user on startup if not exists."""
+    import traceback
     try:
         from uuid import uuid4
         from ModuleFolders.Service.Auth.models import UserRole, UserStatus
         from ModuleFolders.Service.Auth.password_manager import PasswordManager
         from ModuleFolders.Service.Auth import init_database
 
+        print("[Startup] Initializing default admin user...")
+
         # Initialize database tables first
         try:
+            print("[Startup] Calling init_database()...")
             init_database()
+            print("[Startup] Database initialized successfully")
         except Exception as e:
-            print(f"Database init in startup: {e}")
+            print(f"[Startup] Database init warning: {e}")
 
         # Check if admin already exists
+        print("[Startup] Checking for existing admin user...")
         admin_user = User.get_or_none(User.username == "admin")
+        print(f"[Startup] Query result: {admin_user}")
+
         if admin_user is None:
             # Create default admin user
+            print("[Startup] Creating new admin user...")
             password_manager = PasswordManager()
+            print("[Startup] Password manager initialized")
+
+            password_hash = password_manager.hash_password("admin")
+            print(f"[Startup] Password hash generated: {password_hash[:20]}...")
+
             admin_user = User.create(
                 id=str(uuid4()),
                 email="admin@translateflow.local",
                 username="admin",
-                password_hash=password_manager.hash_password("admin"),
+                password_hash=password_hash,
                 role=UserRole.SUPER_ADMIN.value,
                 status=UserStatus.ACTIVE.value,
                 email_verified=True,  # Admin doesn't need email verification
+                preferences={},  # Explicitly set all JSONField defaults
+                failed_login_attempts=0,
+                tenant_id=None,
+                full_name=None,
+                bio=None,
             )
-            print(f"Default admin user created with username: admin")
+            print(f"[Startup] User.create() called successfully, ID: {admin_user.id}")
+            print(f"[Startup] Default admin user created with username: admin")
         else:
-            print(f"Admin user already exists")
+            print(f"[Startup] Admin user already exists: {admin_user.username}")
     except Exception as e:
-        print(f"Warning: Could not create default admin user: {e}")
+        print(f"[Startup] ERROR: Could not create default admin user: {e}")
+        print(f"[Startup] Exception type: {type(e).__name__}")
+        print(f"[Startup] Traceback:")
+        traceback.print_exc()
 
 # --- Paths to Resources ---
 RESOURCE_PATH = os.path.join(PROJECT_ROOT, "Resource")
@@ -1192,10 +1218,25 @@ async def get_config():
         "prompt_dictionary_data", "exclusion_list_data", "characterization_data",
         "world_building_content", "writing_style_content", "translation_example_data"
     ]
-    
+
     for k in rule_keys:
         if k in rules_config:
             loaded_config[k] = rules_config[k]
+
+    # 4. Load platforms from preset if not in profile
+    if "platforms" not in loaded_config or not loaded_config["platforms"]:
+        preset_path = os.path.join(RESOURCE_PATH, "platforms", "preset.json")
+        if os.path.exists(preset_path):
+            try:
+                with open(preset_path, 'r', encoding='utf-8-sig') as f:
+                    preset_config = json.load(f)
+                    if "platforms" in preset_config:
+                        loaded_config["platforms"] = preset_config["platforms"]
+            except Exception as e:
+                print(f"[Config] Failed to load platforms from preset: {e}")
+                # Ensure platforms is at least an empty dict
+                if "platforms" not in loaded_config:
+                    loaded_config["platforms"] = {}
 
     # Meta
     loaded_config["active_profile"] = current_profile_name
@@ -2461,6 +2502,128 @@ async def delete_temp_files(request: DeleteFileRequest):
             failed.append({"file": filename, "error": "File not found"})
             
     return {"deleted": deleted, "failed": failed}
+
+# --- Version History Endpoints ---
+
+def get_version_file_path(file_id: str) -> str:
+    """Get the directory path for file versions."""
+    version_dir = os.path.join(VERSION_PATH, file_id)
+    os.makedirs(version_dir, exist_ok=True)
+    return version_dir
+
+def get_version_index(file_id: str) -> list:
+    """Get version index for a file."""
+    index_file = os.path.join(get_version_file_path(file_id), "index.json")
+    if os.path.exists(index_file):
+        with open(index_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def save_version_index(file_id: str, versions: list):
+    """Save version index for a file."""
+    index_file = os.path.join(get_version_file_path(file_id), "index.json")
+    with open(index_file, 'w', encoding='utf-8') as f:
+        json.dump(versions, f, indent=2, ensure_ascii=False)
+
+@app.get("/api/v1/files/{file_id}/versions")
+async def list_file_versions(file_id: str):
+    """
+    List all versions for a specific file.
+    """
+    try:
+        versions = get_version_index(file_id)
+        return {"versions": versions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list versions: {e}")
+
+@app.post("/api/v1/files/{file_id}/versions")
+async def create_file_version(file_id: str, request: Request):
+    """
+    Create a new version snapshot for a file.
+    """
+    try:
+        body = await request.json()
+        content = body.get("content", "")
+        description = body.get("description", "")
+
+        version_dir = get_version_file_path(file_id)
+        versions = get_version_index(file_id)
+
+        # Create new version
+        version_num = len(versions) + 1
+        version_id = f"v{version_num}_{int(time.time())}"
+        version_file = os.path.join(version_dir, f"{version_id}.txt")
+
+        with open(version_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        version_data = {
+            "id": version_id,
+            "fileId": file_id,
+            "version": version_num,
+            "timestamp": int(time.time() * 1000),
+            "size": len(content),
+            "segmentCount": len(content.split('\n')),
+            "status": "completed",
+            "description": description
+        }
+
+        versions.append(version_data)
+        save_version_index(file_id, versions)
+
+        return {"version": version_data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create version: {e}")
+
+@app.get("/api/v1/files/{file_id}/versions/{version_id}/content")
+async def get_version_content(file_id: str, version_id: str):
+    """
+    Get the content of a specific version.
+    """
+    try:
+        version_dir = get_version_file_path(file_id)
+        version_file = os.path.join(version_dir, f"{version_id}.txt")
+
+        if not os.path.exists(version_file):
+            raise HTTPException(status_code=404, detail="Version not found")
+
+        with open(version_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        return {"content": content}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get version content: {e}")
+
+@app.delete("/api/v1/files/{file_id}/versions/{version_id}")
+async def delete_file_version(file_id: str, version_id: str):
+    """
+    Delete a specific version.
+    """
+    try:
+        version_dir = get_version_file_path(file_id)
+        versions = get_version_index(file_id)
+
+        # Find and remove version
+        version_data = next((v for v in versions if v["id"] == version_id), None)
+        if not version_data:
+            raise HTTPException(status_code=404, detail="Version not found")
+
+        # Delete version file
+        version_file = os.path.join(version_dir, f"{version_id}.txt")
+        if os.path.exists(version_file):
+            os.remove(version_file)
+
+        # Update index
+        versions = [v for v in versions if v["id"] != version_id]
+        save_version_index(file_id, versions)
+
+        return {"message": "Version deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete version: {e}")
 
 # --- Draft Management Endpoints ---
 

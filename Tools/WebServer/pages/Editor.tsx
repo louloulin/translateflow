@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import { DataService } from '@/services/DataService';
 import { ProjectService } from '@/services/ProjectService';
@@ -8,7 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, Search, Sparkles, Check, Lock, RotateCcw, Copy, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, Save, Search, Sparkles, Check, Lock, RotateCcw, Copy, ChevronLeft, ChevronRight, Loader2, PanelRightClose, PanelRightOpen, BookOpen, Plus, Trash2, X, Download, Wand2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,6 +34,27 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Batch Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchTranslating, setIsBatchTranslating] = useState(false);
+
+  // Context Panel
+  const [showContextPanel, setShowContextPanel] = useState(true);
+  const [contextSegments, setContextSegments] = useState<{ prev: Segment | null; next: Segment | null }>({ prev: null, next: null });
+
+  // Glossary Panel
+  const [showGlossaryPanel, setShowGlossaryPanel] = useState(false);
+  const [glossaryEntries, setGlossaryEntries] = useState<{ id: string; source: string; target: string }[]>([
+    { id: '1', source: 'Hello', target: '你好' },
+    { id: '2', source: 'World', target: '世界' },
+    { id: '3', source: 'Settings', target: '设置' },
+    { id: '4', source: 'Language', target: '语言' },
+    { id: '5', source: 'Translation', target: '翻译' },
+  ]);
+  const [newGlossarySource, setNewGlossarySource] = useState('');
+  const [newGlossaryTarget, setNewGlossaryTarget] = useState('');
+  const [glossarySearch, setGlossarySearch] = useState('');
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -67,6 +90,7 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + Enter: Approve current segment
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         if (activeSegmentId) {
@@ -78,11 +102,60 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
           }
         }
       }
+      // Ctrl/Cmd + A: Select all (when not in input)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        e.preventDefault();
+        handleSelectAll();
+      }
+      // Escape: Clear selection
+      if (e.key === 'Escape') {
+        handleClearSelection();
+      }
+      // Ctrl/Cmd + Shift + A: Deselect all
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        setSelectedIds(new Set());
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSegmentId, segments]);
+  }, [activeSegmentId, segments, selectedIds]);
+
+  // Load context when active segment changes
+  useEffect(() => {
+    const loadContext = async () => {
+      if (!activeSegmentId || !project?.rootPath || !currentFile?.path) {
+        setContextSegments({ prev: null, next: null });
+        return;
+      }
+
+      const activeIndex = segments.findIndex(s => s.id === activeSegmentId);
+      if (activeIndex === -1) return;
+
+      try {
+        // Fetch previous segment (index - 1)
+        const prevIndex = activeIndex > 0 ? segments[activeIndex - 1].index - 1 : null;
+        // Fetch next segment (index + 1)
+        const nextIndex = activeIndex < segments.length - 1 ? segments[activeIndex + 1].index + 1 : null;
+
+        const contextPromises: Promise<{ index: number; source: string; target: string } | null>[] = [];
+
+        // We'll load context from the current page data - for now use segments
+        const prevSeg = activeIndex > 0 ? segments[activeIndex - 1] : null;
+        const nextSeg = activeIndex < segments.length - 1 ? segments[activeIndex + 1] : null;
+
+        setContextSegments({
+          prev: prevSeg,
+          next: nextSeg
+        });
+      } catch (error) {
+        console.error("Failed to load context", error);
+      }
+    };
+
+    loadContext();
+  }, [activeSegmentId, segments, project?.rootPath, currentFile?.path]);
 
   const loadProjectAndCache = async () => {
     setLoading(true);
@@ -239,6 +312,172 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
     handleSegmentUpdate(id, source);
   };
 
+  // Batch Selection Handlers
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === segments.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(segments.map(s => s.id)));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  // Batch Actions
+  const handleBatchTranslate = async () => {
+    if (selectedIds.size === 0) {
+      toast({ title: "Info", description: "No segments selected" });
+      return;
+    }
+
+    if (!project?.rootPath || !currentFile) {
+      toast({ title: "Error", description: "Project path missing", variant: "destructive" });
+      return;
+    }
+
+    setIsBatchTranslating(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      for (const id of selectedIds) {
+        const segment = segments.find(s => s.id === id);
+        if (!segment || segment.locked) continue;
+
+        try {
+          const result = await DataService.checkSingleLine(
+            project.rootPath,
+            currentFile.path,
+            segment.index,
+            segment.target
+          );
+
+          if (result.corrected_translation) {
+            await handleSegmentUpdate(id, result.corrected_translation);
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          failCount++;
+          console.error(`Failed to translate segment ${id}:`, error);
+        }
+      }
+
+      toast({
+        title: "Batch Translate Complete",
+        description: `Translated: ${successCount}, Failed: ${failCount}`,
+        variant: failCount > 0 ? "default" : "default",
+      });
+    } catch (error) {
+      console.error("Batch translate error:", error);
+      toast({
+        title: "Error",
+        description: "Batch translation failed",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBatchTranslating(false);
+    }
+  };
+
+  const handleBatchApprove = () => {
+    if (selectedIds.size === 0) {
+      toast({ title: "Info", description: "No segments selected" });
+      return;
+    }
+
+    setSegments(prev => prev.map(s => {
+      if (selectedIds.has(s.id)) {
+        return { ...s, status: 'approved' as const };
+      }
+      return s;
+    }));
+
+    toast({
+      title: "Approved",
+      description: `${selectedIds.size} segments marked as approved`,
+    });
+
+    handleClearSelection();
+  };
+
+  const handleBatchExport = () => {
+    if (selectedIds.size === 0) {
+      toast({ title: "Info", description: "No segments selected" });
+      return;
+    }
+
+    const selectedSegments = segments.filter(s => selectedIds.has(s.id));
+    const exportData = selectedSegments.map(s => ({
+      index: s.index,
+      source: s.source,
+      target: s.target,
+      status: s.status,
+    }));
+
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `translation-export-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exported",
+      description: `${selectedSegments.length} segments exported`,
+    });
+
+    handleClearSelection();
+  };
+
+  // Glossary handlers
+  const handleAddGlossaryEntry = () => {
+    if (!newGlossarySource.trim() || !newGlossaryTarget.trim()) return;
+    const newEntry = {
+      id: Date.now().toString(),
+      source: newGlossarySource.trim(),
+      target: newGlossaryTarget.trim()
+    };
+    setGlossaryEntries([...glossaryEntries, newEntry]);
+    setNewGlossarySource('');
+    setNewGlossaryTarget('');
+  };
+
+  const handleDeleteGlossaryEntry = (id: string) => {
+    setGlossaryEntries(glossaryEntries.filter(e => e.id !== id));
+  };
+
+  const handleApplyGlossary = (target: string) => {
+    if (!activeSegmentId) {
+      toast({ title: "Info", description: "Select a segment first" });
+      return;
+    }
+    handleSegmentUpdate(activeSegmentId, target);
+    toast({ title: "Applied", description: "Glossary term applied to segment" });
+  };
+
+  const filteredGlossaryEntries = glossaryEntries.filter(e =>
+    e.source.toLowerCase().includes(glossarySearch.toLowerCase()) ||
+    e.target.toLowerCase().includes(glossarySearch.toLowerCase())
+  );
+
   // Filter is done client side for current page, 
   // ideally backend should support status filter.
   const filteredSegments = segments.filter(s => {
@@ -302,9 +541,26 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button 
-              size="sm" 
-              variant="secondary" 
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowContextPanel(!showContextPanel)}
+              title={showContextPanel ? "Hide Context Panel" : "Show Context Panel"}
+            >
+              {showContextPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowGlossaryPanel(!showGlossaryPanel)}
+              title={showGlossaryPanel ? "Hide Glossary Panel" : "Show Glossary Panel"}
+              className={showGlossaryPanel ? "bg-accent" : ""}
+            >
+              <BookOpen className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={handleTranslateAll}
               disabled={isTranslating}
             >
@@ -318,21 +574,108 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
           </div>
         </div>
         <Progress value={progress} className="h-1 w-full rounded-none" />
+        {/* Batch Action Toolbar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center justify-between px-4 py-2 bg-pink-50 dark:bg-pink-900/20 border-b border-pink-200 dark:border-pink-800">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSelection}
+                className="h-8 text-pink-700 dark:text-pink-300"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear Selection ({selectedIds.size})
+              </Button>
+              <span className="text-xs text-pink-600 dark:text-pink-400">
+                Press Esc to clear • Ctrl+A to select all
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleBatchTranslate}
+                disabled={isBatchTranslating}
+                className="h-8"
+              >
+                {isBatchTranslating ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4 mr-2 text-pink-500" />
+                )}
+                Translate
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleBatchApprove}
+                className="h-8"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-500" />
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleBatchExport}
+                className="h-8"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Editor Grid */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="min-w-full divide-y divide-border pb-20">
+      <div className="flex-1 overflow-hidden">
+        <div className="flex h-full">
+          {/* Main Editor Area */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="min-w-full divide-y divide-border pb-20">
+              {/* Header Row with Select All */}
+              <div className="grid grid-cols-[40px_50px_1fr_1fr_50px] bg-muted/50 sticky top-0 z-10 border-b">
+                <div className="p-2 flex items-center justify-center">
+                  <Checkbox
+                    checked={selectedIds.size === segments.length && segments.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                  />
+                </div>
+                <div className="p-3 text-xs font-medium text-muted-foreground border-r flex items-center justify-center">
+                  #
+                </div>
+                <div className="p-3 text-xs font-medium text-muted-foreground border-r">
+                  Source
+                </div>
+                <div className="p-3 text-xs font-medium text-muted-foreground border-r">
+                  Target
+                </div>
+                <div className="p-3"></div>
+              </div>
           {filteredSegments.map((segment) => (
-            <div 
+            <div
               key={segment.id}
               ref={activeSegmentId === segment.id ? activeRowRef : null}
               className={cn(
-                "grid grid-cols-[50px_1fr_1fr_50px] group transition-colors",
-                activeSegmentId === segment.id ? "bg-accent/50" : "hover:bg-accent/20"
+                "grid grid-cols-[40px_50px_1fr_1fr_50px] group transition-colors",
+                activeSegmentId === segment.id ? "bg-accent/50" : "hover:bg-accent/20",
+                selectedIds.has(segment.id) && "bg-pink-50 dark:bg-pink-900/10"
               )}
               onClick={() => setActiveSegmentId(segment.id)}
             >
+              {/* Checkbox Column */}
+              <div className="p-2 flex items-center justify-center border-r bg-muted/5">
+                <Checkbox
+                  checked={selectedIds.has(segment.id)}
+                  onCheckedChange={() => handleToggleSelect(segment.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`Select segment ${segment.index}`}
+                />
+              </div>
+
               {/* Index Column */}
               <div className="p-3 text-xs text-muted-foreground border-r flex flex-col items-center justify-center select-none bg-muted/10 gap-1">
                 <span>{segment.index}</span>
@@ -435,6 +778,195 @@ export const Editor: React.FC<EditorProps> = ({ projectId, fileId }) => {
             <div className="flex flex-col items-center justify-center p-12 text-muted-foreground gap-2">
               <Search className="h-8 w-8 opacity-20" />
               <p>No segments found.</p>
+            </div>
+          )}
+        </div>
+          </div>
+
+          {/* Context Panel */}
+          {showContextPanel && (
+            <div className="w-72 border-l bg-card shrink-0 flex flex-col">
+              <div className="p-3 border-b bg-muted/30">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-pink-500" />
+                  {t('editor_context_panel', 'Context Preview')}
+                </h3>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-3 space-y-4">
+                  {/* Previous Segment */}
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <ChevronLeft className="h-3 w-3" />
+                      {t('editor_context_previous', 'Previous')}
+                    </div>
+                    {contextSegments.prev ? (
+                      <div
+                        className="p-3 rounded-lg bg-muted/50 border text-sm cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => setActiveSegmentId(contextSegments.prev!.id)}
+                      >
+                        <div className="text-xs text-muted-foreground mb-1">
+                          #{contextSegments.prev.index}
+                        </div>
+                        <div className="text-muted-foreground line-clamp-3">
+                          {contextSegments.prev.source}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-lg border border-dashed text-sm text-muted-foreground text-center">
+                        {t('editor_context_no_previous', 'No previous segment')}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current Segment Info */}
+                  {activeSegmentId && (
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-muted-foreground">
+                        {t('editor_context_current', 'Current Selection')}
+                      </div>
+                      <div className="p-3 rounded-lg bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800">
+                        {segments.find(s => s.id === activeSegmentId) && (
+                          <>
+                            <div className="text-xs text-pink-600 dark:text-pink-400 mb-1">
+                              #{segments.find(s => s.id === activeSegmentId)?.index}
+                            </div>
+                            <div className="text-sm line-clamp-4">
+                              {segments.find(s => s.id === activeSegmentId)?.source}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Next Segment */}
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      {t('editor_context_next', 'Next')}
+                      <ChevronRight className="h-3 w-3" />
+                    </div>
+                    {contextSegments.next ? (
+                      <div
+                        className="p-3 rounded-lg bg-muted/50 border text-sm cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => setActiveSegmentId(contextSegments.next!.id)}
+                      >
+                        <div className="text-xs text-muted-foreground mb-1">
+                          #{contextSegments.next.index}
+                        </div>
+                        <div className="text-muted-foreground line-clamp-3">
+                          {contextSegments.next.source}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-lg border border-dashed text-sm text-muted-foreground text-center">
+                        {t('editor_context_no_next', 'No next segment')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {/* Glossary Panel */}
+          {showGlossaryPanel && (
+            <div className="w-80 border-l bg-card shrink-0 flex flex-col">
+              <div className="p-3 border-b bg-muted/30">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-blue-500" />
+                  {t('editor_glossary_panel', 'Glossary')}
+                </h3>
+              </div>
+
+              {/* Add new entry */}
+              <div className="p-3 border-b space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">
+                  {t('editor_glossary_add', 'Add New Term')}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder={t('editor_glossary_source', 'Source')}
+                    value={newGlossarySource}
+                    onChange={(e) => setNewGlossarySource(e.target.value)}
+                    className="h-8 text-xs"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddGlossaryEntry()}
+                  />
+                  <Input
+                    placeholder={t('editor_glossary_target', 'Target')}
+                    value={newGlossaryTarget}
+                    onChange={(e) => setNewGlossaryTarget(e.target.value)}
+                    className="h-8 text-xs"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddGlossaryEntry()}
+                  />
+                  <Button
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={handleAddGlossaryEntry}
+                    disabled={!newGlossarySource.trim() || !newGlossaryTarget.trim()}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="p-3 border-b">
+                <Input
+                  placeholder={t('editor_glossary_search', 'Search glossary...')}
+                  value={glossarySearch}
+                  onChange={(e) => setGlossarySearch(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="p-3 space-y-2">
+                  {filteredGlossaryEntries.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      {t('editor_glossary_empty', 'No glossary entries')}
+                    </div>
+                  ) : (
+                    filteredGlossaryEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              {entry.source}
+                            </div>
+                            <div className="text-sm font-medium line-clamp-2">
+                              {entry.target}
+                            </div>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                              title="Apply to segment"
+                              onClick={() => handleApplyGlossary(entry.target)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 text-destructive"
+                              title="Delete"
+                              onClick={() => handleDeleteGlossaryEntry(entry.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
             </div>
           )}
         </div>

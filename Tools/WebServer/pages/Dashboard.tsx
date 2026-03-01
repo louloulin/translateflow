@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ProjectCard } from '@/components/ProjectCard';
 import { CreateProjectDialog } from '@/components/CreateProjectDialog';
+import { ProgressDashboard } from '@/components/ProgressDashboard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 export const Dashboard: React.FC = () => {
@@ -243,6 +245,20 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* Progress Dashboard */}
+      <Tabs defaultValue="progress" className="w-full">
+        <TabsList>
+          <TabsTrigger value="progress">
+            {t('progressDashboard', '进度仪表盘')}
+          </TabsTrigger>
+          <TabsTrigger value="projects">
+            {t('projects', '项目列表')}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="progress" className="mt-4">
+          <ProgressDashboard projects={projects} />
+        </TabsContent>
+        <TabsContent value="projects">
       {/* Projects Grid */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -268,6 +284,8 @@ export const Dashboard: React.FC = () => {
             </div>
         )}
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -106,6 +106,7 @@ class TaskConfig(Base):
         self.output_filename_suffix = "" # NEW: 输出文件名后缀
         self.enable_bilingual_output = True # NEW: 是否启用双语输出 (default True)
         self.bilingual_text_order = "translation_first" # NEW: 双语文本顺序
+        self.force_retranslate = False # NEW: 强制重新翻译所有内容
         self.polishing_mode_selection = "translated_text_polish" # NEW: 润色模式选择
         self.polishing_pre_line_counts = 2 # NEW: 润色时获取上文的行数
         self.cache_backup_limit = 10

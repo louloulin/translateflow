@@ -356,7 +356,7 @@ class TaskExecutor(Base):
             "translated_suffix": config.get('output_filename_suffix', ''),
             "bilingual_suffix": "_bilingual",
             "bilingual_order": config.get('bilingual_text_order', 'translation_first'),
-            "enable_bilingual_output": config.get('enable_bilingual_output', False)
+            "enable_bilingual_output": config.get('enable_bilingual_output', True)
         }
 
         # 写入文件
@@ -544,7 +544,8 @@ class TaskExecutor(Base):
                     self.config.pre_line_counts,
                     TaskType.TRANSLATION,
                     getattr(self.config, 'enable_context_enhancement', False),
-                    self.config.pre_line_counts
+                    self.config.pre_line_counts,
+                    getattr(self.config, 'force_retranslate', False)
                 )
 
                 # 生成翻译任务合集列表
@@ -830,7 +831,8 @@ class TaskExecutor(Base):
                         self.config.polishing_pre_line_counts,
                         TaskType.TRANSLATION,
                         False,  # 润色模式不需要上下文增强
-                        0
+                        0,
+                        getattr(self.config, 'force_retranslate', False)
                     )
                 elif self.config.polishing_mode_selection == "translated_text_polish":
                     chunks, previous_chunks, file_paths, source_context_chunks = self.cache_manager.generate_item_chunks(
@@ -839,7 +841,8 @@ class TaskExecutor(Base):
                         self.config.polishing_pre_line_counts,
                         TaskType.POLISH,
                         False,  # 润色模式不需要上下文增强
-                        0
+                        0,
+                        getattr(self.config, 'force_retranslate', False)
                     )
 
                 # 生成润色任务合集列表

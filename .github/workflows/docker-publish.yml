@@ -51,7 +51,7 @@ jobs:
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09
         with:
           context: .
-          file: ./Dockerfile.production
+          file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -71,7 +71,7 @@ jobs:
         run: |
           mkdir -p deploy_package
 
-          cp Dockerfile.production pyproject.toml README.md deploy_package/
+          cp Dockerfile pyproject.toml README.md deploy_package/
 
           # 复制 docker-compose 文件
           [ -f docker-compose.yml ] && cp docker-compose.yml deploy_package/

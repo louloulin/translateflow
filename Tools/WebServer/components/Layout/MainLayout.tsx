@@ -37,6 +37,9 @@ import { Teams } from '@/pages/Teams';
 import { Login } from '@/pages/Login';
 import { Profile } from '@/pages/Profile';
 import { Subscription } from '@/pages/Subscription';
+import { BilingualView } from '@/pages/BilingualView';
+import { FileComparisonView } from '@/pages/FileComparisonView';
+import { VersionHistoryView } from '@/pages/VersionHistoryView';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Custom hook to track hash based location for navigation
@@ -178,13 +181,27 @@ export const MainLayout: React.FC = () => {
           case '/monitor': content = <Monitor />; break;
           case '/export': content = <div className="text-muted-foreground text-center mt-20">{t('menu_export_only')} (Placeholder)</div>; break;
           case '/logs': content = <div className="text-muted-foreground text-center mt-20">System Logs (Placeholder)</div>; break;
-          default: 
+          default:
             // Simple router matching for projects
             if (pathname.startsWith('/editor/')) {
               const parts = pathname.split('/');
               const projectId = parts[2];
               const fileId = parts[3];
               content = <Editor projectId={projectId} fileId={fileId} />;
+            } else if (pathname.startsWith('/bilingual/')) {
+              const parts = pathname.split('/');
+              const projectId = parts[2];
+              const fileId = parts[3];
+              content = <BilingualView projectId={projectId} fileId={fileId} />;
+            } else if (pathname.startsWith('/comparison/')) {
+              const parts = pathname.split('/');
+              const projectId = parts[2];
+              content = <FileComparisonView projectId={projectId} />;
+            } else if (pathname.startsWith('/history/')) {
+              const parts = pathname.split('/');
+              const projectId = parts[2];
+              const fileId = parts[3];
+              content = <VersionHistoryView />;
             } else if (pathname.startsWith('/projects/')) {
               const projectId = pathname.split('/projects/')[1];
               content = <ProjectDetails projectId={projectId} />;

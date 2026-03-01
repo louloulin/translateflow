@@ -52,7 +52,7 @@ BUILD_ARGS=(
 # Build options
 BUILD_OPTIONS=(
     --platform "${PLATFORMS}"
-    --file "./Dockerfile.production"
+    --file "./Dockerfile"
     --tag "${REGISTRY}${IMAGE_NAME}:${IMAGE_TAG}"
     --tag "${REGISTRY}${IMAGE_NAME}:${VERSION}"
     --progress "plain"

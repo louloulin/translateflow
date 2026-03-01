@@ -75,6 +75,29 @@ from ModuleFolders.CLI.OperationLogger import OperationLogger, log_operation
 
 console = Console()
 
+# Cross-platform notification sound
+def play_notification_sound():
+    """Play notification sound on task completion (cross-platform)"""
+    if not sys.platform.startswith('win'):
+        # On non-Windows systems, sounds are typically disabled in headless environments
+        # Use terminal bell as fallback (may not work in all terminals)
+        try:
+            print('\a', end='', flush=True)
+        except:
+            pass
+        return
+    
+    # Windows: use winsound for notification
+    try:
+        import winsound
+        winsound.MessageBeep()
+    except:
+        # Fallback to terminal bell
+        try:
+            print('\a', end='', flush=True)
+        except:
+            pass
+
 # 角色介绍与翻译示例的校验键值对
 FEATURE_REQUIRED_KEYS = {
     "characterization_data": {"original_name", "translated_name", "gender", "age", "personality", "speech_style", "additional_info"},
@@ -251,6 +274,118 @@ class WebLogger:
 
     def update_status(self, event, data):
         pass
+
+
+def normalize_path_for_filesystem(path):
+    """
+    智能文件路径匹配函数：处理包含特殊字符的文件名
+
+    常见问题：
+    - 文件名包含 U+2019 (') 而不是普通单引号 (')
+    - 文件名包含 U+00A0 (NBSP) 而不是普通空格
+
+    Args:
+        path: 原始文件路径
+
+    Returns:
+        如果找到匹配文件，返回正确的路径；否则返回原始路径
+    """
+    import unicodedata
+
+    # 如果路径存在，直接返回
+    if os.path.exists(path):
+        return path
+
+    # 获取目录和文件名
+    directory = os.path.dirname(path)
+    filename = os.path.basename(path)
+
+    # 如果目录不存在，返回原始路径
+    if not os.path.exists(directory):
+        return path
+
+    # 尝试多种规范化策略
+    strategies = []
+
+    # 策略1: 规范化 Unicode 字符（NFC/NFD）
+    for form in ['NFC', 'NFD', 'NFKC', 'NFKD']:
+        normalized = unicodedata.normalize(form, filename)
+        if normalized != filename:
+            strategies.append(normalized)
+
+    # 策略2: 替换常见的特殊引号为普通引号
+    quote_replacements = [
+        ('\u2018', "'"),  # Left single quotation mark
+        ('\u2019', "'"),  # Right single quotation mark
+        ('\u201c', '"'),  # Left double quotation mark
+        ('\u201d', '"'),  # Right double quotation mark
+        ('\u0060', "'"),  # Grave accent
+        ('\u00b4', "'"),  # Acute accent
+    ]
+
+    for special, normal in quote_replacements:
+        if special in filename:
+            strategies.append(filename.replace(special, normal))
+
+    # 策略3: 替换不换行空格为普通空格
+    if '\u00A0' in filename:
+        strategies.append(filename.replace('\u00A0', ' '))
+
+    # 策略4: 组合策略（引号+空格）
+    combined = filename
+    for special, normal in quote_replacements:
+        combined = combined.replace(special, normal)
+    combined = combined.replace('\u00A0', ' ')
+    if combined != filename:
+        strategies.append(combined)
+
+    # 策略5: 模糊匹配（忽略大小写和特殊字符）
+    # 获取目录中的所有文件
+    try:
+        files_in_dir = os.listdir(directory)
+    except:
+        return path
+
+    # 尝试精确匹配所有策略
+    for strategy_filename in strategies:
+        test_path = os.path.join(directory, strategy_filename)
+        if os.path.exists(test_path):
+            return test_path
+
+    # 策略6: 模糊匹配（移除所有特殊字符后比较）
+    def normalize_for_compare(name):
+        """规范化文件名用于比较"""
+        # 替换所有特殊引号和空格
+        for special, normal in quote_replacements:
+            name = name.replace(special, normal)
+        name = name.replace('\u00A0', ' ')
+        # 转换为小写
+        return name.lower()
+
+    normalized_input = normalize_for_compare(filename)
+
+    for file_in_dir in files_in_dir:
+        if normalize_for_compare(file_in_dir) == normalized_input:
+            return os.path.join(directory, file_in_dir)
+
+    # 策略7: 部分匹配（如果文件名很长，尝试匹配主要部分）
+    if len(filename) > 20:
+        # 使用文件名的主要部分（去除扩展名）
+        name_without_ext = os.path.splitext(filename)[0]
+        if len(name_without_ext) > 20:
+            # 取前 50% 的字符进行匹配
+            key_part = name_without_ext[:len(name_without_ext)//2]
+
+            for file_in_dir in files_in_dir:
+                if key_part.lower() in file_in_dir.lower():
+                    candidate_path = os.path.join(directory, file_in_dir)
+                    if os.path.exists(candidate_path):
+                        console.print(f"[yellow]Warning: Using approximate file match: '{file_in_dir}'[/yellow]")
+                        return candidate_path
+
+    # 所有策略都失败，返回原始路径
+    return path
+
 
 class CLIMenu:
     def __init__(self):
@@ -995,7 +1130,7 @@ class CLIMenu:
                 # 在非交互模式下，如果传入了 input_path，则使用它
                 if args.input_path:
                     # 使用 run_task 组合逻辑，因为 run_all_in_one 内部带 path 选择
-                    self.run_task(TaskType.TRANSLATION, target_path=args.input_path, continue_status=args.resume, non_interactive=True, web_mode=args.web_mode, from_queue=True)
+                    self.run_task(TaskType.TRANSLATION, target_path=args.input_path, continue_status=args.resume, non_interactive=True, web_mode=args.web_mode, from_queue=True, force_retranslate=getattr(args, 'force_retranslate', False))
                     if Base.work_status != Base.STATUS.STOPING:
                         self.run_task(TaskType.POLISH, target_path=args.input_path, continue_status=True, non_interactive=True, web_mode=args.web_mode)
                 else:
@@ -1006,7 +1141,8 @@ class CLIMenu:
                     target_path=args.input_path,
                     continue_status=args.resume,
                     non_interactive=args.non_interactive,
-                    web_mode=args.web_mode
+                    web_mode=args.web_mode,
+                    force_retranslate=getattr(args, 'force_retranslate', False)
                 )
         elif args.task == 'export':
             self.run_export_only(
@@ -2410,7 +2546,7 @@ class CLIMenu:
             console.print(f"[green]Plugin '{name}' {'enabled' if not current_state else 'disabled'}.[/green]")
             time.sleep(0.5)
 
-    def run_task(self, task_mode, target_path=None, continue_status=False, non_interactive=False, web_mode=False, from_queue=False):
+    def run_task(self, task_mode, target_path=None, continue_status=False, non_interactive=False, web_mode=False, from_queue=False, force_retranslate=False):
         # 如果是非交互模式，直接跳过菜单
         if target_path is None:
             last_path = self.config.get("label_input_path")
@@ -2515,9 +2651,18 @@ class CLIMenu:
                     target_path = candidates[0]
                     console.print(f"[dim]Switched target to file: {target_path}[/dim]")
 
-        # --- 非交互模式的路径处理 ---
+        # --- 非交互模式的路径处理 with intelligent path matching ---
+        # 尝试智能匹配文件路径（处理特殊字符）
+        matched_path = normalize_path_for_filesystem(target_path)
+        if matched_path != target_path:
+            console.print(f"[green]✓ Smart path matching found file:[/green]")
+            console.print(f"[dim]  Original: {os.path.basename(target_path)}[/dim]")
+            console.print(f"[dim]  Matched:  {os.path.basename(matched_path)}[/dim]")
+            target_path = matched_path
+
         if not os.path.exists(target_path):
             console.print(f"[red]Error: Input path '{target_path}' not found.[/red]")
+            console.print(f"[yellow]Tip: The filename may contain special characters. Please verify the exact filename.[/yellow]")
             return
 
         self._update_recent_projects(target_path)
@@ -2662,6 +2807,11 @@ class CLIMenu:
 
         # 确保 TaskExecutor 的配置与 CLIMenu 的配置同步
         self.task_executor.config.load_config_from_dict(self.config)
+
+        # Set force_retranslate if provided
+        if force_retranslate:
+            self.task_executor.config.force_retranslate = True
+
         
         if self.input_listener.disabled and not web_mode:
             self.ui.log("[bold yellow]Warning: Keyboard listener failed to initialize (no TTY found). Hotkeys will be disabled.[/bold yellow]")
@@ -3129,14 +3279,7 @@ class CLIMenu:
             
             if success.is_set():
                 if self.config.get("enable_task_notification", True):
-                    try:
-                        import winsound
-                        winsound.MessageBeep()
-                    except ImportError:
-                        print("提示：winsound模块在此系统上不可用（Linux/Docker环境）")
-                        pass
-                    except:
-                        print("\a")
+                    play_notification_sound()
                 
                 # Summary Report
                 lines = last_task_data.get("line", 0); tokens = last_task_data.get("token", 0); duration = last_task_data.get("time", 1)
@@ -3244,14 +3387,7 @@ class CLIMenu:
             if task_success:
                 self.ui.log("[bold green]All Done![/bold green]")
                 if self.config.get("enable_task_notification", True):
-                    try:
-                        import winsound
-                        winsound.MessageBeep()
-                    except ImportError:
-                        print("提示：winsound模块在此系统上不可用（Linux/Docker环境）")
-                        pass
-                    except:
-                        print("\a")
+                    play_notification_sound()
             
             if not non_interactive and not web_mode and not from_queue:
                 Prompt.ask(f"\n{i18n.get('msg_task_ended')}")
@@ -3334,11 +3470,20 @@ class CLIMenu:
                     target_path = candidates[0]
                     console.print(f"[dim]Switched target to file: {target_path}[/dim]")
 
-        # 2. Setup paths
+        # 2. Setup paths with intelligent path matching
+        # 尝试智能匹配文件路径（处理特殊字符）
+        matched_path = normalize_path_for_filesystem(target_path)
+        if matched_path != target_path:
+            console.print(f"[green]✓ Smart path matching found file:[/green]")
+            console.print(f"[dim]  Original: {os.path.basename(target_path)}[/dim]")
+            console.print(f"[dim]  Matched:  {os.path.basename(matched_path)}[/dim]")
+            target_path = matched_path
+
         if not os.path.exists(target_path):
             console.print(f"[red]Error: Input path '{target_path}' not found.[/red]")
+            console.print(f"[yellow]Tip: The filename may contain special characters. Please verify the exact filename.[/yellow]")
             return
-            
+
         abs_input = os.path.abspath(target_path)
         parent_dir = os.path.dirname(abs_input)
         base_name = os.path.basename(abs_input)
@@ -3865,6 +4010,7 @@ def main():
     
     # 运行策略
     parser.add_argument('-r', '--resume', action='store_true', help=i18n.get('help_resume'))
+    parser.add_argument('-f', '--force', dest='force_retranslate', action='store_true', help="Force re-translation of all content, ignoring previous translations")
     parser.add_argument('-y', '--yes', action='store_true', dest='non_interactive', help=i18n.get('help_yes'))
     parser.add_argument('--threads', type=int, help="Concurrent thread counts (0 for auto)")
     parser.add_argument('--retry', type=int, help="Max retry counts for failed requests")
