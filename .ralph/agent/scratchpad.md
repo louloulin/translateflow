@@ -103,8 +103,29 @@ Based on the plan, I need to create tasks for:
 
 **Conclusion**: Language mapper is fully functional and integrated into the web server. Memory mem-1772252903-3f11 is accurate.
 
+## Task 3: Verify Web UI Bilingual Toggle ✅ COMPLETED
+
+**Status**: Web UI bilingual toggle is fully implemented
+
+**Verification Results**:
+1. ✅ `SettingsFeatures.tsx:54` - `<FeatureToggle field="enable_bilingual_output">` UI toggle exists
+2. ✅ `constants.ts:457` - Chinese i18n key: "启用双语输出"
+3. ✅ `constants.ts:1168` - English i18n key: "Enable Bilingual Output"
+4. ✅ `types.ts:369` - AppConfig interface includes `enable_bilingual_output: boolean`
+5. ✅ `types.ts:370` - Includes `bilingual_text_order: string` for ordering preference
+
+**UI Implementation Details**:
+- Located in Settings > Features section
+- Uses FeatureToggle component for consistency
+- Fully bilingual (Chinese/English)
+- Connected to AppConfig type system
+- Part of feature settings grid layout
+
+**Conclusion**: The bilingual output toggle is properly exposed in the Web UI. Memory mem-1772335545-f053 is accurate.
+
 ## Next Steps
 
 1. ✅ Complete - Bilingual defaults verified
 2. ✅ Complete - Language mapper verified
-3. → Next task: Verify Web UI bilingual toggle exists
+3. ✅ Complete - Web UI toggle verified
+4. → Next task: Execute web server and verify API endpoints
