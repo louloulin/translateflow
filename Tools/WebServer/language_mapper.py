@@ -12,22 +12,34 @@ from typing import Optional, Dict
 LANGUAGE_NAME_TO_CODE: Dict[str, str] = {
     # English variants
     "English": "english",
+    "en": "english",
+    "EN": "english",
     "English (US)": "english",
     "English (UK)": "english_uk",
 
     # Chinese variants
     "Chinese (Simplified)": "chinese_simplified",
+    "zh_CN": "chinese_simplified",
+    "zh-cn": "chinese_simplified",
+    "zh-Hans": "chinese_simplified",
     "Chinese (Traditional)": "chinese_traditional",
+    "zh_TW": "chinese_traditional",
+    "zh-tw": "chinese_traditional",
+    "zh-Hant": "chinese_traditional",
     "Simplified Chinese": "chinese_simplified",
     "Traditional Chinese": "chinese_traditional",
     "Chinese": "chinese_simplified",  # Default to Simplified
 
     # Japanese
     "Japanese": "japanese",
+    "ja": "japanese",
+    "JA": "japanese",
     "Japanese (Japan)": "japanese",
 
     # Korean
     "Korean": "korean",
+    "ko": "korean",
+    "KO": "korean",
     "Korean (South Korea)": "korean",
 
     # Other languages
@@ -79,11 +91,20 @@ LANGUAGE_NAME_TO_CODE: Dict[str, str] = {
 LANGUAGE_CODE_TO_NAME: Dict[str, str] = {
     # Reverse of the above mapping
     "english": "English",
+    "en": "English",
     "english_uk": "English (UK)",
     "chinese_simplified": "Chinese (Simplified)",
+    "zh_CN": "Chinese (Simplified)",
+    "zh-cn": "Chinese (Simplified)",
+    "zh-Hans": "Chinese (Simplified)",
     "chinese_traditional": "Chinese (Traditional)",
+    "zh_TW": "Chinese (Traditional)",
+    "zh-tw": "Chinese (Traditional)",
+    "zh-Hant": "Chinese (Traditional)",
     "japanese": "Japanese",
+    "ja": "Japanese",
     "korean": "Korean",
+    "ko": "Korean",
     "french": "French",
     "german": "German",
     "spanish": "Spanish",
@@ -252,6 +273,12 @@ def normalize_language_input(language_input: Optional[str]) -> str:
         'chinese_simplified'
         >>> normalize_language_input("chinese_simplified")
         'chinese_simplified'
+        >>> normalize_language_input("zh_CN")
+        'chinese_simplified'
+        >>> normalize_language_input("en")
+        'english'
+        >>> normalize_language_input("ja")
+        'japanese'
         >>> normalize_language_input("invalid")
         'auto'
     """
