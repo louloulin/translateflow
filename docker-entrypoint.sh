@@ -5,6 +5,36 @@ echo "========================================="
 echo "TranslateFlow Docker Initialization"
 echo "========================================="
 
+# Initialize default configuration files
+init_config() {
+    echo "[Init] Checking configuration files..."
+
+    # Create default profile if not exists
+    if [ ! -f "/app/Resource/profiles/default.json" ]; then
+        echo "[Init] Creating default profile from preset..."
+        mkdir -p /app/Resource/profiles
+        cp /app/Resource/platforms/preset.json /app/Resource/profiles/default.json
+        echo "✓ Default profile created"
+    else
+        echo "✓ Default profile exists"
+    fi
+
+    # Create main config.json if not exists
+    if [ ! -f "/app/Resource/config.json" ]; then
+        echo "[Init] Creating main config.json..."
+        cat > /app/Resource/config.json << 'EOF'
+{
+    "wizard_completed": true,
+    "active_profile": "default",
+    "active_rules_profile": "default"
+}
+EOF
+        echo "✓ Main config.json created"
+    else
+        echo "✓ Main config.json exists"
+    fi
+}
+
 # Function to wait for database
 wait_for_db() {
     echo "[Init] Checking database connection..."
@@ -112,6 +142,9 @@ show_config() {
 # Main initialization
 main() {
     echo "[Init] Starting initialization..."
+
+    # Initialize default configuration files
+    init_config
 
     # Wait for database
     wait_for_db

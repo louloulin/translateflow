@@ -17,13 +17,13 @@ import { PlatformConfig } from '@/types';
 export const SettingsApi: React.FC = () => {
   const { t } = useI18n();
   const { config, setConfig } = useGlobal();
-  
+
   const [isCreatingPlatform, setIsCreatingPlatform] = useState(false);
   const [tempName, setTempName] = useState('');
   const [newPoolItem, setNewPoolItem] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
-  if (!config) return null;
+  if (!config || !config.platforms) return null;
 
   const handlePlatformChange = (tag: string) => {
     if (!config.platforms[tag]) return;

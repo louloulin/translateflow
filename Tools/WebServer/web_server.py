@@ -1215,10 +1215,25 @@ async def get_config():
         "prompt_dictionary_data", "exclusion_list_data", "characterization_data",
         "world_building_content", "writing_style_content", "translation_example_data"
     ]
-    
+
     for k in rule_keys:
         if k in rules_config:
             loaded_config[k] = rules_config[k]
+
+    # 4. Load platforms from preset if not in profile
+    if "platforms" not in loaded_config or not loaded_config["platforms"]:
+        preset_path = os.path.join(RESOURCE_PATH, "platforms", "preset.json")
+        if os.path.exists(preset_path):
+            try:
+                with open(preset_path, 'r', encoding='utf-8-sig') as f:
+                    preset_config = json.load(f)
+                    if "platforms" in preset_config:
+                        loaded_config["platforms"] = preset_config["platforms"]
+            except Exception as e:
+                print(f"[Config] Failed to load platforms from preset: {e}")
+                # Ensure platforms is at least an empty dict
+                if "platforms" not in loaded_config:
+                    loaded_config["platforms"] = {}
 
     # Meta
     loaded_config["active_profile"] = current_profile_name
