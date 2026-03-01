@@ -51,6 +51,7 @@ export const SettingsFeatures: React.FC = () => {
             <FeatureToggle field="translation_example_switch" label={t('feature_translation_example_switch')} />
             <FeatureToggle field="few_shot_and_example_switch" label={t('feature_few_shot_and_example_switch')} />
             <FeatureToggle field="auto_process_text_code_segment" label={t('feature_auto_process_text_code_segment')} />
+            <FeatureToggle field="enable_bilingual_output" label={t('feature_enable_bilingual_output')} />
         </CardContent>
       </Card>
 

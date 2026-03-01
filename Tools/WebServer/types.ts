@@ -366,6 +366,8 @@ export interface AppConfig {
   translation_example_switch: boolean;
   few_shot_and_example_switch: boolean;
   auto_process_text_code_segment: boolean;
+  enable_bilingual_output: boolean;
+  bilingual_text_order: string;
 
   // --- Data Containers ---
   pre_translation_data: any;
